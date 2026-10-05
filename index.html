@@ -1,0 +1,1219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dala & Genzi WiFi Manager</title>
+<style>
+:root{--bg:#f3f6fa;--card:#fff;--ink:#14213d;--muted:#5b6b82;--line:#e2e8f0;--head:#0057A6;--brand:#0057A6;--brand-2:#e6eef8;--genzi:#0d9488;--good:#15803d;--good-bg:#dcfce7;--bad:#b91c1c;--bad-bg:#fee2e2;--warn:#92400e;--warn-bg:#fef3c7;--info-bg:#e0ecfb;--on-brand:#fff;--toast:#14213d;--toast-ink:#fff;--on-head:#fff;--on-head-2:#cfe3ff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e151d;--card:#16202b;--ink:#e6edf5;--muted:#93a3b8;--line:#263445;--head:#0b2a4a;--brand:#4da3ff;--brand-2:#1b2c40;--genzi:#2dd4bf;--good:#4ade80;--good-bg:#12321f;--bad:#f87171;--bad-bg:#3a1717;--warn:#fbbf24;--warn-bg:#3a2e10;--info-bg:#16304d;--on-brand:#06121f;--toast:#e6edf5;--toast-ink:#0e151d;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e151d;--card:#16202b;--ink:#e6edf5;--muted:#93a3b8;--line:#263445;--head:#0b2a4a;--brand:#4da3ff;--brand-2:#1b2c40;--genzi:#2dd4bf;--good:#4ade80;--good-bg:#12321f;--bad:#f87171;--bad-bg:#3a1717;--warn:#fbbf24;--warn-bg:#3a2e10;--info-bg:#16304d;--on-brand:#06121f;--toast:#e6edf5;--toast-ink:#0e151d;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font:14.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header.top{background:var(--head);color:var(--on-head);padding:12px 16px 0}
+header .brand{display:flex;justify-content:space-between;align-items:center;gap:10px;max-width:1200px;margin:0 auto}
+header h1{font-size:18px;margin:0}
+header .sub{font-size:12px;opacity:.8}
+nav{display:flex;gap:2px;overflow-x:auto;max-width:1200px;margin:8px auto 0;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{background:none;border:0;color:var(--on-head-2);padding:10px 12px;border-bottom:3px solid transparent;white-space:nowrap;font:inherit;cursor:pointer}
+nav button.on{color:var(--on-head);border-color:var(--on-head);font-weight:600}
+main{max-width:1200px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.kpi .l{color:var(--muted);font-size:12.5px}
+.kpi .v{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+.kpi .s{color:var(--muted);font-size:12px}
+.h2row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+h2{font-size:17px;margin:0}
+h3{font-size:15px;margin:0 0 8px}
+.muted{color:var(--muted)}
+.small{font-size:12.5px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row > select,.row > input{width:auto}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;vertical-align:middle}
+th{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;font-weight:600}
+td.n,th.n{text-align:right}
+td.wrap{white-space:normal;min-width:160px}
+tfoot td{font-weight:700;border-top:2px solid var(--line)}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--brand-2)}
+.btn{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--brand)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.btn.sm{padding:4px 9px;font-size:12.5px}
+.btn.danger{color:var(--bad)}
+.btn.good{color:var(--good)}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600}
+.b-ok{background:var(--good-bg);color:var(--good)}
+.b-bad{background:var(--bad-bg);color:var(--bad)}
+.b-warn{background:var(--warn-bg);color:var(--warn)}
+.b-info{background:var(--info-bg);color:var(--brand)}
+.b-dala{background:var(--brand-2);color:var(--brand)}
+.b-genzi{background:color-mix(in srgb,var(--genzi) 16%,transparent);color:var(--genzi)}
+.pos{color:var(--good)}
+.neg{color:var(--bad)}
+input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--brand);outline-offset:-1px}
+.fld{display:block;margin-bottom:10px}
+.fld > span{display:block;font-size:12.5px;color:var(--muted);margin-bottom:3px}
+.fld small{color:var(--muted)}
+.chk{display:flex;gap:8px;align-items:center;margin:4px 0 12px}
+.chk input{width:auto}
+.egroup{margin-bottom:12px}
+.egroup h3{display:flex;gap:8px;align-items:center}
+.egrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.egrid input{font-size:16px;font-variant-numeric:tabular-nums}
+.etotal{font-size:18px;font-weight:700}
+dialog{border:0;border-radius:14px;padding:0;width:min(480px,94vw);background:var(--card);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.mform{padding:18px;max-height:86vh;overflow:auto}
+.mform h3{font-size:17px;margin-bottom:14px}
+.mact{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.two>*{min-width:0}
+@media (max-width:820px){.two{grid-template-columns:1fr}}
+.hbars .hb{display:grid;grid-template-columns:110px 1fr 104px;gap:8px;align-items:center;margin:7px 0}
+.hbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hbt{background:var(--brand-2);border-radius:6px;height:14px;overflow:hidden}
+.hbf{height:100%;background:var(--brand);border-radius:6px}
+.hbf.g{background:var(--genzi)}
+.hbf.neg{background:var(--bad)}
+.hbv{text-align:right;font-variant-numeric:tabular-nums;font-size:13px}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:11px}
+.alerts{list-style:none;margin:0;padding:0}
+.alerts li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}
+.alerts li:last-child{border-bottom:0}
+.scards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.scard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.scard dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:6px 0 10px;font-size:13.5px}
+.scard dt{color:var(--muted)}
+.scard dd{margin:0;text-align:right}
+.scard .sec{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-top:8px;font-weight:600}
+.heat td.h{text-align:right;font-size:12.5px}
+.note{background:var(--info-bg);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:12px}
+.empty{color:var(--muted);text-align:center;padding:18px}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--toast);color:var(--toast-ink);padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;max-width:90vw}
+#toast.show{opacity:1}
+details summary{cursor:pointer;color:var(--brand)}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:14px;font-size:13.5px}
+.drop.over{border-color:var(--brand);background:var(--brand-2)}
+@media (max-width:600px){main{padding:12px}.kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}.kpi .v{font-size:18px}.hbars .hb{grid-template-columns:82px 1fr 90px}.card{padding:12px}}
+@media print{header,nav,.noprint,.btn{display:none!important}body{background:#fff;color:#000}.card,.kpi{border-color:#ccc}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div><h1 id="bizName">Dala & Genzi WiFi</h1><div class="sub">ISP business manager · <span id="netState">Saved on this device</span></div></div>
+    <button class="btn sm noprint" data-act="exportJSON" style="background:transparent;color:var(--on-head);border-color:var(--on-head-2)">Backup</button>
+  </div>
+  <nav id="nav"></nav>
+</header>
+<main id="main"></main>
+<dialog id="dlg"></dialog>
+<dialog id="dlg2"></dialog>
+<div id="toast"></div>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+<input type="file" id="upFile" accept=".html,.htm,.mhtml,.mht,.csv,.txt" multiple hidden>
+
+<script>
+'use strict';
+const KEY='dalaGenziISP.v1';
+const SITES_SEED=[
+  {id:'dala1',name:'Dala 1',group:'Dala',router:'dalawifi1'},
+  {id:'dala2',name:'Dala 2',group:'Dala',router:'dalawifi2'},
+  {id:'dala3',name:'Dala 3',group:'Dala',router:'dalawifi3'},
+  {id:'dala4',name:'Dala 4',group:'Dala',router:'dalawifi4'},
+  {id:'dala5',name:'Dala 5',group:'Dala',router:'dalawifi5'},
+  {id:'dala6',name:'Dala 6',group:'Dala',router:'dalawifi6'},
+  {id:'f3b',name:'Genzi F3B',group:'Genzi',router:''},
+  {id:'f3c',name:'Genzi F3C',group:'Genzi',router:''},
+  {id:'f7',name:'Genzi F7',group:'Genzi',router:''}
+];
+// Daily income copied from the ISP Ledger "Income Overview" pages (newest first)
+const SEED_DATES=['2026-10-05','2026-10-04','2026-10-03','2026-10-02','2026-10-01','2026-09-30','2026-09-29','2026-09-28','2026-09-27','2026-09-26'];
+const SEED_VALUES={
+  dala1:[928,2609,2505,2762,2114,2059,1961,2509,1721,901],
+  dala2:[402,1425,1812,1390,1235,1245,906,1435,1194,701],
+  dala3:[561,3141,2585,2203,2181,1390,2465,2158,2418,2549],
+  dala4:[315,1490,1498,1609,334,782,1171,1184,1625,1575],
+  dala5:[335,982,1222,1101,1154,985,1240,1303,1043,930],
+  dala6:[205,711,818,558,443,528,675,601,574,380],
+  f3b:[794,2977,2971,2766,2364,2619,3107,2805,2716,3021],
+  f3c:[301,1267,1503,1358,1306,957,1234,1102,1482,1677],
+  f7:[776,2085,1751,1946,2041,1762,1991,1417,1872,2190]
+};
+const INV_CAT='Equipment & investment';
+const EXP_CATS=['Motorbike fuel','Tech salary','Electricity tokens','Wifi subscription','Materials','Repairs & maintenance','Transport','Airtime / SMS','Rent',INV_CAT,'Other'];
+const isInv=x=>x.category===INV_CAT;
+const SUBTECH_CAT='Sub-tech wages';
+const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['issues','Site Issues'],['settings','Settings & Backup']];
+
+/* ---------- state ---------- */
+function defaultState(){
+  const earnings={};
+  SEED_DATES.forEach((d,i)=>{earnings[d]={};for(const k in SEED_VALUES)earnings[d][k]=SEED_VALUES[k][i];});
+  return {version:1,
+    settings:{business:'Dala & Genzi WiFi',subtechRate:500,subtechName:'Sub-tech',techName:'Technician',techSalary:0,tokenWarnDays:30,wifiWarnDays:5,partners:['FIDEL','DOROTHY','MAURICE'],partnerShares:{},lastPayer:''},
+    sites:SITES_SEED.map(s=>({...s,tokenMeter:'',tokenLastPaid:'',tokenLastAmount:0,wifiProvider:'',wifiAccount:'',wifiLastPaid:'',wifiAmount:0,wifiCycleDays:30,notes:''})),
+    earnings,expenses:[],subtech:[],store:[],toBuy:[],matLog:[],debts:[],issues:[],assets:[],targets:{},partnerTx:[],lumpIncome:[],employees:[],checks:[],lastBackup:''};
+}
+// Combine a backup into the current data without losing anything: union by id, the backup wins on the same entry.
+function mergeState(cur,inc){
+  const out=JSON.parse(JSON.stringify(cur));
+  for(const d in inc.earnings)out.earnings[d]={...(out.earnings[d]||{}),...inc.earnings[d]};
+  for(const k in inc){
+    if(k==='earnings')continue;
+    const a=out[k],b=inc[k];
+    if(Array.isArray(b)&&Array.isArray(a)){const m=new Map(a.map(x=>[x&&x.id!==undefined?x.id:JSON.stringify(x),x]));b.forEach(x=>m.set(x&&x.id!==undefined?x.id:JSON.stringify(x),x));out[k]=[...m.values()];}
+    else if(b&&typeof b==='object'&&!Array.isArray(b))out[k]={...(a||{}),...b};
+    else if(k==='lastBackup')out[k]=[a||'',b||''].sort().pop();
+    else if(b!==undefined)out[k]=b;
+  }
+  return out;
+}
+function migrate(s){
+  const d=defaultState();
+  for(const k in d) if(s[k]===undefined) s[k]=d[k];
+  s.settings={...d.settings,...s.settings};
+  if(!s.employees.length)s.employees=[{id:'tech',name:s.settings.techName||'Technician',role:'Technician',phone:''},{id:'subtech',name:s.settings.subtechName||'Sub-tech',role:'Sub-tech',phone:''}];
+  return s;
+}
+function load(){
+  try{const r=localStorage.getItem(KEY);if(r)return migrate(JSON.parse(r));}catch(e){}
+  return defaultState();
+}
+let S=load();
+if(!S.employees.length)S=migrate(S);
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(S));}
+  catch(e){if(!ONLINE)toast('Could not save in this browser. Use Backup to keep your data.');}
+  scheduleSync();
+}
+/* ---------- online storage: when opened from the shared link, data lives in the artifact's database ---------- */
+const SPLIT=['expenses','subtech','matLog','checks','issues','partnerTx'];
+// Google hosting: the page runs inside Apps Script (google.script.run), or on another host that calls the
+// Apps Script web app at API_URL. Either way the data lives in the owner's Google Sheet.
+const API_URL='';
+const GAS_RUN=typeof google!=='undefined'&&google.script&&google.script.run?google.script.run:null;
+const REMOTE=!!(GAS_RUN||API_URL);
+let ONLINE=false,PIN='',lastStamp='';
+function remote(fn,...args){
+  if(GAS_RUN)return new Promise((res,rej)=>google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args));
+  return fetch(API_URL,{method:'POST',body:JSON.stringify({fn,args})}).then(r=>r.json()).then(r=>{if(r.error)throw new Error(r.error);return r.result;});
+}
+const fakeSnaps=docs=>{const st=[],ea=[];for(const p in docs){const [c,id]=p.split('/');const d={id,data:()=>JSON.parse(docs[p])};(c==='earnings'?ea:st).push(d);}return {st,ea};};
+let DB=null,written={},syncTimer=null,syncing=false,syncAgain=false,needApply=false,readOnly=false;
+const lastSnaps={state:[],earn:[]};
+function toDocs(st){
+  const out={};
+  for(const k in st){
+    if(k==='earnings'){for(const d in st.earnings){const p='earnings/'+d.slice(0,7);(out[p]=out[p]||{days:{}}).days[d]=st.earnings[d];}}
+    else if(SPLIT.includes(k)&&Array.isArray(st[k])){st[k].forEach(x=>{const p='state/'+k+'@'+(String(x.date||'').slice(0,4)||'none');(out[p]=out[p]||{v:[]}).v.push(x);});}
+    else out['state/'+k]={v:st[k]};
+  }
+  return out;
+}
+function fromDocs(stateDocs,earnDocs){
+  const st={},parts={};
+  stateDocs.forEach(d=>{const v=(d.data()||{}).v,at=d.id.indexOf('@');if(at>0){const k=d.id.slice(0,at);(parts[k]=parts[k]||[]).push([d.id,v]);}else st[d.id]=v;});
+  for(const k in parts)st[k]=parts[k].sort((a,b)=>a[0].localeCompare(b[0])).flatMap(x=>x[1]||[]);
+  SPLIT.forEach(k=>{if(!st[k])st[k]=[];});
+  st.earnings={};earnDocs.forEach(d=>Object.assign(st.earnings,(d.data()||{}).days||{}));
+  return st;
+}
+function setNet(state){
+  const el=$('#netState');if(!el)return;
+  el.textContent={local:'Saved on this device',ok:'Saved online',saving:'Saving…',err:'Not saved online, check your connection',ro:'View only'}[state]||'';
+}
+function scheduleSync(){if(!ONLINE||readOnly)return;clearTimeout(syncTimer);setNet('saving');syncTimer=setTimeout(runSync,400);}
+async function runSync(){
+  syncTimer=null;
+  if(syncing){syncAgain=true;return;}
+  syncing=true;
+  try{
+    const docs=toDocs(S);
+    if(REMOTE){
+      const sets={},dels=Object.keys(written).filter(p=>!docs[p]);
+      for(const p in docs){const j=JSON.stringify(docs[p]);if(written[p]!==j)sets[p]=j;}
+      if(Object.keys(sets).length||dels.length){const r=await remote('saveDocs',PIN,sets,dels);lastStamp=r.stamp;Object.assign(written,sets);dels.forEach(p=>delete written[p]);}
+    }else{
+      for(const p in docs){const j=JSON.stringify(docs[p]);if(written[p]!==j){await DB.doc(p).set(docs[p]);written[p]=j;}}
+      for(const p of Object.keys(written)){if(!docs[p]){await DB.doc(p).delete();delete written[p];}}
+    }
+    setNet('ok');
+  }catch(e){
+    if(e&&String(e.message||e).includes('bad_pin')){setNet('err');askPin('Your PIN was not accepted. Enter it again.');}
+    else if(e&&e.code==='invalid_argument'&&!Object.keys(written).length){readOnly=true;setNet('ro');}
+    else{setNet('err');toast(e&&e.code==='quota_exceeded'?'Online storage is full. Download a backup.':'Could not save online. Your change is kept on this device and will be sent with the next save.');}
+  }
+  syncing=false;
+  if(syncAgain||syncTimer){syncAgain=false;if(!syncTimer)runSync();return;}
+  if(needApply)applyRemote();
+}
+function applyRemote(){
+  if(syncing||syncTimer||$('#dlg').open||$('#dlg2').open){needApply=true;return;}
+  needApply=false;
+  const all=[...lastSnaps.state.map(d=>['state/'+d.id,d]),...lastSnaps.earn.map(d=>['earnings/'+d.id,d])];
+  if(!all.length)return;
+  written={};all.forEach(([p,d])=>written[p]=JSON.stringify(d.data()));
+  S=migrate(fromDocs(lastSnaps.state,lastSnaps.earn));
+  try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
+  const a=document.activeElement;
+  if(a&&a.closest&&a.closest('main')&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)){needApply=true;return;}
+  render();
+}
+function askPin(msg){
+  openForm('Enter your PIN',[{k:'pin',label:msg||'Enter the PIN for this website',type:'password',req:true,hint:'The very first time, type a new PIN you will remember. That becomes the PIN for everyone.'}],{},o=>{PIN=o.pin;try{localStorage.setItem('isp.pin',PIN);}catch(e){}connectRemote();});
+}
+async function connectRemote(){
+  try{PIN=PIN||localStorage.getItem('isp.pin')||'';}catch(e){}
+  if(!PIN){askPin();return;}
+  setNet('saving');
+  try{
+    const r=await remote('loadAll',PIN);
+    ONLINE=true;lastStamp=r.stamp;
+    const f=fakeSnaps(r.docs);lastSnaps.state=f.st;lastSnaps.earn=f.ea;
+    if(f.st.length||f.ea.length)applyRemote();else{written={};scheduleSync();}
+    setNet('ok');render();
+    if(!connectRemote.poll)connectRemote.poll=setInterval(async()=>{
+      if(syncing||syncTimer||document.hidden)return;
+      try{const st=await remote('getStamp',PIN);if(st!==lastStamp){const r2=await remote('loadAll',PIN);lastStamp=r2.stamp;const g=fakeSnaps(r2.docs);lastSnaps.state=g.st;lastSnaps.earn=g.ea;applyRemote();}}catch(e){}
+    },20000);
+  }catch(e){
+    if(String(e.message||e).includes('bad_pin')){try{localStorage.removeItem('isp.pin');}catch(_){}PIN='';askPin('That PIN is not correct. Try again.');}
+    else{setNet('err');toast('Could not reach the online data. Check your internet and reload.');}
+  }
+}
+async function connectOnline(){
+  if(REMOTE)return connectRemote();
+  try{
+    const db=window.claude&&window.claude.use?await window.claude.use('db'):null;
+    if(!db){setNet('local');return;}
+    DB=db;ONLINE=true;
+    const [a,b]=await Promise.all([db.collection('state').get(),db.collection('earnings').get()]);
+    lastSnaps.state=a.docs;lastSnaps.earn=b.docs;
+    if(a.docs.length||b.docs.length)applyRemote();
+    setNet('ok');render();
+    db.collection('state').onSnapshot(q=>{lastSnaps.state=q.docs;applyRemote();},()=>setNet('err'));
+    db.collection('earnings').onSnapshot(q=>{lastSnaps.earn=q.docs;applyRemote();},()=>setNet('err'));
+  }catch(e){setNet('err');}
+}
+const UI={page:(location.hash.slice(1)||'dash'),earnDate:'',earnMonth:'',perfRange:'30',costMonth:'',costCat:'',costSite:'',staffMonth:'',plMonth:'',issueFilter:'Open',debtFilter:'open',tgtMonth:'',assetSite:'',costPayer:'',partRange:'month',teamRange:'30'};
+if(!PAGES.some(p=>p[0]===UI.page))UI.page='dash';
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const pad=n=>String(n).padStart(2,'0');
+const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parse=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);};
+const today=()=>iso(new Date());
+const addDays=(s,n)=>{const d=parse(s);d.setDate(d.getDate()+n);return iso(d);};
+const diffDays=(a,b)=>Math.round((parse(b)-parse(a))/86400000);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=v=>{const n=parseFloat(String(v??'').replace(/,/g,''));return isFinite(n)?n:0;};
+const fmt=n=>(n<0?'-':'')+'Ksh '+Math.round(Math.abs(n)).toLocaleString('en-US');
+const fmtK=n=>Math.abs(n)>=1000?(n/1000).toFixed(Math.abs(n)>=10000?0:1)+'k':String(Math.round(n));
+const fmtD=s=>s?parse(s).toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}):'—';
+const fmtDs=s=>s?parse(s).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}).replace('Sept','Sep'):'—';
+const monthLabel=m=>{const [y,mo]=m.split('-').map(Number);return new Date(y,mo-1,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});};
+const monthRange=m=>{const [y,mo]=m.split('-').map(Number);return [m+'-01',iso(new Date(y,mo,0))];};
+const sum=(arr,f)=>arr.reduce((a,x)=>a+num(f?f(x):x),0);
+const pct=(a,b)=>b?((a-b)/b*100):null;
+const site=id=>S.sites.find(s=>s.id===id);
+const siteName=id=>id==='general'?'General (all sites)':(site(id)||{name:id||'—'}).name;
+const siteOpts=(general=true)=>[...(general?[['general','General (all sites)']]:[]),...S.sites.map(s=>[s.id,s.name])];
+const groupBadge=s=>`<span class="badge ${s.group==='Genzi'?'b-genzi':'b-dala'}">${esc(s.group)}</span>`;
+const pnl=v=>`<span class="${v<0?'neg':'pos'}">${fmt(v)}</span>`;
+function ask(msg,ok='Yes'){return new Promise(res=>{const d=$('#dlg2');d.innerHTML=`<form class="mform"><p style="margin:0 0 14px">${esc(msg)}</p><div class="mact"><button type="button" class="btn" data-no>Cancel</button><button class="btn primary" type="submit">${esc(ok)}</button></div></form>`;let v=false;d.querySelector('[data-no]').onclick=()=>d.close();d.querySelector('form').onsubmit=e=>{e.preventDefault();v=true;d.close();};d.onclose=()=>res(v);d.showModal();});}
+function toast(msg){toast.last=msg;toast.t0=Date.now();const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),2600);}
+function monthsWithData(){
+  const set=new Set([today().slice(0,7)]);
+  Object.keys(S.earnings).forEach(d=>set.add(d.slice(0,7)));
+  S.expenses.forEach(e=>set.add(e.date.slice(0,7)));
+  (S.lumpIncome||[]).forEach(e=>set.add(String(e.date).slice(0,7)));
+  S.subtech.forEach(e=>set.add(e.date.slice(0,7)));
+  return [...set].sort().reverse();
+}
+const monthSelect=(chg,val)=>`<select data-chg="${chg}">${monthsWithData().map(m=>`<option value="${m}"${m===val?' selected':''}>${monthLabel(m)}</option>`).join('')}</select>`;
+const RANGE_OPTS=[['7','Last 7 days'],['14','Last 14 days'],['30','Last 30 days'],['month','This month'],['lastmonth','Last month'],['90','Last 90 days'],['all','All time']];
+function rangeOf(key){
+  const t=today(),d=parse(t);
+  if(key==='month')return [t.slice(0,8)+'01',t];
+  if(key==='lastmonth')return [iso(new Date(d.getFullYear(),d.getMonth()-1,1)),iso(new Date(d.getFullYear(),d.getMonth(),0))];
+  if(key==='all')return ['0000-01-01','9999-12-31'];
+  return [addDays(t,-(Number(key)-1)),t];
+}
+
+/* ---------- aggregates ---------- */
+function earnIn(from,to){
+  const r={bySite:{},byDate:{},total:0,days:0};
+  S.sites.forEach(s=>r.bySite[s.id]={total:0,days:0,best:null,worst:null});
+  for(const d in S.earnings){
+    if(d<from||d>to)continue;
+    let dt=0;
+    for(const id in S.earnings[d]){
+      const b=r.bySite[id];if(!b)continue;
+      const v=num(S.earnings[d][id]);
+      b.total+=v;b.days++;
+      if(!b.best||v>b.best.v)b.best={d,v};
+      if(!b.worst||v<b.worst.v)b.worst={d,v};
+      dt+=v;
+    }
+    r.byDate[d]=dt;r.total+=dt;r.days++;
+  }
+  r.lump=0;
+  (S.lumpIncome||[]).forEach(x=>{if(x.date<from||x.date>to)return;const v=num(x.amount);r.byDate[x.date]=(r.byDate[x.date]||0)+v;r.total+=v;r.lump+=v;});
+  return r;
+}
+function costsIn(from,to){
+  const out=S.expenses.filter(e=>e.date>=from&&e.date<=to).map(e=>({...e,amount:num(e.amount),src:'exp'}));
+  S.subtech.filter(w=>w.date>=from&&w.date<=to).forEach(w=>out.push({id:w.id,date:w.date,category:SUBTECH_CAT,site:w.site,amount:num(w.amount),desc:(w.name||'Sub-tech')+': '+(w.task||'work day'),src:'sub'}));
+  // equipment bought counts as money out on the day it was bought
+  S.assets.filter(a=>num(a.cost)>0&&a.date&&a.date>=from&&a.date<=to).forEach(a=>out.push({id:a.id,date:a.date,category:INV_CAT,site:a.site||'general',amount:num(a.cost),desc:'Equipment: '+a.name,paidBy:a.paidBy,src:'asset'}));
+  return out;
+}
+const debtPaid=d=>sum(d.payments||[],p=>p.amount);
+const debtBal=d=>num(d.amount)-debtPaid(d);
+function wifiDue(s){return s.wifiLastPaid?addDays(s.wifiLastPaid,num(s.wifiCycleDays)||30):'';}
+function wifiStatus(s){
+  if(!s.wifiLastPaid)return {cls:'b-info',txt:'Not set',left:null};
+  const left=diffDays(today(),wifiDue(s));
+  if(left<0)return {cls:'b-bad',txt:`Overdue ${-left}d`,left};
+  if(left<=num(S.settings.wifiWarnDays))return {cls:'b-warn',txt:left===0?'Due today':`Due in ${left}d`,left};
+  return {cls:'b-ok',txt:`${left} days left`,left};
+}
+function tokenStatus(s){
+  if(!s.tokenLastPaid)return {cls:'b-info',txt:'Not set',ago:null};
+  const ago=diffDays(s.tokenLastPaid,today());
+  return {cls:ago>=num(S.settings.tokenWarnDays)?'b-warn':'b-ok',txt:ago===0?'Today':`${ago} days ago`,ago};
+}
+
+/* ---------- calculations ---------- */
+function costByDate(from,to){const m={};costsIn(from,to).forEach(x=>m[x.date]=(m[x.date]||0)+x.amount);return m;}
+function dayCalc(d){const e=S.earnings[d]?sum(Object.values(S.earnings[d])):0,c=sum(costsIn(d,d),x=>x.amount);return {e,c,p:e-c};}
+function monthStats(m){const [f,t]=monthRange(m),e=earnIn(f,t),c=sum(costsIn(f,t),x=>x.amount);return {e:e.total,c,p:e.total-c,days:e.days};}
+const VAR_CATS=['Motorbike fuel',SUBTECH_CAT,'Transport','Airtime / SMS'];
+// Expected month-end figures: earnings at the current daily average, costs so far plus
+// bills still to come (unpaid tech salary, WiFi subscriptions falling due) and day-to-day costs at the current rate.
+function projection(m){
+  const [f,t]=monthRange(m),tdy=today(),daysIn=diffDays(f,t)+1;
+  const e=earnIn(f,t),c=costsIn(f,t),cost=sum(c,x=>x.amount);
+  if(tdy>t||tdy<f){return {daysIn,projE:e.total,projC:cost,projP:e.total-cost,breakEven:cost/daysIn,final:true,extra:[]};}
+  const elapsed=diffDays(f,tdy)+1,projE=e.days?e.total/e.days*daysIn:0,extra=[];
+  const techPaid=sum(c.filter(x=>x.category==='Tech salary'),x=>x.amount),techLeft=Math.max(0,num(S.settings.techSalary)-techPaid);
+  if(techLeft)extra.push(['Tech salary still to pay',techLeft]);
+  let wifi=0;S.sites.forEach(s=>{if(!s.wifiLastPaid||!num(s.wifiAmount))return;let due=wifiDue(s);while(due<=t){if(due>tdy||due<=tdy&&due>=f&&!c.some(x=>x.category==='Wifi subscription'&&x.site===s.id&&x.date>=addDays(due,-5)))wifi+=num(s.wifiAmount);due=addDays(due,num(s.wifiCycleDays)||30);}});
+  if(wifi)extra.push(['WiFi subscriptions due',wifi]);
+  const varSoFar=sum(c.filter(x=>VAR_CATS.includes(x.category)),x=>x.amount),varMore=varSoFar/elapsed*(daysIn-elapsed);
+  if(varMore)extra.push(['Fuel, sub-tech and other daily costs for the rest of the month',varMore]);
+  const projC=cost+sum(extra,x=>x[1]);
+  return {daysIn,projE,projC,projP:projE-projC,breakEven:projC/daysIn,final:false,extra,elapsed};
+}
+function profitNote(){const st=monthStats(today().slice(0,7));return `This month ${st.p<0?'loss':'profit'}: ${fmt(Math.abs(st.p))}`;}
+
+/* ---------- charts ---------- */
+function vbars(items,h=170){
+  if(!items.length)return '<div class="empty">No data yet</div>';
+  const bw=46,W=items.length*bw,max=Math.max(1,...items.map(i=>i.v));
+  let g='';
+  items.forEach((it,i)=>{
+    const bh=it.v/max*h,x=i*bw+8,y=18+h-bh;
+    g+=`<g><title>${esc(it.title||it.label)}: ${fmt(it.v)}</title><rect x="${x}" y="${y}" width="${bw-16}" height="${Math.max(bh,it.v?2:0)}" rx="4" fill="${it.color||'var(--brand)'}"></rect>`+
+      (it.v?`<text x="${x+(bw-16)/2}" y="${y-5}" text-anchor="middle">${fmtK(it.v)}</text>`:'')+
+      `<text x="${x+(bw-16)/2}" y="${h+34}" text-anchor="middle">${esc(it.label)}</text></g>`;
+  });
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${h+42}" role="img">${g}</svg></div>`;
+}
+function hbars(items){
+  if(!items.length)return '<div class="empty">No data yet</div>';
+  const max=Math.max(1,...items.map(i=>Math.abs(i.v)));
+  return `<div class="hbars">${items.map(i=>`<div class="hb"><span class="hbl">${esc(i.label)}</span><div class="hbt"><div class="hbf ${i.v<0?'neg':(i.cls||'')}" style="width:${Math.abs(i.v)/max*100}%"></div></div><span class="hbv">${fmt(i.v)}</span></div>`).join('')}</div>`;
+}
+
+/* ---------- forms ---------- */
+function fieldHtml(f,v){
+  v=v??f.def??'';
+  const id='f_'+f.k;
+  if(f.type==='checkbox')return `<label class="chk"><input type="checkbox" name="${f.k}" ${v?'checked':''}> ${esc(f.label)}</label>`;
+  let inp;
+  if(f.type==='select')inp=`<select name="${f.k}" id="${id}">${f.options.map(o=>{const [val,lab]=Array.isArray(o)?o:[o,o];return `<option value="${esc(val)}"${String(val)===String(v)?' selected':''}>${esc(lab)}</option>`;}).join('')}</select>`;
+  else if(f.type==='textarea')inp=`<textarea name="${f.k}" id="${id}" rows="2">${esc(v)}</textarea>`;
+  else inp=`<input name="${f.k}" id="${id}" type="${f.type||'text'}" value="${esc(v)}" ${f.req?'required':''} ${f.type==='number'?'step="any" min="0" inputmode="decimal"':''} ${f.list?`list="${f.k}_dl"`:''}>`+
+    (f.list?`<datalist id="${f.k}_dl">${f.list.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>`:'');
+  return `<label class="fld" for="${id}"><span>${esc(f.label)}</span>${inp}${f.hint?`<small>${esc(f.hint)}</small>`:''}</label>`;
+}
+function openForm(title,fields,vals,onSave){
+  const dlg=$('#dlg');
+  dlg.innerHTML=`<form class="mform"><h3>${esc(title)}</h3>${fields.map(f=>fieldHtml(f,vals[f.k])).join('')}<div class="mact"><button type="button" class="btn" data-x>Cancel</button><button class="btn primary" type="submit">Save</button></div></form>`;
+  const form=dlg.querySelector('form');
+  dlg.querySelector('[data-x]').onclick=()=>dlg.close();
+  form.onsubmit=e=>{
+    e.preventDefault();
+    const out={};
+    for(const f of fields){const el=form.elements[f.k];out[f.k]=f.type==='checkbox'?el.checked:(f.type==='number'?num(el.value):el.value.trim());}
+    const t0=Date.now();
+    if(out.paidBy)S.settings.lastPayer=out.paidBy;
+    if(onSave(out)!==false){save();dlg.close();render();toast((toast.t0>=t0?toast.last:'Saved')+' · '+profitNote());}
+  };
+  dlg.showModal();
+}
+const fDate=(k='date',label='Date')=>({k,label,type:'date',req:true,def:today()});
+
+/* ---------- upload daily figures ---------- */
+const MON={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+function siteFromText(str){
+  const n=String(str||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  if(!n)return '';
+  for(const s of S.sites){const sn=s.name.toLowerCase().replace(/[^a-z0-9]/g,'');if(sn&&(n===sn||n.includes(sn)))return s.id;}
+  const m=n.match(/dala(?:wifi)?([1-9])/);if(m&&site('dala'+m[1]))return 'dala'+m[1];
+  for(const k of ['f3b','f3c','f7'])if(n.includes(k)&&site(k))return k;
+  return '';
+}
+function inferDate(day,mon,year){
+  if(year)return year+'-'+pad(mon+1)+'-'+pad(day);
+  let y=new Date().getFullYear();const tomorrow=addDays(today(),1);
+  let d=y+'-'+pad(mon+1)+'-'+pad(day);
+  if(d>tomorrow)d=(y-1)+'-'+pad(mon+1)+'-'+pad(day);
+  return d;
+}
+function parseDayRows(text){
+  const rows={};
+  const re=/\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,?\s+(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?,?(?:\s+(\d{4}))?\s+(?:Ksh\.?|KES)?\s*([\d,]+(?:\.\d+)?)/gi;
+  let m;while((m=re.exec(text))){const d=inferDate(Number(m[1]),MON[m[2].toLowerCase()],m[3]);if(rows[d]===undefined)rows[d]=num(m[4]);}
+  return rows;
+}
+function htmlToText(s){return s.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;|&#160;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ');}
+function decodeQP(s){return s.replace(/=\r?\n/g,'').replace(/=([0-9A-F]{2})/g,(m,h)=>String.fromCharCode(parseInt(h,16)));}
+function parseCSV(raw,file){
+  const lines=raw.split(/\r?\n/).filter(l=>l.trim());
+  const sep=(lines[0].match(/[;\t]/)&&!lines[0].includes(','))?lines[0].match(/[;\t]/)[0]:',';
+  const split=l=>{const out=[];let cur='',q=false;for(let k=0;k<l.length;k++){const ch=l[k];if(q){if(ch==='"'&&l[k+1]==='"'){cur+='"';k++;}else if(ch==='"')q=false;else cur+=ch;}else if(ch==='"')q=true;else if(ch===sep){out.push(cur.trim());cur='';}else cur+=ch;}out.push(cur.trim());return out;};
+  const head=split(lines[0]);const out=[];
+  head.forEach((h,ci)=>{if(ci===0)return;const id=siteFromText(h);if(!id)return;
+    const rows={};
+    lines.slice(1).forEach(l=>{const c=split(l);let d=c[0]||'';let m;
+      if((m=d.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/)))d=m[1]+'-'+pad(m[2])+'-'+pad(m[3]);
+      else if((m=d.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/)))d=m[3]+'-'+pad(m[2])+'-'+pad(m[1]);
+      else return;
+      if(c[ci]!==undefined&&c[ci]!=='')rows[d]=num(c[ci]);});
+    out.push({file,site:id,rows});});
+  if(!out.length)out.push({file,site:'',rows:{},error:'No site columns found. The first row must be: Date, Dala 1, Dala 2, ...'});
+  return out;
+}
+function parseUpload(raw,file){
+  if(/\.(csv|txt)$/i.test(file)&&!/<html/i.test(raw.slice(0,2000))){
+    if(/^[^\n]*date/i.test(raw))return parseCSV(raw,file);
+  }
+  let s=raw;
+  if(/multipart\/related|MIME-Version/i.test(s.slice(0,3000)))s=decodeQP(s);
+  const cands=[];
+  const r=s.match(/[?&](?:amp;)?router=([^&"'\s#<>]+)/);if(r){try{cands.push(decodeURIComponent(r[1].replace(/\+/g,' ')));}catch(e){cands.push(r[1]);}}
+  const opt=s.match(/<option[^>]*selected[^>]*>([^<]+)/i);if(opt)cands.push(opt[1]);
+  cands.push(file);
+  let id='';for(const c of cands){id=siteFromText(c);if(id)break;}
+  const rows=parseDayRows(htmlToText(s));
+  return [{file,site:id,rows,error:Object.keys(rows).length?'':'No daily figures found in this file.'}];
+}
+function readFiles(files){
+  return Promise.all([...files].map(f=>new Promise(res=>{const r=new FileReader();r.onload=()=>res(parseUpload(String(r.result),f.name));r.onerror=()=>res([{file:f.name,site:'',rows:{},error:'Could not read file'}]);r.readAsText(f);}))).then(a=>{
+    UI.upload=[...(UI.upload||[]),...a.flat()];UI.page='earn';render();
+    document.getElementById('upCard')?.scrollIntoView({behavior:'smooth'});
+  });
+}
+function uploadCard(){
+  const up=UI.upload||[];
+  const preview=up.length?`<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr><th>File</th><th>Site</th><th class="n">Days</th><th>Dates</th><th class="n">Total</th><th>Status</th><th></th></tr></thead><tbody>
+    ${up.map((u,i)=>{const ds=Object.keys(u.rows).sort();const upd=u.site?ds.filter(d=>S.earnings[d]&&S.earnings[d][u.site]!==undefined).length:0;
+      return `<tr><td class="wrap small">${esc(u.file)}</td><td><select data-chg="upSite" data-k="${i}" style="width:auto"><option value="">Choose site…</option>${S.sites.map(s=>`<option value="${s.id}"${s.id===u.site?' selected':''}>${esc(s.name)}</option>`).join('')}</select></td>
+      <td class="n">${ds.length}</td><td>${ds.length?fmtDs(ds[0])+' to '+fmtDs(ds[ds.length-1]):'—'}</td><td class="n">${fmt(sum(Object.values(u.rows)))}</td>
+      <td>${u.error?`<span class="badge b-bad">${esc(u.error)}</span>`:!u.site?'<span class="badge b-warn">Pick the site</span>':`<span class="badge b-ok">${ds.length-upd} new, ${upd} update</span>`}</td>
+      <td><button class="btn sm danger" data-act="upRemove" data-id="${i}">✕</button></td></tr>`;}).join('')}
+    </tbody></table></div>
+    <div class="row" style="margin-top:10px"><button class="btn primary" data-act="upImport">Save these figures</button><button class="btn" data-act="upCancel">Cancel</button></div>`:'';
+  return `<div class="card" id="upCard"><div class="h2row"><h2>Upload daily figures</h2><button class="btn primary" data-act="upPick">⬆ Choose files</button></div>
+    <div class="drop" id="dropZone">Upload the <b>Income Overview</b> pages saved from ISP Ledger (one per site, all at once is fine), or a CSV file. You can also drag files here.
+      <div class="small muted" style="margin-top:4px">On the Income Overview page choose the site's router and Daily, then save the page (Chrome menu ⋮ → Download, or Ctrl+S). The site is detected from the page.</div></div>
+    <details style="margin-top:10px"><summary>Or paste the table instead</summary>
+      <div class="row" style="margin-top:8px;align-items:flex-start"><select id="pasteSite" style="width:auto">${S.sites.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select>
+      <textarea id="pasteBox" rows="4" placeholder="Copy the rows from the Income Overview table and paste here, e.g.  Mon 05 Oct  Ksh. 928" style="flex:1;min-width:220px"></textarea>
+      <button class="btn" data-act="upPaste">Read pasted figures</button></div></details>
+    ${preview}</div>`;
+}
+
+const P={};
+
+P.dash=()=>{
+  const t=today(),[mf,mt]=rangeOf('month'),e=earnIn(mf,mt),c=costsIn(mf,mt),exp=sum(c,x=>x.amount),profit=e.total-exp;
+  const days=Object.keys(S.earnings).sort(),latest=days[days.length-1];
+  const latestTot=latest?sum(Object.values(S.earnings[latest])):0;
+  const owedUs=sum(S.debts.filter(d=>d.type==='owedToUs'),debtBal),weOwe=sum(S.debts.filter(d=>d.type==='weOwe'),debtBal);
+  const unpaidSub=sum(S.subtech.filter(w=>!w.paid),w=>w.amount);
+  const avgDay=e.days?e.total/e.days:0;
+  const last14=[];for(let i=13;i>=0;i--){const d=addDays(t,-i);last14.push({label:fmtDs(d).replace(' ',' '),title:fmtD(d),v:S.earnings[d]?sum(Object.values(S.earnings[d])):0});}
+  let rk=e;if(!e.total)rk=earnIn(...rangeOf('30'));
+  const rank=S.sites.map(s=>({label:s.name,v:rk.bySite[s.id].total,cls:s.group==='Genzi'?'g':''})).sort((a,b)=>b.v-a.v);
+  const al=alerts(),pj=projection(t.slice(0,7)),invM=sum(c.filter(isInv),x=>x.amount);
+  return `
+  <div class="kpis">
+    <div class="kpi"><div class="l">Earnings this month</div><div class="v">${fmt(e.total)}</div><div class="s">${e.days} days recorded${e.lump?' + monthly total':' · avg '+fmt(avgDay)+'/day'}</div></div>
+    <div class="kpi"><div class="l">Money out this month</div><div class="v">${fmt(exp)}</div><div class="s">running ${fmt(exp-invM)} · equipment ${fmt(invM)}</div></div>
+    <div class="kpi"><div class="l">${profit<0?'Loss':'Profit'} this month (after everything)</div><div class="v ${profit<0?'neg':'pos'}">${fmt(profit)}</div><div class="s">Before equipment: ${fmt(profit+invM)}</div></div>
+    <div class="kpi"><div class="l">Latest day (${latest?fmtDs(latest):'—'})</div><div class="v">${fmt(latestTot)}</div><div class="s">${latest?(()=>{const dc=dayCalc(latest);return 'costs '+fmt(dc.c)+' · '+(dc.p<0?'loss ':'profit ')+fmt(Math.abs(dc.p));})():'all 9 sites'}</div></div>
+    <div class="kpi"><div class="l">Expected month-end ${pj.projP<0?'loss':'profit'}</div><div class="v ${pj.projP<0?'neg':'pos'}">${fmt(pj.projP)}</div><div class="s">Break-even: ${fmt(pj.breakEven)}/day</div></div>
+    <div class="kpi"><div class="l">People owe us</div><div class="v">${fmt(owedUs)}</div><div class="s">We owe ${fmt(weOwe)}</div></div>
+    <div class="kpi"><div class="l">Unpaid sub-tech</div><div class="v">${fmt(unpaidSub)}</div><div class="s">${S.subtech.filter(w=>!w.paid).length} days not paid</div></div>
+  </div>
+  <div class="two">
+    <div class="card"><div class="h2row"><h2>Daily earnings, last 14 days</h2><button class="btn sm" data-go="earn">Enter earnings</button></div>${vbars(last14)}</div>
+    <div class="card"><div class="h2row"><h2>Needs attention</h2><span class="badge ${al.length?'b-warn':'b-ok'}">${al.length||'All clear'}</span></div>
+      ${al.length?`<ul class="alerts">${al.map(a=>`<li><span class="badge ${a.cls}">${esc(a.tag)}</span><span>${a.html}</span></li>`).join('')}</ul>`:'<div class="empty">Nothing urgent. Good work.</div>'}</div>
+  </div>
+  <div class="card"><div class="h2row"><h2>Site ranking ${e.total?'this month':'(last 30 days)'}</h2><button class="btn sm" data-go="perf">Full performance</button></div>${hbars(rank)}</div>`;
+};
+function alerts(){
+  const a=[],t=today();
+  const y=addDays(t,-1);
+  if(!S.earnings[y])a.push({cls:'b-info',tag:'Earnings',html:`Yesterday's earnings (${fmtD(y)}) are not entered yet. <a href="#earn" data-go="earn">Enter now</a>`});
+  S.sites.forEach(s=>{
+    const w=wifiStatus(s);
+    if(w.left!==null&&w.left<=num(S.settings.wifiWarnDays))a.push({cls:w.cls,tag:'WiFi',html:`${esc(s.name)} WiFi subscription ${w.left<0?'is overdue by '+(-w.left)+' days':'due '+fmtD(wifiDue(s))} (acc ${esc(s.wifiAccount||'—')})`});
+    const k=tokenStatus(s);
+    if(k.ago!==null&&k.ago>=num(S.settings.tokenWarnDays))a.push({cls:'b-warn',tag:'Token',html:`${esc(s.name)} token last bought ${k.ago} days ago (meter ${esc(s.tokenMeter||'—')})`});
+  });
+  const noW=S.sites.filter(s=>!s.wifiLastPaid).length,noT=S.sites.filter(s=>!s.tokenLastPaid).length;
+  if(noW||noT)a.push({cls:'b-info',tag:'Setup',html:`${noW} sites have no WiFi payment date and ${noT} have no token date. <a href="#bills" data-go="bills">Fill them in</a>`});
+  S.store.filter(m=>num(m.minQty)>0&&num(m.qty)<=num(m.minQty)).forEach(m=>a.push({cls:'b-warn',tag:'Stock',html:`Low stock: ${esc(m.name)} (${num(m.qty)} ${esc(m.unit||'')} left)`}));
+  const hi=S.toBuy.filter(b=>b.priority==='High').length;
+  if(hi)a.push({cls:'b-warn',tag:'To buy',html:`${hi} high-priority item${hi>1?'s':''} on the shopping list`});
+  S.debts.filter(d=>d.due&&d.due<t&&debtBal(d)>0).forEach(d=>a.push({cls:'b-bad',tag:'Debt',html:`${esc(d.person)} ${d.type==='weOwe'?'(we owe)':'owes us'} ${fmt(debtBal(d))}, due ${fmtD(d.due)}`}));
+  const unpaid=S.subtech.filter(w=>!w.paid);
+  if(unpaid.length)a.push({cls:'b-info',tag:'Wages',html:`Sub-tech has ${unpaid.length} unpaid work day${unpaid.length>1?'s':''} (${fmt(sum(unpaid,w=>w.amount))})`});
+  const faulty=S.assets.filter(x=>x.status==='Faulty').length;
+  if(faulty)a.push({cls:'b-bad',tag:'Equipment',html:`${faulty} faulty equipment item${faulty>1?'s':''}. <a href="#assets" data-go="assets">View</a>`});
+  const open=S.issues.filter(i=>i.status!=='Fixed').length;
+  if(open)a.push({cls:'b-bad',tag:'Issues',html:`${open} open site issue${open>1?'s':''}. <a href="#issues" data-go="issues">View</a>`});
+  if(!S.lastBackup||diffDays(S.lastBackup,t)>7)a.push({cls:'b-warn',tag:'Backup',html:`${S.lastBackup?'Last backup was '+fmtD(S.lastBackup):'No backup made yet'}. <a href="#" data-act="exportJSON">Download backup</a>`});
+  return a;
+}
+
+function lumpCard(){
+  const L=[...(S.lumpIncome||[])].sort((a,b)=>b.date.localeCompare(a.date));
+  return `<div class="card"><div class="h2row"><h2>Monthly income totals</h2><button class="btn primary" data-act="addLump">+ Add total</button></div>
+  <div class="note">Use this only for months where you have one total for the month and no daily figure per site. It counts in profit and loss, but not in site performance.</div>
+  ${L.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Description</th><th class="n">Amount</th><th></th></tr></thead><tbody>${L.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.desc||'')}</td><td class="n">${fmt(x.amount)}</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editLump" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delLump" data-id="${x.id}">✕</button></div></td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td></td><td class="n">${fmt(sum(L,x=>num(x.amount)))}</td><td></td></tr></tfoot></table></div>`:'<div class="empty">No monthly totals recorded.</div>'}</div>`;
+}
+const dayProfitTxt=(e,c)=>`${e-c<0?'Loss':'Profit'} this day: <b class="${e-c<0?'neg':'pos'}">${fmt(e-c)}</b>`;
+P.earn=()=>{
+  const d=UI.earnDate||today(),rec=S.earnings[d]||{},exists=!!S.earnings[d];
+  const m=UI.earnMonth||d.slice(0,7),[mf,mt]=monthRange(m);
+  const dates=Object.keys(S.earnings).filter(x=>x>=mf&&x<=mt).sort().reverse();
+  const groups=['Dala','Genzi'];
+  const tot=sum(Object.values(rec)),dayCost=sum(costsIn(d,d),x=>x.amount);
+  const colTot={};S.sites.forEach(s=>colTot[s.id]=0);
+  const cbd=costByDate(mf,mt),costTot=sum(dates,x=>cbd[x]||0);
+  const rows=dates.map(x=>{const r=S.earnings[x];let rt=0;return `<tr class="click" data-act="editDay" data-id="${x}"><td>${fmtD(x)}</td>${S.sites.map(s=>{const v=r[s.id];if(v!==undefined){colTot[s.id]+=num(v);rt+=num(v);}return `<td class="n">${v===undefined?'<span class="muted">—</span>':num(v).toLocaleString('en-US')}</td>`;}).join('')}<td class="n"><b>${rt.toLocaleString('en-US')}</b></td><td class="n">${(cbd[x]||0).toLocaleString('en-US')}</td><td class="n">${pnl(rt-(cbd[x]||0))}</td></tr>`;}).join('');
+  const grand=sum(Object.values(colTot));
+  return `
+  <div class="card">
+    <div class="h2row"><h2>${exists?'Edit':'Enter'} daily earnings</h2><div class="row"><input type="date" value="${d}" data-chg="earnDate" style="width:auto"><button class="btn sm" data-act="earnShift" data-id="-1">◀ Prev</button><button class="btn sm" data-act="earnShift" data-id="1">Next ▶</button></div></div>
+    <div class="note">Pick the date, type each site's income for <b>${fmtD(d)}</b>, then press <b>Save</b>. To change a past day, pick its date or tap it in the history below. Leave a box empty if you don't know the figure yet.</div>
+    ${groups.map(g=>`<div class="egroup"><h3>${g==='Dala'?'Dala WiFi':'Genzi'} ${groupBadge({group:g})}</h3><div class="egrid">${S.sites.filter(s=>s.group===g).map(s=>`<label class="fld"><span>${esc(s.name)}</span><input class="earnIn" data-site="${s.id}" type="number" min="0" step="any" inputmode="decimal" value="${rec[s.id]??''}" placeholder="0"></label>`).join('')}</div></div>`).join('')}
+    <div class="h2row" style="margin:6px 0 0"><div>Day total: <span class="etotal" id="earnTot" data-cost="${dayCost}">${fmt(tot)}</span>
+      <div class="small">Costs this day: <b>${fmt(dayCost)}</b> · <span id="earnProfit">${dayProfitTxt(tot,dayCost)}</span></div></div>
+      <div class="row">${exists?`<button class="btn danger" data-act="delDay">Delete day</button>`:''}<button class="btn primary" data-act="saveDay">Save ${fmtDs(d)}</button></div></div>
+  </div>
+  ${uploadCard()}
+  ${lumpCard()}
+  <div class="card">
+    <div class="h2row"><h2>Earnings history</h2><div class="row">${monthSelect('earnMonth',m)}<button class="btn sm" data-act="exportCSV">Export CSV</button></div></div>
+    ${dates.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th>${S.sites.map(s=>`<th class="n">${esc(s.name)}</th>`).join('')}<th class="n">Total</th><th class="n">Costs</th><th class="n">Profit / loss</th></tr></thead><tbody>${rows}</tbody>
+    <tfoot><tr><td>Total</td>${S.sites.map(s=>`<td class="n">${colTot[s.id].toLocaleString('en-US')}</td>`).join('')}<td class="n">${grand.toLocaleString('en-US')}</td><td class="n">${costTot.toLocaleString('en-US')}</td><td class="n">${pnl(grand-costTot)}</td></tr>
+    <tr><td>Avg / day</td>${S.sites.map(s=>`<td class="n">${Math.round(colTot[s.id]/dates.length).toLocaleString('en-US')}</td>`).join('')}<td class="n">${Math.round(grand/dates.length).toLocaleString('en-US')}</td><td class="n">${Math.round(costTot/dates.length).toLocaleString('en-US')}</td><td class="n">${pnl((grand-costTot)/dates.length)}</td></tr></tfoot></table></div>
+    <p class="small muted">Tap a row to edit that day. Costs are everything recorded on that date in Running Costs, Tokens &amp; WiFi, Materials and sub-tech days.</p>`:'<div class="empty">No earnings recorded for this month.</div>'}
+  </div>`;
+};
+
+P.perf=()=>{
+  const [f,t]=rangeOf(UI.perfRange),e=earnIn(f,t),all=UI.perfRange==='all';
+  const len=diffDays(f,t)+1,pe=all?null:earnIn(addDays(f,-len),addDays(f,-1));
+  const c=costsIn(f,t),sc={};S.sites.forEach(s=>sc[s.id]=0);c.forEach(x=>{if(sc[x.site]!==undefined)sc[x.site]+=x.amount;});
+  const general=sum(c.filter(x=>!sc.hasOwnProperty(x.site)),x=>x.amount);
+  const list=S.sites.map(s=>({s,b:e.bySite[s.id],p:pe?pe.bySite[s.id].total:null})).sort((a,b)=>b.b.total-a.b.total);
+  const grp=g=>sum(S.sites.filter(s=>s.group===g),s=>e.bySite[s.id].total);
+  // heat table: last 14 days
+  const hd=[];for(let i=13;i>=0;i--)hd.push(addDays(today(),-i));
+  const maxBy={};S.sites.forEach(s=>maxBy[s.id]=Math.max(1,...hd.map(d=>num((S.earnings[d]||{})[s.id]))));
+  return `
+  <div class="card"><div class="h2row"><h2>Site performance</h2><select data-chg="perfRange" style="width:auto">${RANGE_OPTS.map(([v,l])=>`<option value="${v}"${v===UI.perfRange?' selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="kpis" style="margin-bottom:8px">
+      <div class="kpi"><div class="l">All sites</div><div class="v">${fmt(e.total)}</div><div class="s">${e.days} days${pe&&pe.total?` · ${trend(pct(e.total,pe.total))} vs previous`:''}</div></div>
+      <div class="kpi"><div class="l">Dala (6 sites)</div><div class="v">${fmt(grp('Dala'))}</div><div class="s">${e.total?Math.round(grp('Dala')/e.total*100):0}% of income</div></div>
+      <div class="kpi"><div class="l">Genzi (3 sites)</div><div class="v">${fmt(grp('Genzi'))}</div><div class="s">${e.total?Math.round(grp('Genzi')/e.total*100):0}% of income</div></div>
+    </div>
+    ${hbars(list.map(x=>({label:x.s.name,v:x.b.total,cls:x.s.group==='Genzi'?'g':''})))}
+  </div>
+  <div class="card"><h2 style="margin-bottom:10px">Ranking and profit per site</h2>
+    <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Site</th><th class="n">Earnings</th><th class="n">Avg/day</th><th class="n">Best day</th><th class="n">Worst day</th><th class="n">Share</th><th class="n">vs previous</th><th class="n">Site costs</th><th class="n">Site profit</th></tr></thead><tbody>
+    ${list.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.s.name)} ${groupBadge(x.s)}</td><td class="n"><b>${fmt(x.b.total)}</b></td><td class="n">${fmt(x.b.days?x.b.total/x.b.days:0)}</td>
+      <td class="n">${x.b.best?fmt(x.b.best.v)+' <span class="muted small">'+fmtDs(x.b.best.d)+'</span>':'—'}</td><td class="n">${x.b.worst?fmt(x.b.worst.v)+' <span class="muted small">'+fmtDs(x.b.worst.d)+'</span>':'—'}</td>
+      <td class="n">${e.total?(x.b.total/e.total*100).toFixed(1)+'%':'—'}</td><td class="n">${x.p?trend(pct(x.b.total,x.p)):'—'}</td><td class="n">${fmt(sc[x.s.id])}</td><td class="n">${pnl(x.b.total-sc[x.s.id])}</td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="small muted">Site costs are running costs tagged to that site (tokens, WiFi, repairs, sub-tech days there). Shared costs tagged "General" (${fmt(general)}) are not split per site.</p>
+  </div>
+  <div class="card"><h2 style="margin-bottom:6px">Last 14 days by site</h2><p class="small muted" style="margin-top:0">Darker means a better day for that site. Pale or empty boxes can mean downtime or a missing entry.</p>
+    <div class="tbl-wrap heat"><table><thead><tr><th>Site</th>${hd.map(d=>`<th class="n">${fmtDs(d)}</th>`).join('')}</tr></thead><tbody>
+    ${S.sites.map(s=>`<tr><td>${esc(s.name)}</td>${hd.map(d=>{const r=S.earnings[d];const v=r?r[s.id]:undefined;if(v===undefined)return '<td class="h muted">—</td>';const p=Math.round(num(v)/maxBy[s.id]*55);return `<td class="h" style="background:color-mix(in srgb,${s.group==='Genzi'?'var(--genzi)':'var(--brand)'} ${p}%,transparent)">${num(v).toLocaleString('en-US')}</td>`;}).join('')}</tr>`).join('')}
+    </tbody></table></div></div>`;
+};
+const trend=p=>p===null||!isFinite(p)?'—':`<span class="${p<0?'neg':'pos'}">${p<0?'▼':'▲'} ${Math.abs(p).toFixed(0)}%</span>`;
+
+P.bills=()=>{
+  const [mf,mt]=rangeOf('month'),me=earnIn(mf,mt),msc={};costsIn(mf,mt).forEach(x=>msc[x.site]=(msc[x.site]||0)+x.amount);
+  const hist=S.expenses.filter(x=>x.category==='Electricity tokens'||x.category==='Wifi subscription').sort((a,b)=>b.date.localeCompare(a.date)).slice(0,40);
+  return `
+  <div class="note">Keep each site's token meter number and WiFi account here. Use <b>Pay token</b> or <b>Pay WiFi</b> when you pay: it updates the last paid date and adds the cost to Running Costs automatically.</div>
+  <div class="scards">${S.sites.map(s=>{const k=tokenStatus(s),w=wifiStatus(s);return `
+    <div class="scard"><div class="h2row" style="margin:0"><h3 style="margin:0">${esc(s.name)}</h3>${groupBadge(s)}</div>
+      <div class="sec">Electricity token</div>
+      <dl><dt>Meter no.</dt><dd>${esc(s.tokenMeter||'—')}</dd><dt>Last paid</dt><dd>${fmtD(s.tokenLastPaid)}</dd><dt>Last amount</dt><dd>${s.tokenLastAmount?fmt(s.tokenLastAmount):'—'}</dd><dt>Status</dt><dd><span class="badge ${k.cls}">${k.txt}</span></dd></dl>
+      <div class="sec">WiFi subscription</div>
+      <dl><dt>Provider</dt><dd>${esc(s.wifiProvider||'—')}</dd><dt>Account no.</dt><dd>${esc(s.wifiAccount||'—')}</dd><dt>Last paid</dt><dd>${fmtD(s.wifiLastPaid)}</dd><dt>Next due</dt><dd>${fmtD(wifiDue(s))}</dd><dt>Status</dt><dd><span class="badge ${w.cls}">${w.txt}</span></dd></dl>
+      <div class="sec">This month at this site</div>
+      <dl><dt>Earnings</dt><dd>${fmt(me.bySite[s.id].total)}</dd><dt>Costs</dt><dd>${fmt(msc[s.id]||0)}</dd><dt>${me.bySite[s.id].total-(msc[s.id]||0)<0?'Loss':'Profit'}</dt><dd><b>${pnl(me.bySite[s.id].total-(msc[s.id]||0))}</b></dd><dt>Monthly bills</dt><dd>${fmt(num(s.wifiAmount)*30/(num(s.wifiCycleDays)||30)+num(s.tokenLastAmount))}</dd></dl>
+      ${s.notes?`<p class="small muted">${esc(s.notes)}</p>`:''}
+      <div class="row"><button class="btn sm primary" data-act="payToken" data-id="${s.id}">Pay token</button><button class="btn sm primary" data-act="payWifi" data-id="${s.id}">Pay WiFi</button><button class="btn sm" data-act="editSite" data-id="${s.id}">Edit details</button></div>
+    </div>`;}).join('')}</div>
+  <div class="card" style="margin-top:16px"><h2 style="margin-bottom:10px">Token and WiFi payment history</h2>
+    ${hist.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Site</th><th>Type</th><th>Paid by</th><th>Note</th><th class="n">Amount</th></tr></thead><tbody>${hist.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(siteName(x.site))}</td><td>${esc(x.category)}</td><td>${payerTag(x.paidBy)}</td><td class="wrap">${esc(x.desc)}</td><td class="n">${fmt(x.amount)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No payments recorded yet.</div>'}
+  </div>`;
+};
+
+P.mat=()=>{
+  const storeVal=sum(S.store,m=>num(m.qty)*num(m.unitCost)),buyVal=sum(S.toBuy,b=>b.estCost);
+  const pr={High:0,Medium:1,Low:2};
+  const buy=[...S.toBuy].sort((a,b)=>(pr[a.priority]??3)-(pr[b.priority]??3));
+  const log=[...S.matLog].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,30);
+  return `
+  <div class="kpis"><div class="kpi"><div class="l">Items in store</div><div class="v">${S.store.length}</div><div class="s">value ${fmt(storeVal)}</div></div>
+    <div class="kpi"><div class="l">Items to buy</div><div class="v">${S.toBuy.length}</div><div class="s">est. ${fmt(buyVal)}</div></div>
+    <div class="kpi"><div class="l">Low stock</div><div class="v">${S.store.filter(m=>num(m.minQty)>0&&num(m.qty)<=num(m.minQty)).length}</div><div class="s">at or below minimum</div></div></div>
+  <div class="card"><div class="h2row"><h2>Material in store</h2><button class="btn primary" data-act="addStore">+ Add item</button></div>
+    ${S.store.length?`<div class="tbl-wrap"><table><thead><tr><th>Item</th><th class="n">Qty</th><th>Unit</th><th class="n">Unit cost</th><th class="n">Value</th><th class="n">Min</th><th>Notes</th><th></th></tr></thead><tbody>
+    ${S.store.map(m=>{const low=num(m.minQty)>0&&num(m.qty)<=num(m.minQty);return `<tr><td><b>${esc(m.name)}</b> ${low?'<span class="badge b-warn">Low</span>':''}</td><td class="n">${num(m.qty)}</td><td>${esc(m.unit)}</td><td class="n">${fmt(num(m.unitCost))}</td><td class="n">${fmt(num(m.qty)*num(m.unitCost))}</td><td class="n">${num(m.minQty)||'—'}</td><td class="wrap small">${esc(m.notes)}</td>
+      <td><div class="row" style="flex-wrap:nowrap"><button class="btn sm good" data-act="stockIn" data-id="${m.id}">+ In</button><button class="btn sm" data-act="stockOut" data-id="${m.id}">− Use</button><button class="btn sm" data-act="editStore" data-id="${m.id}">Edit</button><button class="btn sm danger" data-act="delStore" data-id="${m.id}">✕</button></div></td></tr>`;}).join('')}
+    </tbody><tfoot><tr><td colspan="4">Total store value</td><td class="n">${fmt(storeVal)}</td><td colspan="3"></td></tr></tfoot></table></div>`:'<div class="empty">No materials in store yet. Add cables, routers, connectors, poles and so on.</div>'}
+  </div>
+  <div class="card"><div class="h2row"><h2>Material to be bought</h2><button class="btn primary" data-act="addBuy">+ Add to list</button></div>
+    ${buy.length?`<div class="tbl-wrap"><table><thead><tr><th>Item</th><th class="n">Qty</th><th class="n">Est. cost</th><th>Priority</th><th>For site</th><th>Notes</th><th></th></tr></thead><tbody>
+    ${buy.map(b=>`<tr><td><b>${esc(b.name)}</b></td><td class="n">${num(b.qty)} ${esc(b.unit)}</td><td class="n">${fmt(num(b.estCost))}</td><td><span class="badge ${b.priority==='High'?'b-bad':b.priority==='Medium'?'b-warn':'b-info'}">${esc(b.priority)}</span></td><td>${esc(siteName(b.site))}</td><td class="wrap small">${esc(b.notes)}</td>
+      <td><div class="row" style="flex-wrap:nowrap"><button class="btn sm good" data-act="bought" data-id="${b.id}">✓ Bought</button><button class="btn sm" data-act="editBuy" data-id="${b.id}">Edit</button><button class="btn sm danger" data-act="delBuy" data-id="${b.id}">✕</button></div></td></tr>`).join('')}
+    </tbody><tfoot><tr><td colspan="2">Estimated total</td><td class="n">${fmt(buyVal)}</td><td colspan="4"></td></tr></tfoot></table></div>`:'<div class="empty">Shopping list is empty.</div>'}
+    <p class="small muted">Marking an item <b>Bought</b> moves it into the store and records the cost under Running Costs (Materials).</p>
+  </div>
+  <div class="card"><h2 style="margin-bottom:10px">Material movement (latest 30)</h2>
+    ${log.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Item</th><th>In / Out</th><th class="n">Qty</th><th>Site</th><th>Note</th></tr></thead><tbody>${log.map(l=>`<tr><td>${fmtD(l.date)}</td><td>${esc(l.name)}</td><td><span class="badge ${l.type==='In'?'b-ok':'b-warn'}">${l.type}</span></td><td class="n">${num(l.qty)}</td><td>${esc(l.site?siteName(l.site):'—')}</td><td class="wrap small">${esc(l.note)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No movement yet.</div>'}
+  </div>`;
+};
+
+P.costs=()=>{
+  const m=UI.costMonth||today().slice(0,7),[f,t]=monthRange(m);
+  const all=costsIn(f,t);
+  let list=S.expenses.filter(e=>e.date>=f&&e.date<=t);
+  if(UI.costCat)list=list.filter(e=>e.category===UI.costCat);
+  if(UI.costSite)list=list.filter(e=>e.site===UI.costSite);
+  if(UI.costPayer)list=list.filter(e=>(e.paidBy||'')===UI.costPayer);
+  list.sort((a,b)=>b.date.localeCompare(a.date));
+  const byCat={};all.forEach(x=>byCat[x.category]=(byCat[x.category]||0)+x.amount);
+  const cats=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  const total=sum(all,x=>x.amount);
+  return `
+  <div class="card"><div class="h2row"><h2>Running costs</h2><div class="row">${monthSelect('costMonth',m)}<button class="btn primary" data-act="addExp">+ Add cost</button></div></div>
+    <div class="row noprint" style="margin-bottom:12px"><span class="small muted">Quick add:</span>
+      <button class="btn sm" data-act="quickExp" data-id="Motorbike fuel">⛽ Motorbike fuel</button>
+      <button class="btn sm" data-act="quickExp" data-id="Tech salary">👷 Tech salary</button>
+      <button class="btn sm" data-act="quickExp" data-id="Repairs & maintenance">🔧 Repairs</button>
+      <button class="btn sm" data-act="quickExp" data-id="Transport">🚌 Transport</button>
+      <button class="btn sm" data-go="staff">📅 Sub-tech day (500)</button></div>
+    <div class="kpis" style="margin-bottom:0"><div class="kpi"><div class="l">Total costs, ${monthLabel(m)}</div><div class="v">${fmt(total)}</div><div class="s">incl. ${fmt(byCat[SUBTECH_CAT]||0)} sub-tech wages</div></div>
+      <div class="kpi"><div class="l">Motorbike fuel</div><div class="v">${fmt(byCat['Motorbike fuel']||0)}</div></div>
+      <div class="kpi"><div class="l">Salaries &amp; wages</div><div class="v">${fmt((byCat['Tech salary']||0)+(byCat[SUBTECH_CAT]||0))}</div></div></div>
+  </div>
+  <div class="two">
+    <div class="card"><h2 style="margin-bottom:10px">By category</h2>${hbars(cats.map(([k,v])=>({label:k,v})))}</div>
+    <div class="card"><h2 style="margin-bottom:10px">By site</h2>${hbars([...S.sites.map(s=>({label:s.name,v:sum(all.filter(x=>x.site===s.id),x=>x.amount),cls:s.group==='Genzi'?'g':''})),{label:'General',v:sum(all.filter(x=>x.site==='general'),x=>x.amount)}].filter(x=>x.v).sort((a,b)=>b.v-a.v))}</div>
+  </div>
+  <div class="card"><div class="h2row"><h2>Cost entries</h2><div class="row">
+      <select data-chg="costCat"><option value="">All categories</option>${EXP_CATS.map(c=>`<option${c===UI.costCat?' selected':''}>${c}</option>`).join('')}</select>
+      <select data-chg="costSite"><option value="">All sites</option>${siteOpts().map(([v,l])=>`<option value="${v}"${v===UI.costSite?' selected':''}>${esc(l)}</option>`).join('')}</select>
+      <select data-chg="costPayer"><option value="">Paid by anyone</option>${payerOpts().map(v=>`<option${v===UI.costPayer?' selected':''}>${esc(v)}</option>`).join('')}</select></div></div>
+    ${list.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Category</th><th>Site</th><th>Paid by</th><th>Description</th><th class="n">Amount</th><th></th></tr></thead><tbody>
+    ${list.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.category)}</td><td>${esc(siteName(x.site))}</td><td>${payerTag(x.paidBy)}</td><td class="wrap">${esc(x.desc)}</td><td class="n">${fmt(num(x.amount))}</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editExp" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delExp" data-id="${x.id}">✕</button></div></td></tr>`).join('')}
+    </tbody><tfoot><tr><td colspan="5">Total shown</td><td class="n">${fmt(sum(list,x=>x.amount))}</td><td></td></tr></tfoot></table></div>`:'<div class="empty">No cost entries for this filter.</div>'}
+    <p class="small muted">Sub-tech wages are entered as work days on the Staff &amp; Wages page and are counted in the totals above.</p>
+  </div>`;
+};
+
+P.staff=()=>{
+  const m=UI.staffMonth||today().slice(0,7),[f,t]=monthRange(m),st=S.settings;
+  const days=S.subtech.filter(w=>w.date>=f&&w.date<=t).sort((a,b)=>b.date.localeCompare(a.date));
+  const earned=sum(days,w=>w.amount),paid=sum(days.filter(w=>w.paid),w=>w.amount);
+  const allUnpaid=S.subtech.filter(w=>!w.paid);
+  const tech=S.expenses.filter(e=>e.category==='Tech salary').sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12);
+  const techPaidMonth=sum(S.expenses.filter(e=>e.category==='Tech salary'&&e.date>=f&&e.date<=t),e=>e.amount);
+  return `
+  <div class="card"><div class="h2row"><h2>Sub-tech work days</h2><div class="row">${monthSelect('staffMonth',m)}<button class="btn primary" data-act="addWork">+ Log work day</button></div></div>
+    <div class="note">The sub-tech is paid <b>${fmt(num(st.subtechRate))}</b> for each day worked. Log every day he works, then tick it as paid when you pay him. Change the rate in Settings.</div>
+    <div class="kpis"><div class="kpi"><div class="l">Days worked (${monthLabel(m)})</div><div class="v">${days.length}</div></div>
+      <div class="kpi"><div class="l">Earned this month</div><div class="v">${fmt(earned)}</div></div>
+      <div class="kpi"><div class="l">Paid this month</div><div class="v">${fmt(paid)}</div></div>
+      <div class="kpi"><div class="l">Still owed (all time)</div><div class="v ${allUnpaid.length?'neg':''}">${fmt(sum(allUnpaid,w=>w.amount))}</div><div class="s">${allUnpaid.length} days</div></div></div>
+    ${allUnpaid.length?`<div class="row" style="margin-bottom:10px"><button class="btn good" data-act="payAllSub">Mark all ${allUnpaid.length} unpaid days as paid</button></div>`:''}
+    ${days.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Worker</th><th>Site</th><th>Work done</th><th class="n">Amount</th><th>Paid</th><th></th></tr></thead><tbody>
+    ${days.map(w=>`<tr><td>${fmtD(w.date)}</td><td>${esc(w.name)}</td><td>${esc(siteName(w.site))}</td><td class="wrap">${esc(w.task)}</td><td class="n">${fmt(num(w.amount))}</td><td><button class="btn sm ${w.paid?'good':'danger'}" data-act="togglePaid" data-id="${w.id}">${w.paid?'✓ Paid'+(w.paidOn?' '+fmtDs(w.paidOn):'')+(w.paidBy?' · '+esc(w.paidBy):''):'Not paid'}</button></td><td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editWork" data-id="${w.id}">Edit</button><button class="btn sm danger" data-act="delWork" data-id="${w.id}">✕</button></div></td></tr>`).join('')}
+    </tbody></table></div>`:'<div class="empty">No work days logged this month.</div>'}
+  </div>
+  <div class="card"><div class="h2row"><h2>Technician salary</h2><button class="btn primary" data-act="quickExp" data-id="Tech salary">+ Pay salary</button></div>
+    <div class="kpis"><div class="kpi"><div class="l">Monthly salary (from Settings)</div><div class="v">${fmt(num(st.techSalary))}</div></div>
+      <div class="kpi"><div class="l">Paid in ${monthLabel(m)}</div><div class="v">${fmt(techPaidMonth)}</div><div class="s">${num(st.techSalary)?(techPaidMonth>=num(st.techSalary)?'Fully paid':'Balance '+fmt(num(st.techSalary)-techPaidMonth)):'Set salary in Settings'}</div></div></div>
+    ${tech.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Note</th><th class="n">Amount</th></tr></thead><tbody>${tech.map(x=>`<tr><td>${fmtD(x.date)}</td><td class="wrap">${esc(x.desc)}</td><td class="n">${fmt(num(x.amount))}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No salary payments recorded yet.</div>'}
+  </div>`;
+};
+
+P.debts=()=>{
+  const owed=S.debts.filter(d=>d.type==='owedToUs'),we=S.debts.filter(d=>d.type==='weOwe');
+  const filt=l=>UI.debtFilter==='open'?l.filter(d=>debtBal(d)>0):l;
+  const tbl=(l,label)=>{l=filt(l).sort((a,b)=>(a.due||'9').localeCompare(b.due||'9'));return l.length?`<div class="tbl-wrap"><table><thead><tr><th>${label}</th><th>Date</th><th class="n">Amount</th><th class="n">Paid</th><th class="n">Balance</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>
+    ${l.map(d=>{const b=debtBal(d),od=d.due&&d.due<today()&&b>0;return `<tr><td><b>${esc(d.person)}</b>${d.phone?`<div class="small muted">${esc(d.phone)}</div>`:''}${d.desc?`<div class="small muted" style="white-space:normal">${esc(d.desc)}</div>`:''}
+      ${(d.payments||[]).length?`<details class="small"><summary>${d.payments.length} payment${d.payments.length>1?'s':''}</summary>${d.payments.map(p=>`<div>${fmtDs(p.date)}: ${fmt(num(p.amount))}${p.paidBy?' · '+(d.type==='weOwe'?'paid by ':'received by ')+esc(p.paidBy):''}${p.note?' · '+esc(p.note):''}</div>`).join('')}</details>`:''}</td>
+      <td>${fmtD(d.date)}</td><td class="n">${fmt(num(d.amount))}</td><td class="n">${fmt(debtPaid(d))}</td><td class="n"><b>${fmt(b)}</b></td><td>${fmtD(d.due)}</td>
+      <td><span class="badge ${b<=0?'b-ok':od?'b-bad':'b-warn'}">${b<=0?'Cleared':od?'Overdue':'Open'}</span></td>
+      <td><div class="row" style="flex-wrap:nowrap">${b>0?`<button class="btn sm good" data-act="payDebt" data-id="${d.id}">Record payment</button>`:''}<button class="btn sm" data-act="editDebt" data-id="${d.id}">Edit</button><button class="btn sm danger" data-act="delDebt" data-id="${d.id}">✕</button></div></td></tr>`;}).join('')}
+    </tbody></table></div>`:'<div class="empty">Nothing here.</div>';};
+  return `
+  <div class="kpis"><div class="kpi"><div class="l">People owe us</div><div class="v pos">${fmt(sum(owed,debtBal))}</div><div class="s">${owed.filter(d=>debtBal(d)>0).length} open</div></div>
+    <div class="kpi"><div class="l">We owe others</div><div class="v neg">${fmt(sum(we,debtBal))}</div><div class="s">${we.filter(d=>debtBal(d)>0).length} open</div></div>
+    <div class="kpi"><div class="l">Net position</div><div class="v">${pnl(sum(owed,debtBal)-sum(we,debtBal))}</div><div class="s">owed to us minus we owe</div></div></div>
+  <div class="row noprint" style="margin-bottom:12px"><button class="btn primary" data-act="addDebt" data-id="owedToUs">+ Someone owes us</button><button class="btn primary" data-act="addDebt" data-id="weOwe">+ We owe someone</button>
+    <select data-chg="debtFilter" style="width:auto;margin-left:auto"><option value="open"${UI.debtFilter==='open'?' selected':''}>Show open only</option><option value="all"${UI.debtFilter==='all'?' selected':''}>Show all, incl. cleared</option></select></div>
+  <div class="card"><h2 style="margin-bottom:10px">People who owe us</h2>${tbl(owed,'Customer / person')}</div>
+  <div class="card"><h2 style="margin-bottom:10px">Money we owe</h2>${tbl(we,'Supplier / person')}</div>`;
+};
+
+P.pl=()=>{
+  const m=UI.plMonth||today().slice(0,7),[f,t]=monthRange(m),e=earnIn(f,t),c=costsIn(f,t),exp=sum(c,x=>x.amount),profit=e.total-exp;
+  const byCat={};c.forEach(x=>byCat[x.category]=(byCat[x.category]||0)+x.amount);
+  const invP=sum(c.filter(isInv),x=>x.amount);
+  const sc={};S.sites.forEach(s=>sc[s.id]=sum(c.filter(x=>x.site===s.id),x=>x.amount));
+  const general=exp-sum(Object.values(sc));
+  const months=monthsWithData().slice(0,12),pj=projection(m),cbd=costByDate(f,t);
+  const allDays=[...new Set([...Object.keys(e.byDate),...Object.keys(cbd)])].sort();
+  let run=0;const dailyRows=allDays.map(d=>{const ee=e.byDate[d]||0,cc=cbd[d]||0;run+=ee-cc;return {d,ee,cc,p:ee-cc,run};}).reverse();
+  const trendRows=months.map(mm=>{const [a,b]=monthRange(mm),ee=earnIn(a,b).total,cc=sum(costsIn(a,b),x=>x.amount);return {m:mm,e:ee,c:cc,p:ee-cc};});
+  return `
+  <div class="card"><div class="h2row"><h2>Profit &amp; loss, ${monthLabel(m)}</h2><div class="row">${monthSelect('plMonth',m)}</div></div>
+    <div class="kpis" style="margin-bottom:6px"><div class="kpi"><div class="l">Earnings</div><div class="v">${fmt(e.total)}</div><div class="s">${e.days} days recorded${e.lump?' + monthly total':''}</div></div>
+      <div class="kpi"><div class="l">Running costs</div><div class="v">${fmt(exp-invP)}</div><div class="s">fuel, wages, tokens, WiFi, materials…</div></div>
+      <div class="kpi"><div class="l">Profit before equipment</div><div class="v ${profit+invP<0?'neg':'pos'}">${fmt(profit+invP)}</div></div>
+      <div class="kpi"><div class="l">Equipment &amp; investment</div><div class="v">${fmt(invP)}</div><div class="s">bought this month</div></div>
+      <div class="kpi"><div class="l">${profit<0?'Loss':'Profit'} after everything</div><div class="v ${profit<0?'neg':'pos'}">${fmt(profit)}</div><div class="s">${e.total?'Margin '+(profit/e.total*100).toFixed(0)+'%':''}</div></div></div>
+    <p class="small muted" style="margin:0">Profit after everything = earnings minus all money out: fuel, tech salary, sub-tech days, electricity tokens, WiFi subscriptions, materials, repairs, transport, airtime, rent, other costs, and equipment or investment bought. Partner withdrawals are not costs. Debt payments are not deducted again, because what was bought on credit is entered as a cost or equipment.</p>
+  </div>
+  ${pj.final?'':`<div class="card"><h2 style="margin-bottom:10px">Expected end of ${monthLabel(m)}</h2>
+    <div class="kpis" style="margin-bottom:8px"><div class="kpi"><div class="l">Expected earnings</div><div class="v">${fmt(pj.projE)}</div><div class="s">at ${fmt(e.days?e.total/e.days:0)}/day for ${pj.daysIn} days</div></div>
+      <div class="kpi"><div class="l">Expected costs</div><div class="v">${fmt(pj.projC)}</div><div class="s">${fmt(exp)} so far</div></div>
+      <div class="kpi"><div class="l">Expected ${pj.projP<0?'loss':'profit'}</div><div class="v ${pj.projP<0?'neg':'pos'}">${fmt(pj.projP)}</div></div>
+      <div class="kpi"><div class="l">Break-even per day</div><div class="v">${fmt(pj.breakEven)}</div><div class="s">all sites together</div></div></div>
+    ${pj.extra.length?`<p class="small muted" style="margin:0">Expected costs = costs so far ${pj.extra.map(x=>'+ '+esc(x[0].toLowerCase())+' ('+fmt(x[1])+')').join(' ')}.</p>`:'<p class="small muted" style="margin:0">Expected costs = costs so far. Set the tech salary in Settings and WiFi amounts in Tokens &amp; WiFi to include bills still to come.</p>'}
+  </div>`}
+  <div class="two">
+    <div class="card"><h2 style="margin-bottom:10px">Per site</h2><div class="tbl-wrap"><table><thead><tr><th>Site</th><th class="n">Earnings</th><th class="n">Costs</th><th class="n">Profit</th></tr></thead><tbody>
+      ${S.sites.map(s=>`<tr><td>${esc(s.name)}</td><td class="n">${fmt(e.bySite[s.id].total)}</td><td class="n">${fmt(sc[s.id])}</td><td class="n">${pnl(e.bySite[s.id].total-sc[s.id])}</td></tr>`).join('')}
+      <tr><td>General / shared</td><td class="n">—</td><td class="n">${fmt(general)}</td><td class="n">${pnl(-general)}</td></tr></tbody>
+      <tfoot><tr><td>Total</td><td class="n">${fmt(e.total)}</td><td class="n">${fmt(exp)}</td><td class="n">${pnl(profit)}</td></tr></tfoot></table></div></div>
+    <div class="card"><h2 style="margin-bottom:10px">Costs by category</h2>${Object.keys(byCat).length?`<div class="tbl-wrap"><table><tbody>${Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="n">${fmt(v)}</td><td class="n muted">${exp?(v/exp*100).toFixed(0)+'%':''}</td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td class="n">${fmt(exp)}</td><td></td></tr></tfoot></table></div>`:'<div class="empty">No costs recorded for this month.</div>'}</div>
+  </div>
+  <div class="card"><h2 style="margin-bottom:10px">Day by day, ${monthLabel(m)}</h2>
+    ${dailyRows.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th class="n">Earnings</th><th class="n">Costs</th><th class="n">Profit / loss</th><th class="n">Month so far</th></tr></thead><tbody>
+    ${dailyRows.map(r=>`<tr><td>${fmtD(r.d)}</td><td class="n">${fmt(r.ee)}</td><td class="n">${fmt(r.cc)}</td><td class="n">${pnl(r.p)}</td><td class="n"><b>${pnl(r.run)}</b></td></tr>`).join('')}
+    </tbody></table></div>`:'<div class="empty">Nothing recorded this month yet.</div>'}
+  </div>
+  <div class="card"><h2 style="margin-bottom:10px">Month by month</h2>
+    <div class="tbl-wrap"><table><thead><tr><th>Month</th><th class="n">Earnings</th><th class="n">Costs</th><th class="n">Profit / loss</th><th>Result</th></tr></thead><tbody>
+    ${trendRows.map(r=>`<tr><td>${monthLabel(r.m)}</td><td class="n">${fmt(r.e)}</td><td class="n">${fmt(r.c)}</td><td class="n">${pnl(r.p)}</td><td><span class="badge ${r.p<0?'b-bad':'b-ok'}">${r.p<0?'Loss':'Profit'}</span></td></tr>`).join('')}
+    </tbody></table></div>
+    ${hbars(trendRows.slice().reverse().map(r=>({label:parse(r.m+'-01').toLocaleDateString('en-GB',{month:'short',year:'numeric'}).replace('Sept','Sep'),v:r.p})))}
+  </div>`;
+};
+
+P.targets=()=>{
+  const m=UI.tgtMonth||today().slice(0,7),[f,t]=monthRange(m),e=earnIn(f,t),tdy=today();
+  const daysIn=diffDays(f,t)+1,cur=tdy>=f&&tdy<=t,left=cur?diffDays(tdy,t):0;
+  const rows=S.sites.map(s=>{const tg=num(S.targets[s.id]),b=e.bySite[s.id],exp=cur&&b.days?b.total/b.days*daysIn:b.total;
+    return {s,tg,got:b.total,exp,pct:tg?b.total/tg*100:0,need:tg&&left?Math.max(0,tg-b.total)/left:0};});
+  const T=sum(rows,r=>r.tg),G=sum(rows,r=>r.got),X=sum(rows,r=>r.exp);
+  const status=r=>!r.tg?'<span class="badge b-info">No target</span>':r.got>=r.tg?'<span class="badge b-ok">Reached</span>':!cur?'<span class="badge b-bad">Missed</span>':r.exp>=r.tg?'<span class="badge b-ok">On track</span>':'<span class="badge b-warn">Behind</span>';
+  return `
+  <div class="card"><div class="h2row"><h2>Monthly targets</h2><div class="row">${monthSelect('tgtMonth',m)}<button class="btn primary" data-act="editTargets">Set targets</button></div></div>
+    <div class="note">Set how much each site should earn in a month. The page shows progress, whether each site is on track, and how much it must earn per day for the rest of the month to reach its target.</div>
+    <div class="kpis"><div class="kpi"><div class="l">Target, all sites</div><div class="v">${fmt(T)}</div></div>
+      <div class="kpi"><div class="l">Earned so far</div><div class="v">${fmt(G)}</div><div class="s">${T?Math.round(G/T*100)+'% of target':''}</div></div>
+      <div class="kpi"><div class="l">Expected by month end</div><div class="v ${T&&X<T?'neg':''}">${fmt(X)}</div><div class="s">${T?(X>=T?'Above target':'Short by '+fmt(T-X)):''}</div></div></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Site</th><th class="n">Target</th><th class="n">Earned</th><th style="min-width:120px">Progress</th><th class="n">Expected</th><th class="n">Needed / day</th><th>Status</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td>${esc(r.s.name)}</td><td class="n">${r.tg?fmt(r.tg):'—'}</td><td class="n">${fmt(r.got)}</td>
+      <td><div class="hbt"><div class="hbf ${r.s.group==='Genzi'?'g':''}" style="width:${Math.min(100,r.pct)}%"></div></div><span class="small muted">${r.tg?Math.round(r.pct)+'%':''}</span></td>
+      <td class="n">${fmt(r.exp)}</td><td class="n">${r.tg&&cur?fmt(r.need):'—'}</td><td>${status(r)}</td></tr>`).join('')}
+    </tbody></table></div>
+    ${!T?'<p class="small muted">No targets yet. Tap <b>Set targets</b>. A good start is each site\'s average for the last 30 days.</p>':''}
+  </div>`;
+};
+
+const ASSET_STATUS=['In use','In store','Faulty','Sold / lost'];
+P.assets=()=>{
+  const t=today(),all=earnIn('0000-01-01','9999-12-31'),ac=costsIn('0000-01-01','9999-12-31'),l30=earnIn(...rangeOf('30')),c30=costsIn(...rangeOf('30'));
+  const inv={};ac.filter(isInv).forEach(x=>{inv[x.site]=(inv[x.site]||0)+x.amount;});S.assets.filter(x=>x.site&&num(x.cost)>0&&!x.date).forEach(x=>inv[x.site]=(inv[x.site]||0)+num(x.cost));
+  const rows=S.sites.map(s=>{const prof=all.bySite[s.id].total-sum(ac.filter(x=>x.site===s.id&&!isInv(x)),x=>x.amount);
+    const p30=l30.bySite[s.id].total-sum(c30.filter(x=>x.site===s.id&&!isInv(x)),x=>x.amount),i=inv[s.id]||0,left=Math.max(0,i-prof);
+    return {s,i,prof,pct:i?Math.min(100,prof/i*100):0,months:i&&left&&p30>0?left/p30:null,p30};});
+  let list=[...S.assets].sort((a,b)=>(a.site||'').localeCompare(b.site||'')||a.name.localeCompare(b.name));
+  if(UI.assetSite)list=list.filter(x=>x.site===UI.assetSite);
+  const totalInv=sum(S.assets,x=>x.cost);
+  return `
+  <div class="kpis"><div class="kpi"><div class="l">Total invested in equipment</div><div class="v">${fmt(totalInv)}</div><div class="s">${S.assets.length} items</div></div>
+    <div class="kpi"><div class="l">In use</div><div class="v">${S.assets.filter(x=>x.status==='In use').length}</div></div>
+    <div class="kpi"><div class="l">Faulty</div><div class="v ${S.assets.some(x=>x.status==='Faulty')?'neg':''}">${S.assets.filter(x=>x.status==='Faulty').length}</div></div></div>
+  <div class="card"><h2 style="margin-bottom:6px">Payback per site</h2>
+    <p class="small muted" style="margin-top:0">How much of the money spent on each site's equipment has been earned back (all-time earnings minus all-time costs at that site). Time left is based on the last 30 days' profit.</p>
+    <div class="tbl-wrap"><table><thead><tr><th>Site</th><th class="n">Invested</th><th class="n">Profit so far</th><th style="min-width:120px">Paid back</th><th class="n">Time left</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td>${esc(r.s.name)}</td><td class="n">${r.i?fmt(r.i):'—'}</td><td class="n">${pnl(r.prof)}</td>
+      <td>${r.i?`<div class="hbt"><div class="hbf ${r.s.group==='Genzi'?'g':''}" style="width:${Math.max(0,r.pct)}%"></div></div><span class="small muted">${Math.round(Math.max(0,r.pct))}%</span>`:'<span class="small muted">Add equipment</span>'}</td>
+      <td class="n">${!r.i?'—':r.pct>=100?'<span class="badge b-ok">Paid back</span>':r.months===null?'<span class="badge b-warn">Not profitable yet</span>':r.months<1?'under 1 month':r.months.toFixed(1)+' months'}</td></tr>`).join('')}
+    </tbody></table></div></div>
+  <div class="card"><div class="h2row"><h2>Equipment register</h2><div class="row"><select data-chg="assetSite"><option value="">All sites</option>${siteOpts().map(([v,l])=>`<option value="${v}"${v===UI.assetSite?' selected':''}>${esc(l)}</option>`).join('')}</select><button class="btn primary" data-act="addAsset">+ Add equipment</button></div></div>
+    ${list.length?`<div class="tbl-wrap"><table><thead><tr><th>Item</th><th>Site</th><th>Serial / MAC</th><th>Bought</th><th class="n">Cost</th><th>Paid by</th><th>Status</th><th></th></tr></thead><tbody>
+    ${list.map(x=>`<tr><td><b>${esc(x.name)}</b>${x.notes?`<div class="small muted" style="white-space:normal">${esc(x.notes)}</div>`:''}</td><td>${esc(siteName(x.site))}</td><td>${esc(x.serial||'—')}</td><td>${fmtD(x.date)}</td><td class="n">${fmt(num(x.cost))}</td><td>${payerTag(x.paidBy)}</td>
+      <td><span class="badge ${x.status==='In use'?'b-ok':x.status==='Faulty'?'b-bad':x.status==='In store'?'b-info':'b-warn'}">${esc(x.status)}</span></td>
+      <td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editAsset" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delAsset" data-id="${x.id}">✕</button></div></td></tr>`).join('')}
+    </tbody><tfoot><tr><td colspan="4">Total shown</td><td class="n">${fmt(sum(list,x=>x.cost))}</td><td colspan="3"></td></tr></tfoot></table></div>`:'<div class="empty">No equipment recorded. Add routers, access points, switches, solar panels, batteries, poles and so on for each site.</div>'}
+    <p class="small muted">Equipment cost is deducted from profit in the month it was bought (shown as "Equipment &amp; investment" in Running Costs and Profit &amp; Loss). Payback compares it with the site's profit before equipment.</p>
+  </div>`;
+};
+
+function partnerLedger(from,to){
+  const L=[],inR=d=>d>=from&&d<=to;
+  S.expenses.filter(x=>x.paidBy&&inR(x.date)).forEach(x=>L.push({date:x.date,who:x.paidBy,kind:'Paid cost',dir:1,amount:num(x.amount),note:x.category+' · '+siteName(x.site)+(x.desc?' · '+x.desc:'')}));
+  S.subtech.filter(w=>w.paid&&w.paidBy&&inR(w.paidOn||w.date)).forEach(w=>L.push({date:w.paidOn||w.date,who:w.paidBy,kind:'Paid sub-tech',dir:1,amount:num(w.amount),note:(w.name||'Sub-tech')+' for '+fmtDs(w.date)}));
+  S.assets.filter(x=>x.paidBy&&inR(x.date)).forEach(x=>L.push({date:x.date,who:x.paidBy,kind:'Bought equipment',dir:1,amount:num(x.cost),note:x.name+' · '+siteName(x.site)}));
+  S.debts.forEach(d=>(d.payments||[]).filter(p=>p.paidBy&&inR(p.date)).forEach(p=>L.push({date:p.date,who:p.paidBy,kind:d.type==='weOwe'?'Paid business debt':'Collected debt',dir:d.type==='weOwe'?1:-1,amount:num(p.amount),note:d.person+(p.note?' · '+p.note:'')})));
+  S.partnerTx.filter(x=>inR(x.date)).forEach(x=>L.push({date:x.date,who:x.person,kind:x.type==='in'?'Put money in':'Took money out',dir:x.type==='in'?1:-1,amount:num(x.amount),note:x.note||'',id:x.id}));
+  return L.sort((a,b)=>b.date.localeCompare(a.date));
+}
+P.partners=()=>{
+  const [f,t]=rangeOf(UI.partRange),L=partnerLedger(f,t),ps=S.settings.partners;
+  const e=earnIn(f,t),profit=e.total-sum(costsIn(f,t),x=>x.amount);
+  const shares=ps.map(p=>num(S.settings.partnerShares[p])),shareTot=sum(shares)||ps.length;
+  const rows=ps.map((p,i)=>{const mine=L.filter(x=>x.who===p);const paid=sum(mine.filter(x=>x.dir>0),x=>x.amount),took=sum(mine.filter(x=>x.dir<0),x=>x.amount);
+    const share=(shares[i]||(sum(shares)?0:1))/shareTot,ps_=profit*share;return {p,paid,took,net:paid-took,share,pshare:ps_,costs:sum(mine.filter(x=>x.kind==='Paid cost'||x.kind==='Paid sub-tech'),x=>x.amount),equip:sum(mine.filter(x=>x.kind==='Bought equipment'),x=>x.amount),debts:sum(mine.filter(x=>x.kind==='Paid business debt'),x=>x.amount)};});
+  const biz=L.filter(x=>x.who===BIZ);
+  return `
+  <div class="card"><div class="h2row"><h2>Partners</h2><div class="row"><select data-chg="partRange">${RANGE_OPTS.map(([v,l])=>`<option value="${v}"${v===UI.partRange?' selected':''}>${l}</option>`).join('')}</select><button class="btn" data-act="editShares">Profit shares</button><button class="btn primary" data-act="addPartnerTx">+ Money in / out</button></div></div>
+    <div class="note">Every cost, token, WiFi payment, material, sub-tech payment, equipment and debt payment asks <b>who paid</b>. This page adds it up per person. "Money in / out" is for cash a partner puts into the business or takes out of the earnings.</div>
+    <div class="kpis">${rows.map(r=>`<div class="kpi"><div class="l">${esc(r.p)}</div><div class="v">${fmt(r.paid)}</div><div class="s">paid for the business · took out ${fmt(r.took)}</div><div class="s">${r.net>=0?'Business owes '+esc(r.p)+' <b>'+fmt(r.net)+'</b>':esc(r.p)+' owes business <b>'+fmt(-r.net)+'</b>'}</div></div>`).join('')}
+      <div class="kpi"><div class="l">Paid from business money</div><div class="v">${fmt(sum(biz.filter(x=>x.dir>0),x=>x.amount))}</div><div class="s">${biz.length} payments</div></div></div>
+  </div>
+  <div class="card"><h2 style="margin-bottom:10px">Summary per partner</h2>
+    <div class="tbl-wrap"><table><thead><tr><th>Partner</th><th class="n">Costs paid</th><th class="n">Equipment</th><th class="n">Debts paid</th><th class="n">Total paid in</th><th class="n">Taken out</th><th class="n">Balance</th><th class="n">Profit share</th><th class="n">Share of profit</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td><b>${esc(r.p)}</b></td><td class="n">${fmt(r.costs)}</td><td class="n">${fmt(r.equip)}</td><td class="n">${fmt(r.debts)}</td><td class="n">${fmt(r.paid)}</td><td class="n">${fmt(r.took)}</td><td class="n">${pnl(r.net)}</td><td class="n">${(r.share*100).toFixed(0)}%</td><td class="n">${pnl(r.pshare)}</td></tr>`).join('')}
+    </tbody><tfoot><tr><td>Total</td><td class="n">${fmt(sum(rows,r=>r.costs))}</td><td class="n">${fmt(sum(rows,r=>r.equip))}</td><td class="n">${fmt(sum(rows,r=>r.debts))}</td><td class="n">${fmt(sum(rows,r=>r.paid))}</td><td class="n">${fmt(sum(rows,r=>r.took))}</td><td class="n">${pnl(sum(rows,r=>r.net))}</td><td></td><td class="n">${pnl(profit)}</td></tr></tfoot></table></div>
+    <p class="small muted">Balance = what the partner paid for the business minus what they took out (green means the business owes them). Share of profit = this period's profit split by the profit shares.</p>
+  </div>
+  <div class="card"><h2 style="margin-bottom:10px">All partner payments</h2>
+    ${L.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Who</th><th>What</th><th>Details</th><th class="n">Amount</th><th></th></tr></thead><tbody>
+    ${L.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${payerTag(x.who)}</td><td>${esc(x.kind)}</td><td class="wrap small">${esc(x.note)}</td><td class="n ${x.dir<0?'neg':''}">${x.dir<0?'−':''}${fmt(x.amount)}</td><td>${x.id?`<button class="btn sm danger" data-act="delPartnerTx" data-id="${x.id}">✕</button>`:''}</td></tr>`).join('')}
+    </tbody></table></div>`:'<div class="empty">No payments with a "Paid by" name in this period yet.</div>'}
+  </div>`;
+};
+
+const CHECK_DONE=['Yes','Partly','No'];
+function empStats(emp,from,to){
+  const inR=d=>d>=from&&d<=to,n=emp.name;
+  const ch=S.checks.filter(c=>c.emp===emp.id&&inR(c.date));
+  const work=S.subtech.filter(w=>(w.name||'')===n&&inR(w.date));
+  const iss=S.issues.filter(i=>i.assignedTo===n&&inR(i.date)),fixed=iss.filter(i=>i.status==='Fixed');
+  const fixDays=fixed.filter(i=>i.fixedOn).map(i=>Math.max(0,diffDays(i.date,i.fixedOn)));
+  const days=new Set([...ch.map(c=>c.date),...work.map(w=>w.date)]).size;
+  const rated=ch.filter(c=>num(c.rating)>0),avgRating=rated.length?sum(rated,c=>c.rating)/rated.length:null;
+  const doneScore=ch.length?sum(ch,c=>c.done==='Yes'?1:c.done==='Partly'?0.5:0)/ch.length:null;
+  const onTime=ch.filter(c=>c.onTime!==undefined&&c.onTime!=='');const onTimePct=onTime.length?onTime.filter(c=>c.onTime==='Yes').length/onTime.length:null;
+  const fixRate=iss.length?fixed.length/iss.length:null,avgFix=fixDays.length?sum(fixDays)/fixDays.length:null;
+  const parts=[[avgRating!==null?avgRating/5:null,0.4],[doneScore,0.3],[onTimePct,0.15],[fixRate,0.15]].filter(x=>x[0]!==null);
+  const score=parts.length?Math.round(sum(parts,x=>x[0]*x[1])/sum(parts,x=>x[1])*100):null;
+  return {ch,days,tasks:ch.length,avgRating,doneScore,onTimePct,iss:iss.length,fixed:fixed.length,open:iss.length-fixed.length,avgFix,score,fixRate};
+}
+const verdict=sc=>sc===null?'<span class="badge b-info">Not enough records</span>':sc>=75?'<span class="badge b-ok">Doing great</span>':sc>=50?'<span class="badge b-warn">Average</span>':'<span class="badge b-bad">Needs improvement</span>';
+const stars=r=>r===null?'—':'★'.repeat(Math.round(r))+'☆'.repeat(5-Math.round(r))+' '+r.toFixed(1);
+const pctTxt=v=>v===null?'—':Math.round(v*100)+'%';
+P.team=()=>{
+  const [f,t]=rangeOf(UI.teamRange);
+  const st=S.employees.map(e=>({e,x:empStats(e,f,t)}));
+  const log=S.checks.filter(c=>c.date>=f&&c.date<=t).sort((a,b)=>b.date.localeCompare(a.date));
+  const en=id=>(S.employees.find(e=>e.id===id)||{name:'(removed)'}).name;
+  return `
+  <div class="card"><div class="h2row"><h2>Employee performance</h2><div class="row"><select data-chg="teamRange">${RANGE_OPTS.map(([v,l])=>`<option value="${v}"${v===UI.teamRange?' selected':''}>${l}</option>`).join('')}</select><button class="btn" data-act="addEmp">+ Employee</button><button class="btn primary" data-act="addCheck">+ Daily check</button></div></div>
+    <div class="note">Record a quick <b>daily check</b> for each worker: what they were asked to do, whether it was done, whether they came on time, and a rating out of 5. Assign site issues to a worker on the Site Issues page. The score combines rating (40%), tasks completed (30%), coming on time (15%) and issues fixed (15%).</div>
+    <div class="scards">${st.map(({e,x})=>`<div class="scard"><div class="h2row" style="margin:0"><h3 style="margin:0">${esc(e.name)}</h3>${verdict(x.score)}</div>
+      <div class="small muted">${esc(e.role||'')}${e.phone?' · '+esc(e.phone):''}</div>
+      <div style="font-size:28px;font-weight:700;margin:6px 0" class="${x.score===null?'muted':x.score>=75?'pos':x.score<50?'neg':''}">${x.score===null?'—':x.score+'/100'}</div>
+      <dl><dt>Days worked</dt><dd>${x.days}</dd><dt>Tasks checked</dt><dd>${x.tasks}</dd><dt>Tasks completed</dt><dd>${pctTxt(x.doneScore)}</dd><dt>Came on time</dt><dd>${pctTxt(x.onTimePct)}</dd><dt>Average rating</dt><dd>${stars(x.avgRating)}</dd>
+        <dt>Issues assigned</dt><dd>${x.iss} (${x.fixed} fixed, ${x.open} open)</dd><dt>Average time to fix</dt><dd>${x.avgFix===null?'—':x.avgFix<0.5?'same day':x.avgFix.toFixed(1)+' days'}</dd></dl>
+      <div class="row"><button class="btn sm primary" data-act="addCheck" data-id="${e.id}">+ Check</button><button class="btn sm" data-act="editEmp" data-id="${e.id}">Edit</button><button class="btn sm danger" data-act="delEmp" data-id="${e.id}">✕</button></div></div>`).join('')}</div>
+  </div>
+  <div class="card"><h2 style="margin-bottom:10px">Daily checks</h2>
+    ${log.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Employee</th><th>Site</th><th>Task</th><th>Done</th><th>On time</th><th>Rating</th><th>Comment</th><th></th></tr></thead><tbody>
+    ${log.map(c=>`<tr><td>${fmtD(c.date)}</td><td>${esc(en(c.emp))}</td><td>${esc(siteName(c.site))}</td><td class="wrap">${esc(c.task)}</td><td><span class="badge ${c.done==='Yes'?'b-ok':c.done==='Partly'?'b-warn':'b-bad'}">${esc(c.done)}</span></td><td>${esc(c.onTime||'—')}</td><td>${num(c.rating)?'★'.repeat(num(c.rating)):'—'}</td><td class="wrap small">${esc(c.note)}</td>
+      <td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editCheck" data-id="${c.id}">Edit</button><button class="btn sm danger" data-act="delCheck" data-id="${c.id}">✕</button></div></td></tr>`).join('')}
+    </tbody></table></div>`:'<div class="empty">No checks in this period yet.</div>'}
+  </div>`;
+};
+
+P.issues=()=>{
+  let l=[...S.issues].sort((a,b)=>b.date.localeCompare(a.date));
+  if(UI.issueFilter!=='All')l=l.filter(i=>(i.status||'Open')===UI.issueFilter||(UI.issueFilter==='Open'&&i.status!=='Fixed'));
+  return `
+  <div class="card"><div class="h2row"><h2>Site issues &amp; maintenance log</h2><div class="row"><select data-chg="issueFilter">${['Open','Fixed','All'].map(o=>`<option${o===UI.issueFilter?' selected':''}>${o}</option>`).join('')}</select><button class="btn primary" data-act="addIssue">+ Report issue</button></div></div>
+    <p class="small muted" style="margin-top:0">Record outages, slow internet, damaged cables or router faults per site. It helps explain low earning days and shows which sites need attention.</p>
+    ${l.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Site</th><th>Problem</th><th>Action taken</th><th>Assigned</th><th>Status</th><th></th></tr></thead><tbody>
+    ${l.map(i=>`<tr><td>${fmtD(i.date)}</td><td>${esc(siteName(i.site))}</td><td class="wrap">${esc(i.problem)}</td><td class="wrap">${esc(i.action)}</td><td>${esc(i.assignedTo||'—')}</td><td><span class="badge ${i.status==='Fixed'?'b-ok':'b-bad'}">${esc(i.status||'Open')}${i.status==='Fixed'&&i.fixedOn?' '+fmtDs(i.fixedOn):''}</span></td>
+      <td><div class="row" style="flex-wrap:nowrap">${i.status!=='Fixed'?`<button class="btn sm good" data-act="fixIssue" data-id="${i.id}">Mark fixed</button>`:''}<button class="btn sm" data-act="editIssue" data-id="${i.id}">Edit</button><button class="btn sm danger" data-act="delIssue" data-id="${i.id}">✕</button></div></td></tr>`).join('')}
+    </tbody></table></div>`:'<div class="empty">No issues in this list.</div>'}
+  </div>`;
+};
+
+P.settings=()=>{
+  const st=S.settings;
+  const counts=`${Object.keys(S.earnings).length} earning days, ${S.expenses.length} costs, ${S.subtech.length} sub-tech days, ${S.debts.length} debts, ${S.store.length+S.toBuy.length} material items`;
+  return `
+  <div class="card"><h2 style="margin-bottom:6px">Backup your data</h2>
+    <div class="note">${ONLINE?'Your data is saved <b>online with this link</b>, so it is the same on any phone or computer that opens it. Download a backup now and then as an extra copy.':'Your data is saved in <b>this browser on this device</b>. Download a backup at least once a week, and use it to move your data to another phone or computer.'} Last backup: <b>${S.lastBackup?fmtD(S.lastBackup):'never'}</b>.</div>
+    <div class="row"><button class="btn primary" data-act="exportJSON">⬇ Download backup</button><button class="btn" data-act="importJSON">⬆ Restore from backup</button><button class="btn" data-act="exportCSV">Earnings CSV (Excel)</button></div>
+    <p class="small muted">Saved now: ${counts}.</p>
+  </div>
+  <div class="card"><h2 style="margin-bottom:10px">Business settings</h2>
+    <div class="egrid" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr))">
+      ${[['business','Business name','text'],['techName','Technician name','text'],['techSalary','Tech monthly salary (Ksh)','number'],['subtechName','Sub-tech name','text'],['subtechRate','Sub-tech pay per day (Ksh)','number'],['tokenWarnDays','Warn when token is older than (days)','number'],['wifiWarnDays','Warn before WiFi due (days)','number']]
+        .map(([k,l,ty])=>`<label class="fld"><span>${l}</span><input type="${ty}" value="${esc(st[k])}" data-chg="setting" data-k="${k}" ${ty==='number'?'min="0" step="any"':''}></label>`).join('')}
+    </div>
+  </div>
+  <div class="card"><h2 style="margin-bottom:10px">Partners</h2><label class="fld"><span>Names, separated by commas</span><input value="${esc(S.settings.partners.join(', '))}" data-chg="partners"></label><p class="small muted" style="margin:0">These names appear in every "Paid by" choice. Set profit shares on the Partners page.</p></div>
+  <div class="card"><h2 style="margin-bottom:10px">Site names</h2>
+    <div class="egrid" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr))">${S.sites.map(s=>`<label class="fld"><span>${esc(s.group)}${s.router?' · '+esc(s.router):''}</span><input value="${esc(s.name)}" data-chg="siteName" data-k="${s.id}"></label>`).join('')}</div>
+  </div>
+  <div class="card"><h2 style="margin-bottom:6px">Start over</h2><p class="small muted">Deletes everything saved${ONLINE?' online for everyone using this link':' in this browser'}. Download a backup first.</p><button class="btn danger" data-act="resetAll">Delete all data</button></div>`;
+};
+
+/* ---------- actions ---------- */
+const byId=(arr,id)=>arr.find(x=>x.id===id);
+async function del(arr,id,what){if(!await ask(`Delete this ${what}?`,'Delete'))return;const i=arr.findIndex(x=>x.id===id);if(i>=0)arr.splice(i,1);save();render();toast('Deleted');}
+const BIZ='Business money';
+const payerOpts=()=>[...S.settings.partners,BIZ];
+const fPaid=(label='Paid by')=>({k:'paidBy',label,type:'select',options:payerOpts(),def:S.settings.lastPayer||S.settings.partners[0]});
+const payerTag=p=>p?`<span class="badge ${p===BIZ?'b-info':'b-dala'}">${esc(p===BIZ?'Business':p)}</span>`:'<span class="muted small">—</span>';
+function expFields(cat){return [fDate(),{k:'category',label:'Category',type:'select',options:EXP_CATS,def:cat||EXP_CATS[0]},{k:'site',label:'Site',type:'select',options:siteOpts(),def:'general'},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},fPaid(),{k:'desc',label:'Description',type:'text'}];}
+function addExpense(o){S.expenses.push({id:uid(),date:o.date,category:o.category,site:o.site,amount:num(o.amount),desc:o.desc||'',paidBy:o.paidBy||''});}
+function addToStore(name,qty,unit,unitCost){
+  let it=S.store.find(m=>m.name.toLowerCase()===name.toLowerCase());
+  if(it){it.qty=num(it.qty)+qty;if(unitCost)it.unitCost=unitCost;}
+  else S.store.push(it={id:uid(),name,qty,unit:unit||'pcs',unitCost:unitCost||0,minQty:0,notes:''});
+  return it;
+}
+const storeFields=[{k:'name',label:'Item name',req:true,list:['Router','Ethernet cable (m)','Drop cable (m)','RJ45 connectors','Access point','Switch','Pole','Power adapter','Cable ties','Fuse']},{k:'qty',label:'Quantity',type:'number'},{k:'unit',label:'Unit',def:'pcs',list:['pcs','m','rolls','boxes']},{k:'unitCost',label:'Cost per unit (Ksh)',type:'number'},{k:'minQty',label:'Warn me when stock falls to',type:'number',hint:'0 means no warning'},{k:'notes',label:'Notes / location',type:'text'}];
+const buyFields=[{k:'name',label:'Item name',req:true},{k:'qty',label:'Quantity',type:'number',def:1},{k:'unit',label:'Unit',def:'pcs',list:['pcs','m','rolls','boxes']},{k:'estCost',label:'Estimated total cost (Ksh)',type:'number'},{k:'priority',label:'Priority',type:'select',options:['High','Medium','Low'],def:'Medium'},{k:'site',label:'For site',type:'select',options:siteOpts(),def:'general'},{k:'notes',label:'Notes',type:'text'}];
+const workFields=()=>[fDate(),{k:'name',label:'Worker',def:S.settings.subtechName},{k:'site',label:'Site worked on',type:'select',options:siteOpts(),def:'general'},{k:'task',label:'Work done',type:'text'},{k:'amount',label:'Pay for the day (Ksh)',type:'number',def:num(S.settings.subtechRate)},{k:'paid',label:'Already paid',type:'checkbox'},fPaid('Paid by (if paid)')];
+const debtFields=t=>[{k:'type',label:'Type',type:'select',options:[['owedToUs','Someone owes us'],['weOwe','We owe someone']],def:t},{k:'person',label:t==='weOwe'?'Who we owe (supplier / person)':'Who owes us (customer / person)',req:true},{k:'phone',label:'Phone',type:'tel'},fDate('date','Date of debt'),{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'due',label:'Due date',type:'date'},{k:'desc',label:'What is it for',type:'text'}];
+const lumpFields=()=>[fDate('date','Date (use the last day of the month)'),{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'desc',label:'Description',type:'text',def:'Dala WiFi monthly income'}];
+const assetFields=()=>[{k:'name',label:'Item',req:true,list:['Router','Access point','Switch','Starlink kit','Solar panel','Battery','Inverter','Pole','Power backup (UPS)']},{k:'site',label:'Site',type:'select',options:siteOpts(),def:'dala1'},{k:'serial',label:'Serial / MAC number'},fDate('date','Date bought'),{k:'cost',label:'Cost (Ksh)',type:'number'},fPaid(),{k:'status',label:'Status',type:'select',options:ASSET_STATUS,def:'In use'},{k:'notes',label:'Notes',type:'text'}];
+const empFields=[{k:'name',label:'Name',req:true},{k:'role',label:'Role',list:['Technician','Sub-tech','Agent','Casual']},{k:'phone',label:'Phone',type:'tel'}];
+const checkFields=()=>[fDate(),{k:'emp',label:'Employee',type:'select',options:S.employees.map(e=>[e.id,e.name])},{k:'site',label:'Site',type:'select',options:siteOpts(),def:'general'},{k:'task',label:'Task given',type:'text'},{k:'done',label:'Was the task done?',type:'select',options:CHECK_DONE},{k:'onTime',label:'Came / responded on time?',type:'select',options:[['','Not checked'],'Yes','No']},{k:'rating',label:'Rating',type:'select',options:[['0','No rating'],['5','★★★★★ Excellent'],['4','★★★★ Good'],['3','★★★ Fair'],['2','★★ Poor'],['1','★ Very poor']],def:'0'},{k:'note',label:'Comment',type:'textarea'}];
+const empNames=()=>S.employees.map(e=>e.name);
+const issueFields=()=>[fDate(),{k:'site',label:'Site',type:'select',options:siteOpts(),def:'dala1'},{k:'problem',label:'Problem',type:'textarea',req:true},{k:'action',label:'Action taken',type:'textarea'},{k:'assignedTo',label:'Assigned to',type:'select',options:[['','Not assigned'],...empNames()]},{k:'status',label:'Status',type:'select',options:['Open','Fixed'],def:'Open'}];
+
+const ACT={
+  saveDay(){
+    const d=UI.earnDate||today(),rec={};
+    document.querySelectorAll('.earnIn').forEach(i=>{if(i.value.trim()!=='')rec[i.dataset.site]=num(i.value);});
+    if(Object.keys(rec).length)S.earnings[d]=rec;else delete S.earnings[d];
+    save();UI.earnMonth=d.slice(0,7);render();toast(`Saved ${fmtDs(d)}: ${fmt(sum(Object.values(rec)))} · ${profitNote()}`);
+  },
+  upPick(){$('#upFile').click();},
+  upRemove(i){UI.upload.splice(Number(i),1);render();},
+  upCancel(){UI.upload=[];render();},
+  upPaste(){const t=$('#pasteBox').value,id=$('#pasteSite').value,rows=parseDayRows(t.replace(/\s+/g,' '));
+    if(!Object.keys(rows).length){toast('No figures found. Paste rows like:  Mon 05 Oct  Ksh. 928');return;}
+    UI.upload=[...(UI.upload||[]),{file:'Pasted for '+siteName(id),site:id,rows}];render();},
+  async upImport(){
+    const ok=(UI.upload||[]).filter(u=>u.site&&Object.keys(u.rows).length);
+    if(!ok.length){toast('Nothing to save. Pick the site for each file first.');return;}
+    if((UI.upload||[]).some(u=>!u.site&&Object.keys(u.rows).length)&&!await ask('Some files have no site chosen and will be skipped. Continue?','Continue'))return;
+    let n=0,last='';
+    ok.forEach(u=>{for(const d in u.rows){(S.earnings[d]=S.earnings[d]||{})[u.site]=u.rows[d];n++;if(d>last)last=d;}});
+    save();UI.upload=[];UI.earnMonth=last.slice(0,7);render();toast(`Saved ${n} figures from ${ok.length} site${ok.length>1?'s':''}`);
+  },
+  async delDay(){const d=UI.earnDate||today();if(await ask(`Delete all earnings for ${fmtD(d)}?`,'Delete')){delete S.earnings[d];save();render();}},
+  editDay(id){UI.earnDate=id;render();scrollTo({top:0,behavior:'smooth'});},
+  earnShift(n){UI.earnDate=addDays(UI.earnDate||today(),Number(n));UI.earnMonth=UI.earnDate.slice(0,7);render();},
+  editSite(id){const s=site(id);openForm(`${s.name} details`,[
+    {k:'tokenMeter',label:'Token meter number'},{k:'tokenLastPaid',label:'Token last paid',type:'date'},{k:'tokenLastAmount',label:'Last token amount (Ksh)',type:'number'},
+    {k:'wifiProvider',label:'WiFi / internet provider'},{k:'wifiAccount',label:'WiFi account number'},{k:'wifiLastPaid',label:'WiFi subscription last paid',type:'date'},{k:'wifiAmount',label:'WiFi subscription amount (Ksh)',type:'number'},{k:'wifiCycleDays',label:'Subscription lasts (days)',type:'number',hint:'Usually 30'},{k:'notes',label:'Notes',type:'textarea'}],s,o=>{Object.assign(s,o);toast('Saved');});},
+  payToken(id){const s=site(id);openForm(`Pay token: ${s.name}`,[fDate(),{k:'amount',label:'Amount (Ksh)',type:'number',req:true,def:s.tokenLastAmount||''},fPaid(),{k:'desc',label:'Note',def:s.tokenMeter?'Meter '+s.tokenMeter:''},{k:'rec',label:'Also add to Running Costs',type:'checkbox',def:true}],{},o=>{
+    if(!s.tokenLastPaid||o.date>=s.tokenLastPaid){s.tokenLastPaid=o.date;s.tokenLastAmount=o.amount;}
+    if(o.rec)addExpense({date:o.date,category:'Electricity tokens',site:id,amount:o.amount,desc:o.desc,paidBy:o.paidBy});toast('Token payment saved');});},
+  payWifi(id){const s=site(id);openForm(`Pay WiFi: ${s.name}`,[fDate(),{k:'amount',label:'Amount (Ksh)',type:'number',req:true,def:s.wifiAmount||''},{k:'cycle',label:'Subscription lasts (days)',type:'number',def:s.wifiCycleDays||30},fPaid(),{k:'desc',label:'Note',def:s.wifiAccount?'Acc '+s.wifiAccount:''},{k:'rec',label:'Also add to Running Costs',type:'checkbox',def:true}],{},o=>{
+    if(!s.wifiLastPaid||o.date>=s.wifiLastPaid){s.wifiLastPaid=o.date;s.wifiAmount=o.amount;s.wifiCycleDays=o.cycle||30;}
+    if(o.rec)addExpense({date:o.date,category:'Wifi subscription',site:id,amount:o.amount,desc:o.desc,paidBy:o.paidBy});toast('WiFi payment saved');});},
+  addStore(){openForm('Add item to store',[...storeFields,fDate(),fPaid(),{k:'rec',label:'Count the cost (qty × cost per unit) in Running Costs (Materials)',type:'checkbox',def:true}],{},o=>{
+    const {date,paidBy,rec,...item}=o;S.store.push({id:uid(),...item});S.matLog.push({id:uid(),date,name:o.name,qty:o.qty,type:'In',site:'',note:'Added to store'});
+    const cost=num(o.qty)*num(o.unitCost);if(rec&&cost)addExpense({date,category:'Materials',site:'general',amount:cost,desc:`${o.qty} ${o.unit} ${o.name}`,paidBy});});},
+  editStore(id){const m=byId(S.store,id);openForm('Edit store item',storeFields,m,o=>{Object.assign(m,o);});},
+  delStore(id){del(S.store,id,'store item');},
+  stockIn(id){const m=byId(S.store,id);openForm(`Add stock: ${m.name}`,[fDate(),{k:'qty',label:'Quantity added',type:'number',req:true},{k:'cost',label:'Total cost paid (Ksh)',type:'number',hint:'Leave 0 if not bought now'},fPaid(),{k:'rec',label:'Add cost to Running Costs (Materials)',type:'checkbox',def:true}],{},o=>{
+    m.qty=num(m.qty)+o.qty;if(o.cost&&o.qty)m.unitCost=Math.round(o.cost/o.qty*100)/100;
+    S.matLog.push({id:uid(),date:o.date,name:m.name,qty:o.qty,type:'In',site:'',note:o.cost?'Bought for '+fmt(o.cost):''});
+    if(o.rec&&o.cost)addExpense({date:o.date,category:'Materials',site:'general',amount:o.cost,desc:`${o.qty} ${m.unit} ${m.name}`,paidBy:o.paidBy});});},
+  stockOut(id){const m=byId(S.store,id);openForm(`Use material: ${m.name}`,[fDate(),{k:'qty',label:`Quantity used (in store: ${num(m.qty)})`,type:'number',req:true},{k:'site',label:'Used at site',type:'select',options:siteOpts(),def:'dala1'},{k:'note',label:'Note'}],{},o=>{
+    if(o.qty>num(m.qty)){toast(`Only ${num(m.qty)} in store. Add stock first or lower the quantity.`);return false;}
+    m.qty=num(m.qty)-o.qty;S.matLog.push({id:uid(),date:o.date,name:m.name,qty:o.qty,type:'Out',site:o.site,note:o.note});});},
+  addBuy(){openForm('Add to shopping list',buyFields,{},o=>{S.toBuy.push({id:uid(),...o});});},
+  editBuy(id){const b=byId(S.toBuy,id);openForm('Edit shopping item',buyFields,b,o=>{Object.assign(b,o);});},
+  delBuy(id){del(S.toBuy,id,'shopping item');},
+  bought(id){const b=byId(S.toBuy,id);openForm(`Bought: ${b.name}`,[fDate(),{k:'qty',label:'Quantity bought',type:'number',def:b.qty},{k:'cost',label:'Actual total cost (Ksh)',type:'number',def:b.estCost},fPaid(),{k:'rec',label:'Add cost to Running Costs (Materials)',type:'checkbox',def:true}],{},o=>{
+    addToStore(b.name,o.qty,b.unit,o.qty?Math.round(o.cost/o.qty*100)/100:0);
+    S.matLog.push({id:uid(),date:o.date,name:b.name,qty:o.qty,type:'In',site:'',note:'Bought for '+fmt(o.cost)});
+    if(o.rec&&o.cost)addExpense({date:o.date,category:'Materials',site:b.site||'general',amount:o.cost,desc:`${o.qty} ${b.unit} ${b.name}`,paidBy:o.paidBy});
+    S.toBuy.splice(S.toBuy.indexOf(b),1);toast('Moved to store');});},
+  addExp(){openForm('Add running cost',expFields(UI.costCat),{},o=>{addExpense(o);toast('Cost saved');});},
+  quickExp(cat){const v={};if(cat==='Tech salary'){v.amount=num(S.settings.techSalary)||'';v.desc=`${S.settings.techName} salary ${monthLabel(today().slice(0,7))}`;}
+    openForm(`Add: ${cat}`,expFields(cat),v,o=>{addExpense(o);toast('Cost saved');});},
+  editExp(id){const x=byId(S.expenses,id);openForm('Edit cost',expFields(),x,o=>{Object.assign(x,o);});},
+  delExp(id){del(S.expenses,id,'cost');},
+  addWork(){openForm('Log sub-tech work day',workFields(),{},o=>{S.subtech.push({id:uid(),...o,paidOn:o.paid?o.date:''});toast('Work day logged');});},
+  editWork(id){const w=byId(S.subtech,id);openForm('Edit work day',workFields(),w,o=>{if(o.paid&&!w.paid)o.paidOn=today();if(!o.paid)o.paidOn='';Object.assign(w,o);});},
+  delWork(id){del(S.subtech,id,'work day');},
+  async togglePaid(id){const w=byId(S.subtech,id);
+    if(w.paid){if(await ask('Mark this day as NOT paid?','Mark not paid')){w.paid=false;w.paidOn='';w.paidBy='';save();render();}return;}
+    openForm(`Pay ${w.name||'sub-tech'}: ${fmt(num(w.amount))}`,[fDate('paidOn','Paid on'),fPaid()],{},o=>{Object.assign(w,o,{paid:true});toast('Marked as paid');});},
+  payAllSub(){const l=S.subtech.filter(w=>!w.paid);
+    openForm(`Pay ${l.length} days: ${fmt(sum(l,w=>w.amount))}`,[fDate('paidOn','Paid on'),fPaid()],{},o=>{l.forEach(w=>Object.assign(w,o,{paid:true}));toast('Marked as paid');});},
+  addDebt(t){openForm(t==='weOwe'?'We owe someone':'Someone owes us',debtFields(t),{},o=>{S.debts.push({id:uid(),...o,payments:[]});});},
+  editDebt(id){const d=byId(S.debts,id);openForm('Edit debt',debtFields(d.type),d,o=>{Object.assign(d,o);});},
+  delDebt(id){del(S.debts,id,'debt');},
+  payDebt(id){const d=byId(S.debts,id);openForm(`Payment: ${d.person}`,[fDate(),{k:'amount',label:`Amount paid (balance ${fmt(debtBal(d))})`,type:'number',req:true,def:debtBal(d)},fPaid(d.type==='weOwe'?'Paid by':'Received by'),{k:'note',label:'Note (e.g. M-Pesa code)'}],{},o=>{(d.payments=d.payments||[]).push(o);toast('Payment recorded');});},
+  editTargets(){const [f,t]=rangeOf('30'),e=earnIn(f,t);
+    openForm('Monthly targets (Ksh)',S.sites.map(s=>({k:s.id,label:s.name,type:'number',hint:'Last 30 days: '+fmt(e.bySite[s.id].total)})),Object.fromEntries(S.sites.map(s=>[s.id,num(S.targets[s.id])||Math.round(e.bySite[s.id].total/100)*100||''])),o=>{S.targets=o;toast('Targets saved');});},
+  addPartnerTx(){openForm('Partner money in / out',[fDate(),{k:'person',label:'Partner',type:'select',options:S.settings.partners,def:S.settings.lastPayer&&S.settings.partners.includes(S.settings.lastPayer)?S.settings.lastPayer:S.settings.partners[0]},{k:'type',label:'Type',type:'select',options:[['in','Put money into the business'],['out','Took money out (e.g. withdrew earnings)']]},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'note',label:'Note'}],{},o=>{S.partnerTx.push({id:uid(),...o});toast('Saved');});},
+  delPartnerTx(id){del(S.partnerTx,id,'partner entry');},
+  editShares(){const ps=S.settings.partners;openForm('Profit shares (%)',ps.map(p=>({k:p,label:p,type:'number',hint:'Leave all at 0 to split equally'})),Object.fromEntries(ps.map(p=>[p,num(S.settings.partnerShares[p])])),o=>{S.settings.partnerShares=o;toast('Shares saved');});},
+  addEmp(){openForm('Add employee',empFields,{},o=>{S.employees.push({id:uid(),...o});});},
+  editEmp(id){const e=byId(S.employees,id),old=e.name;openForm('Edit employee',empFields,e,o=>{Object.assign(e,o);if(o.name!==old){S.issues.forEach(i=>{if(i.assignedTo===old)i.assignedTo=o.name;});S.subtech.forEach(w=>{if(w.name===old)w.name=o.name;});}});},
+  async delEmp(id){if(S.checks.some(c=>c.emp===id)&&!await ask('This employee has daily checks. Delete anyway?','Continue'))return;del(S.employees,id,'employee');},
+  addCheck(id){openForm('Daily check',checkFields(),{emp:id||S.employees[0]?.id},o=>{S.checks.push({id:uid(),...o});toast('Check saved');});},
+  editCheck(id){const c=byId(S.checks,id);openForm('Edit daily check',checkFields(),c,o=>{Object.assign(c,o);});},
+  delCheck(id){del(S.checks,id,'daily check');},
+  addLump(){openForm('Add monthly income total',lumpFields(),{},o=>{S.lumpIncome.push({id:uid(),...o});});},
+  editLump(id){const x=byId(S.lumpIncome,id);openForm('Edit monthly income total',lumpFields(),x,o=>{Object.assign(x,o);});},
+  delLump(id){del(S.lumpIncome,id,'income total');},
+  addAsset(){openForm('Add equipment',assetFields(),{},o=>{S.assets.push({id:uid(),...o});});},
+  editAsset(id){const x=byId(S.assets,id);openForm('Edit equipment',assetFields(),x,o=>{Object.assign(x,o);});},
+  delAsset(id){del(S.assets,id,'equipment item');},
+  addIssue(){openForm('Report site issue',issueFields(),{},o=>{S.issues.push({id:uid(),...o,fixedOn:o.status==='Fixed'?o.date:''});});},
+  editIssue(id){const i=byId(S.issues,id);openForm('Edit issue',issueFields(),i,o=>{if(o.status==='Fixed'&&i.status!=='Fixed')o.fixedOn=today();Object.assign(i,o);});},
+  fixIssue(id){const i=byId(S.issues,id);openForm('Mark as fixed',[{k:'action',label:'What was done',type:'textarea'},fDate('fixedOn','Fixed on')],{...i,fixedOn:i.fixedOn||today()},o=>{Object.assign(i,o,{status:'Fixed'});});},
+  delIssue(id){del(S.issues,id,'issue');},
+  async exportJSON(){
+    const prev=S.lastBackup;S.lastBackup=today();
+    if(await download(`dala-genzi-backup-${today()}.json`,JSON.stringify(S,null,1),'application/json')){save();toast('Backup downloaded. Keep it safe (e.g. email it to yourself).');render();}
+    else S.lastBackup=prev;
+  },
+  importJSON(){$('#importFile').click();},
+  exportCSV(){
+    const dates=Object.keys(S.earnings).sort();
+    const rows=[['Date',...S.sites.map(s=>s.name),'Total']];
+    dates.forEach(d=>{const r=S.earnings[d];rows.push([d,...S.sites.map(s=>r[s.id]??''),sum(Object.values(r))]);});
+    download(`dala-genzi-earnings-${today()}.csv`,rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');
+  },
+  async resetAll(){if(await ask('Delete ALL data? This cannot be undone. Download a backup first if you may need it.','Delete everything')){S=defaultState();S.earnings={};save();render();toast('All data deleted');}}
+};
+async function download(name,text,type){
+  try{const dl=window.claude&&window.claude.use?await window.claude.use('downloads'):null;
+    if(dl){try{await dl.save({filename:name,data:text});return true;}catch(e){toast(e&&e.code==='declined'?'Download cancelled':'Could not download the file here');return false;}}}catch(e){}
+  return downloadLink(name,text,type);
+}
+function downloadLink(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);return true;}
+
+const CHG={
+  earnDate(el){if(el.value){UI.earnDate=el.value;UI.earnMonth=el.value.slice(0,7);render();}},
+  earnMonth(el){UI.earnMonth=el.value;render();},
+  upSite(el){UI.upload[Number(el.dataset.k)].site=el.value;render();},
+  perfRange(el){UI.perfRange=el.value;render();},
+  costMonth(el){UI.costMonth=el.value;render();},
+  costCat(el){UI.costCat=el.value;render();},
+  costSite(el){UI.costSite=el.value;render();},
+  costPayer(el){UI.costPayer=el.value;render();},
+  partRange(el){UI.partRange=el.value;render();},
+  teamRange(el){UI.teamRange=el.value;render();},
+  partners(el){const l=el.value.split(',').map(x=>x.trim()).filter(Boolean);if(l.length){S.settings.partners=l;save();toast('Saved');}},
+  staffMonth(el){UI.staffMonth=el.value;render();},
+  plMonth(el){UI.plMonth=el.value;render();},
+  issueFilter(el){UI.issueFilter=el.value;render();},
+  tgtMonth(el){UI.tgtMonth=el.value;render();},
+  assetSite(el){UI.assetSite=el.value;render();},
+  debtFilter(el){UI.debtFilter=el.value;render();},
+  setting(el){const k=el.dataset.k;S.settings[k]=el.type==='number'?num(el.value):el.value;save();if(k==='business')renderHead();toast('Saved');},
+  siteName(el){const s=site(el.dataset.k);if(el.value.trim()){s.name=el.value.trim();save();toast('Saved');}}
+};
+
+/* ---------- wiring ---------- */
+document.addEventListener('click',e=>{
+  const go=e.target.closest('[data-go]');
+  if(go){e.preventDefault();goto(go.dataset.go);return;}
+  const a=e.target.closest('[data-act]');
+  if(a&&ACT[a.dataset.act]){e.preventDefault();ACT[a.dataset.act](a.dataset.id,a);}
+});
+document.addEventListener('change',e=>{const el=e.target.closest('[data-chg]');if(el&&CHG[el.dataset.chg])CHG[el.dataset.chg](el);});
+document.addEventListener('input',e=>{if(e.target.classList.contains('earnIn')){let t=0;document.querySelectorAll('.earnIn').forEach(i=>t+=num(i.value));$('#earnTot').textContent=fmt(t);$('#earnProfit').innerHTML=dayProfitTxt(t,num($('#earnTot').dataset.cost));}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList.contains('earnIn')){e.preventDefault();const all=[...document.querySelectorAll('.earnIn')],i=all.indexOf(e.target);if(i<all.length-1)all[i+1].focus();else ACT.saveDay();}});
+$('#importFile').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{const o=JSON.parse(r.result);if(!o||!o.sites||!o.earnings)throw 0;
+    ask('Add everything in this backup to the data already here? Nothing already here is deleted. Where both have the same day or entry, the backup\'s figure is used.','Restore').then(y=>{if(!y)return;S=mergeState(S,migrate(o));save();render();toast('Backup restored and combined with your data');});}catch(err){toast('That file is not a valid backup.');}
+    e.target.value='';};
+  r.readAsText(f);
+});
+$('#upFile').addEventListener('change',e=>{if(e.target.files.length)readFiles(e.target.files).then(()=>e.target.value='');});
+document.addEventListener('dragover',e=>{const z=e.target.closest&&e.target.closest('#dropZone');if(z){e.preventDefault();z.classList.add('over');}});
+document.addEventListener('dragleave',e=>{const z=e.target.closest&&e.target.closest('#dropZone');if(z)z.classList.remove('over');});
+document.addEventListener('drop',e=>{const z=e.target.closest&&e.target.closest('#dropZone');if(z){e.preventDefault();z.classList.remove('over');if(e.dataTransfer.files.length)readFiles(e.dataTransfer.files);}});
+window.addEventListener('hashchange',()=>{const p=location.hash.slice(1);if(PAGES.some(x=>x[0]===p)&&p!==UI.page){UI.page=p;render();}});
+function goto(p){UI.page=p;if(location.hash!=='#'+p){try{history.pushState(null,'','#'+p);}catch(e){}}render();scrollTo(0,0);}
+function renderHead(){
+  $('#bizName').textContent=S.settings.business||'Dala & Genzi WiFi';
+  document.title=(S.settings.business||'Dala & Genzi WiFi')+' Manager';
+  $('#nav').innerHTML=PAGES.map(([k,l])=>`<button data-go="${k}" class="${k===UI.page?'on':''}">${l}</button>`).join('');
+  const on=$('#nav .on');if(on)on.scrollIntoView({block:'nearest',inline:'nearest'});
+}
+function render(){renderHead();$('#main').innerHTML=P[UI.page]();}
+window.addEventListener('popstate',()=>{const p=location.hash.slice(1)||'dash';if(PAGES.some(x=>x[0]===p)){UI.page=p;render();}});
+render();
+connectOnline();
+$('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
+document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
+</script>
+</body>
+</html>

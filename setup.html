@@ -1,0 +1,120 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Google Sheet setup</title>
+<style>:root{--bg:#f3f6fa;--ink:#14213d;--card:#fff;--b:#0057A6}@media (prefers-color-scheme:dark){:root{--bg:#0f172a;--ink:#e2e8f0;--card:#1e293b;--b:#60a5fa}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif}main{max-width:760px;margin:0 auto;padding:16px}
+.card{background:var(--card);border-radius:12px;padding:16px;margin-bottom:14px}button{background:var(--b);color:#fff;border:0;border-radius:8px;padding:12px 18px;font-size:16px;font-weight:600}
+textarea{width:100%;box-sizing:border-box;height:160px;font:12px monospace;background:var(--bg);color:var(--ink);border:1px solid #888;border-radius:8px}ol{padding-left:20px}li{margin:6px 0}</style></head><body><main>
+<h1>Connect the Google Sheet</h1>
+<div class="card"><ol>
+<li>On a computer, open <a href="https://sheets.new" target="_blank">sheets.new</a>. Name the sheet <b>Dala Genzi Data</b>.</li>
+<li>Click <b>Extensions</b>, then <b>Apps Script</b>.</li>
+<li>Delete everything in the code box. Press the <b>Copy code</b> button below, then paste it into the code box. Press <b>Ctrl+S</b>.</li>
+<li>Click <b>Deploy</b>, then <b>New deployment</b>. Click the gear icon and choose <b>Web app</b>.</li>
+<li>Set <b>Who has access</b> to <b>Anyone</b>, then click <b>Deploy</b>.</li>
+<li>Click <b>Authorize access</b> and choose your Gmail. If it warns you, click <b>Advanced</b>, then <b>Go to project</b>, then <b>Allow</b>.</li>
+<li>Copy the <b>Web app</b> link that ends in <b>/exec</b> and send it to Claude.</li>
+</ol></div>
+<div class="card"><button id="c">Copy code</button> <span id="m"></span><p></p><textarea id="t" readonly>// Dala &amp; Genzi WiFi Manager: Google Apps Script backend.
+// Keeps the website&#x27;s data in the &quot;data&quot; tab of this Google Sheet.
+
+// The PIN is chosen by the first person who opens the website and is kept in this project&#x27;s
+// Script Properties. To reset it: Project Settings (gear) → Script Properties → delete &quot;pin&quot;.
+
+const SHEET = &#x27;data&#x27;;
+const CHUNK = 45000; // a Sheet cell holds at most 50,000 characters
+
+function doGet() {
+  return ContentService.createTextOutput(&#x27;Dala &amp; Genzi data service is working. Open the website at https://dalagenzidata.github.io/dala-genzi/&#x27;);
+}
+
+// The website (on GitHub Pages) calls these functions to load and save data.
+function doPost(e) {
+  let out;
+  try {
+    const req = JSON.parse(e.postData.contents);
+    const fns = { loadAll: loadAll, getStamp: getStamp, saveDocs: saveDocs };
+    if (!fns[req.fn]) throw new Error(&#x27;unknown&#x27;);
+    out = { result: fns[req.fn].apply(null, req.args || []) };
+  } catch (err) {
+    out = { error: String(err.message || err) };
+  }
+  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function check_(pin) {
+  pin = String(pin || &#x27;&#x27;).trim();
+  if (!pin) throw new Error(&#x27;bad_pin&#x27;);
+  const props = PropertiesService.getScriptProperties();
+  const saved = props.getProperty(&#x27;pin&#x27;);
+  if (!saved) { props.setProperty(&#x27;pin&#x27;, pin); return; } // first visit sets the PIN
+  if (pin !== saved) throw new Error(&#x27;bad_pin&#x27;);
+}
+
+function sheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(SHEET);
+    sh.getRange(1, 1, 1, 3).setValues([[&#x27;path&#x27;, &#x27;updated&#x27;, &#x27;data (do not edit)&#x27;]]);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function stamp_() {
+  return PropertiesService.getScriptProperties().getProperty(&#x27;stamp&#x27;) || &#x27;0&#x27;;
+}
+
+function getStamp(pin) {
+  check_(pin);
+  return stamp_();
+}
+
+function loadAll(pin) {
+  check_(pin);
+  const v = sheet_().getDataRange().getValues();
+  const docs = {};
+  for (let i = 1; i &lt; v.length; i++) {
+    if (!v[i][0]) continue;
+    // every chunk is stored with a leading &quot;~&quot; so Sheets never reads it as a number or formula
+    docs[v[i][0]] = v[i].slice(2).map(c =&gt; String(c || &#x27;&#x27;).replace(/^~/, &#x27;&#x27;)).join(&#x27;&#x27;);
+  }
+  return { docs: docs, stamp: stamp_() };
+}
+
+function saveDocs(pin, sets, dels) {
+  check_(pin);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = sheet_();
+    const v = sh.getDataRange().getValues();
+    const row = {};
+    for (let i = 1; i &lt; v.length; i++) if (v[i][0]) row[v[i][0]] = i + 1;
+    let next = Math.max(sh.getLastRow(), 1) + 1;
+    Object.keys(sets || {}).forEach(function (p) {
+      const j = String(sets[p]);
+      const chunks = [];
+      for (let k = 0; k &lt; j.length; k += CHUNK) chunks.push(&#x27;~&#x27; + j.slice(k, k + CHUNK));
+      if (!chunks.length) chunks.push(&#x27;~&#x27;);
+      const r = row[p] || next++;
+      const width = Math.max(sh.getLastColumn(), 2 + chunks.length);
+      const vals = [p, new Date()].concat(chunks);
+      while (vals.length &lt; width) vals.push(&#x27;&#x27;);
+      if (sh.getMaxColumns() &lt; width) sh.insertColumnsAfter(sh.getMaxColumns(), width - sh.getMaxColumns());
+      sh.getRange(r, 1, 1, width).setValues([vals]);
+      row[p] = r;
+    });
+    (dels || []).map(function (p) { return row[p]; }).filter(Boolean)
+      .sort(function (a, b) { return b - a; })
+      .forEach(function (r) { sh.deleteRow(r); });
+    const st = String(Date.now());
+    PropertiesService.getScriptProperties().setProperty(&#x27;stamp&#x27;, st);
+    return { stamp: st };
+  } finally {
+    lock.releaseLock();
+  }
+}
+</textarea></div>
+</main><script>
+document.getElementById('c').onclick=async()=>{const t=document.getElementById('t');try{await navigator.clipboard.writeText(t.value);}catch(e){t.select();document.execCommand('copy');}document.getElementById('m').textContent='Copied ✓';};
+</script></body></html>

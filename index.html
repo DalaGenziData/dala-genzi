@@ -1106,8 +1106,17 @@ const payerTag=p=>p?`<span class="badge ${p===BIZ?'b-info':'b-dala'}">${esc(p===
 function expFields(cat){return [fDate(),{k:'category',label:'Category',type:'select',options:EXP_CATS,def:cat||EXP_CATS[0]},{k:'site',label:'Site',type:'select',options:siteOpts(),def:'general'},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},fPaid(),{k:'desc',label:'Description',type:'text'}];}
 // A token or WiFi payment typed straight into a site's details (Last paid + amount) must still count as a cost.
 // Deterministic ids, so two phones adding the same one never double it.
+// Payments FIDEL asked Claude to enter. Each is added once for the whole business (remembered in settings.pendingDone,
+// so deleting it later is respected) and skipped if the same payment is already recorded.
+const PENDING=[{"id":"fidel-20261008-dala1-token","date":"2026-10-08","category":"Electricity tokens","site":"dala1","amount":1000,"desc":"Token (FIDEL, 8 Oct chat: 600 + 1000 this month)","paidBy":"Business money"},{"id":"fidel-20261008-dala1-wifi","date":"2026-10-08","category":"Wifi subscription","site":"dala1","amount":12499,"desc":"WiFi subscription (FIDEL, 8 Oct chat)","paidBy":"Business money"}];
 function reconcileBills(){
   let ch=false;
+  const done=S.settings.pendingDone=S.settings.pendingDone||[];
+  for(const x of PENDING){
+    if(done.includes(x.id))continue;
+    if(!S.expenses.some(e=>e.id===x.id||(e.site===x.site&&e.category===x.category&&num(e.amount)===num(x.amount)&&String(e.date).slice(0,7)===x.date.slice(0,7))))S.expenses.push({...x});
+    done.push(x.id);ch=true;
+  }
   for(const s of S.sites){
     for(const [dk,ak,cat,tag] of [['tokenLastPaid','tokenLastAmount','Electricity tokens','tok'],['wifiLastPaid','wifiAmount','Wifi subscription','wifi']]){
       const d=s[dk],a=num(s[ak]),mk=tag+'Counted';
@@ -1315,6 +1324,6 @@ connectOnline();
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791436488';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791436981';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

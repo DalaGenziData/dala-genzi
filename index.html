@@ -19,6 +19,7 @@ nav{display:flex;gap:2px;overflow-x:auto;max-width:1200px;margin:8px auto 0;scro
 nav::-webkit-scrollbar{display:none}
 nav button{background:none;border:0;color:var(--on-head-2);padding:10px 12px;border-bottom:3px solid transparent;white-space:nowrap;font:inherit;cursor:pointer}
 nav button.on{color:var(--on-head);border-color:var(--on-head);font-weight:600}
+@media (max-width:800px){nav{flex-wrap:wrap;overflow:visible;gap:4px;padding-bottom:6px}nav button{padding:6px 9px;border:1px solid rgba(255,255,255,.35);border-radius:8px;font-size:13px}nav button.on{background:rgba(255,255,255,.18)}}
 main{max-width:1200px;margin:0 auto;padding:16px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;margin-bottom:16px}

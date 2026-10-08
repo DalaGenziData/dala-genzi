@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dala & Genzi WiFi Manager</title>
 <style>
@@ -609,6 +610,7 @@ P.dash=()=>{
     <div class="kpi"><div class="l">Unpaid sub-tech</div><div class="v">${fmt(unpaidSub)}</div><div class="s">${S.subtech.filter(w=>!w.paid).length} days not paid</div></div>
   </div>
   ${profitBreakdown(e.total,c,'How this month\'s profit is worked out')}
+  ${siteNet(e,c,'Net profit per site this month')}
   <div class="two">
     <div class="card"><div class="h2row"><h2>Daily earnings, last 14 days</h2><button class="btn sm" data-go="earn">Enter earnings</button></div>${vbars(last14)}</div>
     <div class="card"><div class="h2row"><h2>Needs attention</h2><span class="badge ${al.length?'b-warn':'b-ok'}">${al.length||'All clear'}</span></div>
@@ -647,6 +649,20 @@ function lumpCard(){
   return `<div class="card"><div class="h2row"><h2>Monthly income totals</h2><button class="btn primary" data-act="addLump">+ Add total</button></div>
   <div class="note">Use this only for months where you have one total for the month and no daily figure per site. It counts in profit and loss, but not in site performance.</div>
   ${L.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Description</th><th class="n">Amount</th><th></th></tr></thead><tbody>${L.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.desc||'')}</td><td class="n">${fmt(x.amount)}</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editLump" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delLump" data-id="${x.id}">✕</button></div></td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td></td><td class="n">${fmt(sum(L,x=>num(x.amount)))}</td><td></td></tr></tfoot></table></div>`:'<div class="empty">No monthly totals recorded.</div>'}</div>`;
+}
+// Net profit per site for a period: each site's own tokens, WiFi and other costs, plus an equal share of shared costs.
+function siteNet(e,c,title){
+  const ids=S.sites.map(s=>s.id),row={};S.sites.forEach(s=>row[s.id]={tok:0,wifi:0,oth:0});let shared=0;
+  c.forEach(x=>{const r=row[x.site];if(!r){shared+=x.amount;return;}if(x.category==='Electricity tokens')r.tok+=x.amount;else if(x.category==='Wifi subscription')r.wifi+=x.amount;else r.oth+=x.amount;});
+  const sh=shared/(ids.length||1),miss=v=>v?fmt(v):'<span class="badge b-warn">not entered</span>';
+  const rows=S.sites.map(s=>{const r=row[s.id],en=e.bySite[s.id].total,net=en-r.tok-r.wifi-r.oth-sh;return {s,r,en,net};});
+  const T=k=>sum(rows,x=>x.r[k]),lump=e.lump||0,net=e.total-sum(c,x=>x.amount);
+  return `<div class="card"><h2 style="margin-bottom:6px">${title}</h2>
+    <p class="small muted" style="margin-top:0">Each site's own token and WiFi payments are deducted from that site. "Not entered" means no payment was recorded for that site in this period, so pay it in Tokens &amp; WiFi and it is deducted at once. Shared costs (fuel, salaries, transport…) are split equally across the ${ids.length} sites.</p>
+    <div class="tbl-wrap"><table><thead><tr><th>Site</th><th class="n">Earnings</th><th class="n">Token</th><th class="n">WiFi</th><th class="n">Other site costs</th><th class="n">Shared share</th><th class="n">Net profit</th></tr></thead><tbody>
+    ${rows.map(x=>`<tr><td>${esc(x.s.name)}</td><td class="n">${fmt(x.en)}</td><td class="n">${miss(x.r.tok)}</td><td class="n">${miss(x.r.wifi)}</td><td class="n">${fmt(x.r.oth)}</td><td class="n">${fmt(sh)}</td><td class="n">${pnl(x.net)}</td></tr>`).join('')}
+    ${lump?`<tr><td>Monthly totals (no site split)</td><td class="n">${fmt(lump)}</td><td></td><td></td><td></td><td></td><td class="n">${pnl(lump)}</td></tr>`:''}
+    </tbody><tfoot><tr><td>All sites</td><td class="n">${fmt(e.total)}</td><td class="n">${fmt(T('tok'))}</td><td class="n">${fmt(T('wifi'))}</td><td class="n">${fmt(T('oth'))}</td><td class="n">${fmt(shared)}</td><td class="n">${pnl(net)}</td></tr></tfoot></table></div></div>`;
 }
 function profitBreakdown(earn,c,title){
   const byCat={};c.forEach(x=>byCat[x.category]=(byCat[x.category]||0)+x.amount);
@@ -880,6 +896,7 @@ P.pl=()=>{
       <div class="kpi"><div class="l">Break-even per day</div><div class="v">${fmt(pj.breakEven)}</div><div class="s">all sites together</div></div></div>
     ${pj.extra.length?`<p class="small muted" style="margin:0">Expected costs = costs so far ${pj.extra.map(x=>'+ '+esc(x[0].toLowerCase())+' ('+fmt(x[1])+')').join(' ')}.</p>`:'<p class="small muted" style="margin:0">Expected costs = costs so far. Set the tech salary in Settings and WiFi amounts in Tokens &amp; WiFi to include bills still to come.</p>'}
   </div>`}
+  ${siteNet(e,c,'Net profit per site, '+monthLabel(m))}
   <div class="two">
     <div class="card"><h2 style="margin-bottom:10px">Per site</h2><div class="tbl-wrap"><table><thead><tr><th>Site</th><th class="n">Earnings</th><th class="n">Costs</th><th class="n">Profit</th></tr></thead><tbody>
       ${S.sites.map(s=>`<tr><td>${esc(s.name)}</td><td class="n">${fmt(e.bySite[s.id].total)}</td><td class="n">${fmt(sc[s.id])}</td><td class="n">${pnl(e.bySite[s.id].total-sc[s.id])}</td></tr>`).join('')}
@@ -1298,5 +1315,6 @@ connectOnline();
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
+<script>/* auto-update */(function(){const V='1791436488';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

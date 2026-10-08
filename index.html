@@ -406,11 +406,14 @@ function earnIn(from,to){
   (S.lumpIncome||[]).forEach(x=>{if(x.date<from||x.date>to)return;const v=num(x.amount);r.byDate[x.date]=(r.byDate[x.date]||0)+v;r.total+=v;r.lump+=v;});
   return r;
 }
+const DEBT_CAT='Debt payments';
 function costsIn(from,to){
   const out=S.expenses.filter(e=>e.date>=from&&e.date<=to).map(e=>({...e,amount:num(e.amount),src:'exp'}));
   S.subtech.filter(w=>w.date>=from&&w.date<=to).forEach(w=>out.push({id:w.id,date:w.date,category:SUBTECH_CAT,site:w.site,amount:num(w.amount),desc:(w.name||'Sub-tech')+': '+(w.task||'work day'),src:'sub'}));
   // equipment bought counts as money out on the day it was bought
   S.assets.filter(a=>num(a.cost)>0&&a.date&&a.date>=from&&a.date<=to).forEach(a=>out.push({id:a.id,date:a.date,category:INV_CAT,site:a.site||'general',amount:num(a.cost),desc:'Equipment: '+a.name,paidBy:a.paidBy,src:'asset'}));
+  // paying back money the business owes is money out too
+  S.debts.filter(d=>d.type==='weOwe').forEach(d=>(d.payments||[]).forEach((p,i)=>{if(p.date>=from&&p.date<=to&&num(p.amount))out.push({id:d.id+'-pay'+i,date:p.date,category:DEBT_CAT,site:'general',amount:num(p.amount),desc:'Debt paid to '+(d.person||'')+(p.note?' ('+p.note+')':''),paidBy:p.paidBy,src:'debt'});}));
   return out;
 }
 const debtPaid=d=>sum(d.payments||[],p=>p.amount);
@@ -651,7 +654,7 @@ function profitBreakdown(earn,c,title){
     <tr><td><b>Earnings (all sites)</b></td><td class="n"><b>${fmt(earn)}</b></td></tr>
     ${Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>minus ${esc(k)}</td><td class="n neg">−${fmt(v)}</td></tr>`).join('')||'<tr><td class="muted">No costs recorded yet</td><td></td></tr>'}
     </tbody><tfoot><tr><td>${p<0?'Loss':'Profit'} after deducting everything</td><td class="n ${p<0?'neg':'pos'}">${fmt(p)}</td></tr></tfoot></table></div>
-    <p class="small muted" style="margin:6px 0 0">Every cost is deducted: tokens, WiFi subscriptions, motorbike fuel, salaries, sub-tech days, materials, repairs, transport, equipment and anything else in Running Costs.</p></div>`;
+    <p class="small muted" style="margin:6px 0 0">Every cost is deducted: tokens, WiFi subscriptions, motorbike fuel, salaries, sub-tech days, materials, repairs, transport, equipment, debts the business pays back, and anything else in Running Costs. It updates the moment you save.</p></div>`;
 }
 const dayProfitTxt=(e,c)=>`${e-c<0?'Loss':'Profit'} this day: <b class="${e-c<0?'neg':'pos'}">${fmt(e-c)}</b>`;
 P.earn=()=>{
@@ -1151,25 +1154,25 @@ const ACT={
   payWifi(id){const s=site(id);openForm(`Pay WiFi: ${s.name}`,[fDate(),{k:'amount',label:'Amount (Ksh)',type:'number',req:true,def:s.wifiAmount||''},{k:'cycle',label:'Subscription lasts (days)',type:'number',def:s.wifiCycleDays||30},fPaid(),{k:'desc',label:'Note',def:s.wifiAccount?'Acc '+s.wifiAccount:''}],{},o=>{
     if(!s.wifiLastPaid||o.date>=s.wifiLastPaid){s.wifiLastPaid=o.date;s.wifiAmount=o.amount;s.wifiCycleDays=o.cycle||30;s.wifiCounted=o.date;}
     addExpense({date:o.date,category:'Wifi subscription',site:id,amount:o.amount,desc:o.desc,paidBy:o.paidBy});toast('WiFi payment saved and counted in costs');});},
-  addStore(){openForm('Add item to store',[...storeFields,fDate(),fPaid(),{k:'rec',label:'Count the cost (qty × cost per unit) in Running Costs (Materials)',type:'checkbox',def:true}],{},o=>{
-    const {date,paidBy,rec,...item}=o;S.store.push({id:uid(),...item});S.matLog.push({id:uid(),date,name:o.name,qty:o.qty,type:'In',site:'',note:'Added to store'});
-    const cost=num(o.qty)*num(o.unitCost);if(rec&&cost)addExpense({date,category:'Materials',site:'general',amount:cost,desc:`${o.qty} ${o.unit} ${o.name}`,paidBy});});},
+  addStore(){openForm('Add item to store',[...storeFields,fDate(),fPaid()],{},o=>{
+    const {date,paidBy,...item}=o;S.store.push({id:uid(),...item});S.matLog.push({id:uid(),date,name:o.name,qty:o.qty,type:'In',site:'',note:'Added to store'});
+    const cost=num(o.qty)*num(o.unitCost);if(cost)addExpense({date,category:'Materials',site:'general',amount:cost,desc:`${o.qty} ${o.unit} ${o.name}`,paidBy});});},
   editStore(id){const m=byId(S.store,id);openForm('Edit store item',storeFields,m,o=>{Object.assign(m,o);});},
   delStore(id){del(S.store,id,'store item');},
-  stockIn(id){const m=byId(S.store,id);openForm(`Add stock: ${m.name}`,[fDate(),{k:'qty',label:'Quantity added',type:'number',req:true},{k:'cost',label:'Total cost paid (Ksh)',type:'number',hint:'Leave 0 if not bought now'},fPaid(),{k:'rec',label:'Add cost to Running Costs (Materials)',type:'checkbox',def:true}],{},o=>{
+  stockIn(id){const m=byId(S.store,id);openForm(`Add stock: ${m.name}`,[fDate(),{k:'qty',label:'Quantity added',type:'number',req:true},{k:'cost',label:'Total cost paid (Ksh)',type:'number',hint:'Leave 0 if not bought now'},fPaid()],{},o=>{
     m.qty=num(m.qty)+o.qty;if(o.cost&&o.qty)m.unitCost=Math.round(o.cost/o.qty*100)/100;
     S.matLog.push({id:uid(),date:o.date,name:m.name,qty:o.qty,type:'In',site:'',note:o.cost?'Bought for '+fmt(o.cost):''});
-    if(o.rec&&o.cost)addExpense({date:o.date,category:'Materials',site:'general',amount:o.cost,desc:`${o.qty} ${m.unit} ${m.name}`,paidBy:o.paidBy});});},
+    if(o.cost)addExpense({date:o.date,category:'Materials',site:'general',amount:o.cost,desc:`${o.qty} ${m.unit} ${m.name}`,paidBy:o.paidBy});});},
   stockOut(id){const m=byId(S.store,id);openForm(`Use material: ${m.name}`,[fDate(),{k:'qty',label:`Quantity used (in store: ${num(m.qty)})`,type:'number',req:true},{k:'site',label:'Used at site',type:'select',options:siteOpts(),def:'dala1'},{k:'note',label:'Note'}],{},o=>{
     if(o.qty>num(m.qty)){toast(`Only ${num(m.qty)} in store. Add stock first or lower the quantity.`);return false;}
     m.qty=num(m.qty)-o.qty;S.matLog.push({id:uid(),date:o.date,name:m.name,qty:o.qty,type:'Out',site:o.site,note:o.note});});},
   addBuy(){openForm('Add to shopping list',buyFields,{},o=>{S.toBuy.push({id:uid(),...o});});},
   editBuy(id){const b=byId(S.toBuy,id);openForm('Edit shopping item',buyFields,b,o=>{Object.assign(b,o);});},
   delBuy(id){del(S.toBuy,id,'shopping item');},
-  bought(id){const b=byId(S.toBuy,id);openForm(`Bought: ${b.name}`,[fDate(),{k:'qty',label:'Quantity bought',type:'number',def:b.qty},{k:'cost',label:'Actual total cost (Ksh)',type:'number',def:b.estCost},fPaid(),{k:'rec',label:'Add cost to Running Costs (Materials)',type:'checkbox',def:true}],{},o=>{
+  bought(id){const b=byId(S.toBuy,id);openForm(`Bought: ${b.name}`,[fDate(),{k:'qty',label:'Quantity bought',type:'number',def:b.qty},{k:'cost',label:'Actual total cost (Ksh)',type:'number',def:b.estCost},fPaid()],{},o=>{
     addToStore(b.name,o.qty,b.unit,o.qty?Math.round(o.cost/o.qty*100)/100:0);
     S.matLog.push({id:uid(),date:o.date,name:b.name,qty:o.qty,type:'In',site:'',note:'Bought for '+fmt(o.cost)});
-    if(o.rec&&o.cost)addExpense({date:o.date,category:'Materials',site:b.site||'general',amount:o.cost,desc:`${o.qty} ${b.unit} ${b.name}`,paidBy:o.paidBy});
+    if(o.cost)addExpense({date:o.date,category:'Materials',site:b.site||'general',amount:o.cost,desc:`${o.qty} ${b.unit} ${b.name}`,paidBy:o.paidBy});
     S.toBuy.splice(S.toBuy.indexOf(b),1);toast('Moved to store');});},
   addExp(){openForm('Add running cost',expFields(UI.costCat),{},o=>{addExpense(o);toast('Cost saved');});},
   quickExp(cat){const v={};if(cat==='Tech salary'){v.amount=num(S.settings.techSalary)||'';v.desc=`${S.settings.techName} salary ${monthLabel(today().slice(0,7))}`;}

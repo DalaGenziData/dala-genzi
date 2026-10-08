@@ -604,6 +604,7 @@ P.dash=()=>{
     <div class="kpi"><div class="l">People owe us</div><div class="v">${fmt(owedUs)}</div><div class="s">We owe ${fmt(weOwe)}</div></div>
     <div class="kpi"><div class="l">Unpaid sub-tech</div><div class="v">${fmt(unpaidSub)}</div><div class="s">${S.subtech.filter(w=>!w.paid).length} days not paid</div></div>
   </div>
+  ${profitBreakdown(e.total,c,'How this month\'s profit is worked out')}
   <div class="two">
     <div class="card"><div class="h2row"><h2>Daily earnings, last 14 days</h2><button class="btn sm" data-go="earn">Enter earnings</button></div>${vbars(last14)}</div>
     <div class="card"><div class="h2row"><h2>Needs attention</h2><span class="badge ${al.length?'b-warn':'b-ok'}">${al.length||'All clear'}</span></div>
@@ -642,6 +643,15 @@ function lumpCard(){
   return `<div class="card"><div class="h2row"><h2>Monthly income totals</h2><button class="btn primary" data-act="addLump">+ Add total</button></div>
   <div class="note">Use this only for months where you have one total for the month and no daily figure per site. It counts in profit and loss, but not in site performance.</div>
   ${L.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Description</th><th class="n">Amount</th><th></th></tr></thead><tbody>${L.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.desc||'')}</td><td class="n">${fmt(x.amount)}</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editLump" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delLump" data-id="${x.id}">✕</button></div></td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td></td><td class="n">${fmt(sum(L,x=>num(x.amount)))}</td><td></td></tr></tfoot></table></div>`:'<div class="empty">No monthly totals recorded.</div>'}</div>`;
+}
+function profitBreakdown(earn,c,title){
+  const byCat={};c.forEach(x=>byCat[x.category]=(byCat[x.category]||0)+x.amount);
+  const tot=sum(c,x=>x.amount),p=earn-tot;
+  return `<div class="card"><h2 style="margin-bottom:10px">${title}</h2><div class="tbl-wrap"><table><tbody>
+    <tr><td><b>Earnings (all sites)</b></td><td class="n"><b>${fmt(earn)}</b></td></tr>
+    ${Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>minus ${esc(k)}</td><td class="n neg">−${fmt(v)}</td></tr>`).join('')||'<tr><td class="muted">No costs recorded yet</td><td></td></tr>'}
+    </tbody><tfoot><tr><td>${p<0?'Loss':'Profit'} after deducting everything</td><td class="n ${p<0?'neg':'pos'}">${fmt(p)}</td></tr></tfoot></table></div>
+    <p class="small muted" style="margin:6px 0 0">Every cost is deducted: tokens, WiFi subscriptions, motorbike fuel, salaries, sub-tech days, materials, repairs, transport, equipment and anything else in Running Costs.</p></div>`;
 }
 const dayProfitTxt=(e,c)=>`${e-c<0?'Loss':'Profit'} this day: <b class="${e-c<0?'neg':'pos'}">${fmt(e-c)}</b>`;
 P.earn=()=>{

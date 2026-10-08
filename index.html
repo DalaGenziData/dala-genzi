@@ -410,7 +410,17 @@ function earnIn(from,to){
 }
 const DEBT_CAT='Debt payments';
 function costsIn(from,to){
-  const out=S.expenses.filter(e=>e.date>=from&&e.date<=to).map(e=>({...e,amount:num(e.amount),src:'exp'}));
+  // A WiFi subscription counts in full in the month it is mostly used: a payment made late last month
+  // (most of its days fall in this month) is deducted from this month's profit.
+  const out=[];
+  S.expenses.forEach(e=>{
+    let d=e.date;
+    if(e.category==='Wifi subscription'&&d){
+      const st=S.sites.find(x=>x.id===e.site),cyc=Math.max(1,num(st&&st.wifiCycleDays)||30),mid=addDays(d,Math.floor(cyc/2));
+      if(mid.slice(0,7)!==d.slice(0,7))d=mid.slice(0,7)+'-01';
+    }
+    if(d>=from&&d<=to)out.push({...e,date:d,paidOn:e.date,amount:num(e.amount),src:'exp'});
+  });
   S.subtech.filter(w=>w.date>=from&&w.date<=to).forEach(w=>out.push({id:w.id,date:w.date,category:SUBTECH_CAT,site:w.site,amount:num(w.amount),desc:(w.name||'Sub-tech')+': '+(w.task||'work day'),src:'sub'}));
   // equipment bought counts as money out on the day it was bought
   S.assets.filter(a=>num(a.cost)>0&&a.date&&a.date>=from&&a.date<=to).forEach(a=>out.push({id:a.id,date:a.date,category:INV_CAT,site:a.site||'general',amount:num(a.cost),desc:'Equipment: '+a.name,paidBy:a.paidBy,src:'asset'}));
@@ -671,7 +681,7 @@ function profitBreakdown(earn,c,title){
     <tr><td><b>Earnings (all sites)</b></td><td class="n"><b>${fmt(earn)}</b></td></tr>
     ${Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>minus ${esc(k)}</td><td class="n neg">−${fmt(v)}</td></tr>`).join('')||'<tr><td class="muted">No costs recorded yet</td><td></td></tr>'}
     </tbody><tfoot><tr><td>${p<0?'Loss':'Profit'} after deducting everything</td><td class="n ${p<0?'neg':'pos'}">${fmt(p)}</td></tr></tfoot></table></div>
-    <p class="small muted" style="margin:6px 0 0">Every cost is deducted: tokens, WiFi subscriptions, motorbike fuel, salaries, sub-tech days, materials, repairs, transport, equipment, debts the business pays back, and anything else in Running Costs. It updates the moment you save.</p></div>`;
+    <p class="small muted" style="margin:6px 0 0">Every cost is deducted: tokens, WiFi subscriptions, motorbike fuel, salaries, sub-tech days, materials, repairs, transport, equipment, debts the business pays back, and anything else in Running Costs. A WiFi payment made late last month counts in this month, because that is when it is used. It updates the moment you save.</p></div>`;
 }
 const dayProfitTxt=(e,c)=>`${e-c<0?'Loss':'Profit'} this day: <b class="${e-c<0?'neg':'pos'}">${fmt(e-c)}</b>`;
 P.earn=()=>{
@@ -1324,6 +1334,6 @@ connectOnline();
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791437171';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791437685';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

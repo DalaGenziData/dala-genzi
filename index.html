@@ -206,7 +206,7 @@ function save(){
 const SPLIT=['expenses','subtech','matLog','checks','issues','partnerTx','bankTx'];
 // Google hosting: the page runs inside Apps Script (google.script.run), or on another host that calls the
 // Apps Script web app at API_URL. Either way the data lives in the owner's Google Sheet.
-const API_URL='https://script.google.com/macros/s/AKfycbxv3ehqvow5u0HhgtFfRZSrWsOQbVVokNy_6Q3_OjdbtiFY1IbZFtkrVjiSYW9yLKc/exec';
+const API_URL='https://script.google.com/macros/s/AKfycbya2gpt059ZbFsh2IMXrWqeFObhJIfrISVSZo4AjQYWV-QeJBCswzU_MsMi1vK3Frx4/exec';
 const GAS_RUN=typeof google!=='undefined'&&google.script&&google.script.run?google.script.run:null;
 const REMOTE=!!(GAS_RUN||API_URL);
 let ONLINE=false,PIN='',lastStamp='';

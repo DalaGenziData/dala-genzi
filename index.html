@@ -161,7 +161,7 @@ function defaultState(){
   SEED_DATES.forEach((d,i)=>{earnings[d]={};for(const k in SEED_VALUES)earnings[d][k]=SEED_VALUES[k][i];});
   return {version:1,
     settings:{business:'Dala & Genzi WiFi',subtechRate:500,subtechName:'Sub-tech',techName:'Technician',techSalary:0,tokenWarnDays:30,wifiWarnDays:5,partners:['FIDEL','DOROTHY','MAURICE'],partnerShares:{},lastPayer:''},
-    sites:SITES_SEED.map(s=>({...s,tokenMeter:'',tokenLastPaid:'',tokenLastAmount:0,wifiProvider:'',wifiAccount:'',wifiLastPaid:'',wifiAmount:0,wifiCycleDays:30,notes:''})),
+    sites:SITES_SEED.map(s=>({...s,tokenMeter:'',powerName:'',powerPhone:'',tokenLastPaid:'',tokenLastAmount:0,wifiProvider:'',wifiAccount:'',wifiLastPaid:'',wifiAmount:0,wifiCycleDays:30,notes:''})),
     earnings,expenses:[],subtech:[],store:[],toBuy:[],matLog:[],debts:[],issues:[],assets:[],targets:{},partnerTx:[],lumpIncome:[],employees:[],checks:[],lastBackup:''};
 }
 // Combine a backup into the current data without losing anything: union by id, the backup wins on the same entry.
@@ -715,7 +715,7 @@ P.bills=()=>{
   <div class="scards">${S.sites.map(s=>{const k=tokenStatus(s),w=wifiStatus(s);return `
     <div class="scard"><div class="h2row" style="margin:0"><h3 style="margin:0">${esc(s.name)}</h3>${groupBadge(s)}</div>
       <div class="sec">Electricity token</div>
-      <dl><dt>Meter no.</dt><dd>${esc(s.tokenMeter||'—')}</dd><dt>Last paid</dt><dd>${fmtD(s.tokenLastPaid)}</dd><dt>Last amount</dt><dd>${s.tokenLastAmount?fmt(s.tokenLastAmount):'—'}</dd><dt>Status</dt><dd><span class="badge ${k.cls}">${k.txt}</span></dd></dl>
+      <dl><dt>Meter no.</dt><dd>${esc(s.tokenMeter||'—')}</dd><dt>Power house</dt><dd>${esc(s.powerName||'—')}${s.powerPhone?` · <a href="tel:${esc(String(s.powerPhone).replace(/[^0-9+]/g,''))}">${esc(s.powerPhone)}</a>`:''}</dd><dt>Last paid</dt><dd>${fmtD(s.tokenLastPaid)}</dd><dt>Last amount</dt><dd>${s.tokenLastAmount?fmt(s.tokenLastAmount):'—'}</dd><dt>Status</dt><dd><span class="badge ${k.cls}">${k.txt}</span></dd></dl>
       <div class="sec">WiFi subscription</div>
       <dl><dt>Provider</dt><dd>${esc(s.wifiProvider||'—')}</dd><dt>Account no.</dt><dd>${esc(s.wifiAccount||'—')}</dd><dt>Last paid</dt><dd>${fmtD(s.wifiLastPaid)}</dd><dt>Next due</dt><dd>${fmtD(wifiDue(s))}</dd><dt>Status</dt><dd><span class="badge ${w.cls}">${w.txt}</span></dd></dl>
       <div class="sec">This month at this site</div>
@@ -1101,7 +1101,7 @@ const ACT={
   editDay(id){UI.earnDate=id;render();scrollTo({top:0,behavior:'smooth'});},
   earnShift(n){UI.earnDate=addDays(UI.earnDate||today(),Number(n));UI.earnMonth=UI.earnDate.slice(0,7);render();},
   editSite(id){const s=site(id);openForm(`${s.name} details`,[
-    {k:'tokenMeter',label:'Token meter number'},{k:'tokenLastPaid',label:'Token last paid',type:'date'},{k:'tokenLastAmount',label:'Last token amount (Ksh)',type:'number'},
+    {k:'tokenMeter',label:'Token meter number'},{k:'powerName',label:'Power house owner (name)'},{k:'powerPhone',label:'Power house owner phone',type:'tel'},{k:'tokenLastPaid',label:'Token last paid',type:'date'},{k:'tokenLastAmount',label:'Last token amount (Ksh)',type:'number'},
     {k:'wifiProvider',label:'WiFi / internet provider'},{k:'wifiAccount',label:'WiFi account number'},{k:'wifiLastPaid',label:'WiFi subscription last paid',type:'date'},{k:'wifiAmount',label:'WiFi subscription amount (Ksh)',type:'number'},{k:'wifiCycleDays',label:'Subscription lasts (days)',type:'number',hint:'Usually 30'},{k:'notes',label:'Notes',type:'textarea'}],s,o=>{Object.assign(s,o);toast('Saved');});},
   payToken(id){const s=site(id);openForm(`Pay token: ${s.name}`,[fDate(),{k:'amount',label:'Amount (Ksh)',type:'number',req:true,def:s.tokenLastAmount||''},fPaid(),{k:'desc',label:'Note',def:s.tokenMeter?'Meter '+s.tokenMeter:''},{k:'rec',label:'Also add to Running Costs',type:'checkbox',def:true}],{},o=>{
     if(!s.tokenLastPaid||o.date>=s.tokenLastPaid){s.tokenLastPaid=o.date;s.tokenLastAmount=o.amount;}

@@ -1147,6 +1147,28 @@ P.upcoming=()=>{
   </div>`;
 };
 
+/* ---------- link to the ISPLedger billing dashboards ---------- */
+const ISP_SITES=[['dala','Dala dashboard','https://dalawifi.ispledger.com'],['genzi','Genzi dashboard','https://geziiiwifi.ispledger.com']];
+const ispCfg=k=>{const d=ISP_SITES.find(x=>x[0]===k);const c=((S.settings.isp||{})[k])||{};return {url:c.url||d[2],token:c.token||''};};
+function ispCard(){
+  const online=API_URL==='/api';
+  return `<div class="card"><h2 style="margin-bottom:6px">Link billing dashboards (ISPLedger)</h2>
+    <p class="small muted" style="margin-top:0">Paste the <b>Access Token</b> from each dashboard (Settings → General Settings → API Key) so earnings can come in automatically. The token works like a password, so only paste it here.</p>
+    ${online?'':'<div class="note">Open the website at <b>dalawifi.com</b> to use this.</div>'}
+    ${ISP_SITES.map(([k,label])=>{const c=ispCfg(k);return `<div style="border-top:1px solid var(--line);padding-top:10px;margin-top:10px"><b>${label}</b>
+      <label class="fld"><span>Dashboard address</span><input value="${esc(c.url)}" data-chg="ispUrl" data-id="${k}"></label>
+      <label class="fld"><span>Access Token ${c.token?'<span class="badge b-ok">saved</span>':''}</span><input type="password" autocomplete="off" placeholder="${c.token?'•••••• (saved, paste a new one to change)':'Paste the Access Token here'}" data-chg="ispTok" data-id="${k}"></label>
+      <div class="row"><button class="btn" data-act="ispTest" data-id="${k}"${online?'':' disabled'}>Test connection</button></div>
+      <pre id="ispOut-${k}" class="small" style="white-space:pre-wrap;word-break:break-all;max-height:260px;overflow:auto;background:var(--bg);padding:8px;border-radius:8px;margin:8px 0 0" hidden></pre></div>`;}).join('')}
+  </div>`;
+}
+function ispSummary(res){
+  let j=null;try{j=JSON.parse(res.text);}catch(e){}
+  if(!j)return `HTTP ${res.status}. Not JSON. Start of reply:\n`+res.text.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').slice(0,400);
+  const keys=o=>o&&typeof o==='object'?Object.keys(o).slice(0,40).join(', '):String(o);
+  return `HTTP ${res.status} · success: ${j.success} · message: ${j.message||''}\nTop keys: ${keys(j)}\nResult keys: ${keys(j.result)}\nStart: ${JSON.stringify(j).slice(0,700)}`;
+}
+
 const CHECK_DONE=['Yes','Partly','No'];
 function empStats(emp,from,to){
   const inR=d=>d>=from&&d<=to,n=emp.name;
@@ -1206,6 +1228,7 @@ P.settings=()=>{
   const st=S.settings;
   const counts=`${Object.keys(S.earnings).length} earning days, ${S.expenses.length} costs, ${S.subtech.length} sub-tech days, ${S.debts.length} debts, ${S.store.length+S.toBuy.length} material items`;
   return `
+  ${ispCard()}
   <div class="card"><h2 style="margin-bottom:6px">Backup your data</h2>
     <div class="note">${ONLINE?'Your data is saved <b>online with this link</b>, so it is the same on any phone or computer that opens it. Download a backup now and then as an extra copy.':'Your data is saved in <b>this browser on this device</b>. Download a backup at least once a week, and use it to move your data to another phone or computer.'} Last backup: <b>${S.lastBackup?fmtD(S.lastBackup):'never'}</b>.</div>
     <div class="row"><button class="btn primary" data-act="exportJSON">⬇ Download backup</button><button class="btn" data-act="importJSON">⬆ Restore from backup</button><button class="btn" data-act="exportCSV">Earnings CSV (Excel)</button></div>
@@ -1367,6 +1390,11 @@ const ACT={
     rows.push([]);rows.push(['Ownership now',...n.map(x=>x+' '+(R.share[x]*100).toFixed(2)+'% ('+Math.round(R.cap[x])+')')]);
     download(`directors-statement-${today()}.csv`,rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');},
   printPage(){window.print();},
+  async ispTest(k){const c=ispCfg(k),out=$('#ispOut-'+k);if(!c.token){toast('Paste the Access Token first');return;}
+    out.hidden=false;out.textContent='Testing…';
+    const tries=[['dashboard',''],['reports/income-overview','period=daily'],['reports','']];let txt='';
+    for(const [r,q] of tries){try{const res=await remote('ispFetch',PIN,c.url,c.token,r,q);txt+=`== ${r} ${q}\n`+ispSummary(res)+'\n\n';}catch(e){txt+=`== ${r}\nError: ${e.message||e}\n\n`;}out.textContent=txt;}
+  },
   editShares(){const ps=S.settings.partners;openForm('Profit shares (%)',ps.map(p=>({k:p,label:p,type:'number',hint:'Leave all at 0 to split equally'})),Object.fromEntries(ps.map(p=>[p,num(S.settings.partnerShares[p])])),o=>{S.settings.partnerShares=o;toast('Shares saved');});},
   addEmp(){openForm('Add employee',empFields,{},o=>{S.employees.push({id:uid(),...o});});},
   editEmp(id){const e=byId(S.employees,id),old=e.name;openForm('Edit employee',empFields,e,o=>{Object.assign(e,o);if(o.name!==old){S.issues.forEach(i=>{if(i.assignedTo===old)i.assignedTo=o.name;});S.subtech.forEach(w=>{if(w.name===old)w.name=o.name;});}});},
@@ -1419,6 +1447,8 @@ const CHG={
   costPayer(el){UI.costPayer=el.value;render();},
   partRange(el){UI.partRange=el.value;render();},
   ownRange(el){UI.ownRange=el.value;render();},
+  ispUrl(el){const k=el.dataset.id;S.settings.isp={...(S.settings.isp||{})};S.settings.isp[k]={...ispCfg(k),url:el.value.trim()};save();toast('Saved');},
+  ispTok(el){const k=el.dataset.id,v=el.value.trim();if(!v)return;S.settings.isp={...(S.settings.isp||{})};S.settings.isp[k]={...ispCfg(k),token:v};save();render();toast('Access Token saved');},
   bankRange(el){UI.bankRange=el.value;render();},
   teamRange(el){UI.teamRange=el.value;render();},
   partners(el){const l=el.value.split(',').map(x=>x.trim()).filter(Boolean);if(l.length){S.settings.partners=l;save();toast('Saved');}},
@@ -1473,6 +1503,6 @@ connectOnline();
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791572408';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791573198';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

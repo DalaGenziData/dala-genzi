@@ -31,7 +31,24 @@ async function checkPin(db, pin) {
 
 const stamp = async db => (await getMeta(db, 'stamp')) || '0';
 
+// Reads from the ISPLedger billing dashboards (PHPNuxBill API) so earnings can be imported automatically.
+// Only *.ispledger.com addresses are allowed, so this can't be used to fetch other websites.
+async function ispGet(base, token, route, query) {
+  base = String(base || '').trim().replace(/\/+$/, '');
+  if (!/^https:\/\/[a-z0-9-]+\.ispledger\.com$/i.test(base)) throw new Error('bad_site');
+  const qs = new URLSearchParams(String(query || ''));
+  qs.set('r', String(route || 'dashboard'));
+  qs.set('token', String(token || ''));
+  const r = await fetch(base + '/system/api.php?' + qs.toString(), { headers: { accept: 'application/json' } });
+  const text = await r.text();
+  return { status: r.status, text: text.slice(0, 60000) };
+}
+
 const FNS = {
+  async ispFetch(db, pin, base, token, route, query) {
+    await checkPin(db, pin);
+    return ispGet(base, token, route, query);
+  },
   async getStamp(db, pin) {
     await checkPin(db, pin);
     return stamp(db);

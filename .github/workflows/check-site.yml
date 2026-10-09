@@ -6,8 +6,13 @@ jobs:
     steps:
       - name: Check live website
         run: |
+          out=""
           for u in https://dalawifi.com/ https://www.dalawifi.com/ https://dalawifi.com/api https://dala-genzi.ayiekofidel.workers.dev/ https://dala-genzi.ayiekofidel.workers.dev/api; do
-            echo "== $u"; curl -sS -m 20 -o body.txt -w "HTTP %{http_code} size %{size_download} ip %{remote_ip}\n" "$u" || true; head -c 200 body.txt | tr -d '\n'; echo; grep -o "const V='[0-9]*'" body.txt | head -1 || true
+            r=$(curl -sS -m 20 -o body.txt -w "HTTP %{http_code} size %{size_download}" "$u" 2>&1 || true)
+            v=$(grep -o "const V='[0-9]*'" body.txt 2>/dev/null | head -1)
+            b=$(head -c 120 body.txt 2>/dev/null | tr -d '\n\r' | tr -c '[:print:]' ' ')
+            echo "::notice title=$u::$r $v | $b"
           done
-          echo "== POST getStamp (wrong pin)"; curl -sS -m 20 -X POST https://dalawifi.com/api -d '{"fn":"getStamp","args":["__wrong__"]}'; echo
-          echo "== DNS"; getent hosts dalawifi.com || true; getent hosts www.dalawifi.com || true
+          p=$(curl -sS -m 20 -X POST https://dalawifi.com/api -d '{"fn":"getStamp","args":["__wrong__"]}' 2>&1 | head -c 200)
+          echo "::notice title=POST getStamp::$p"
+          echo "::notice title=DNS::$(getent hosts dalawifi.com | tr '\n' ' ') / www: $(getent hosts www.dalawifi.com | tr '\n' ' ')"

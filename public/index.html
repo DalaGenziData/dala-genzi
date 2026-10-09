@@ -1400,7 +1400,37 @@ const ACT={
     rows.push([]);rows.push(['Ownership now',...n.map(x=>x+' '+(R.share[x]*100).toFixed(2)+'% ('+Math.round(R.cap[x])+')')]);
     download(`directors-statement-${today()}.csv`,rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');},
   printPage(){window.print();},
+  editContacts(){const c=S.settings.contacts||[],F=[];for(let i=0;i<4;i++)F.push({k:'n'+i,label:'Name '+(i+1)+(i>2?' (optional)':'')},{k:'p'+i,label:'Phone '+(i+1),type:'tel'});
+    F.push({k:'days',label:'Remind how many days before a payment is due',type:'number'});
+    const v={days:num(S.settings.remindDays)||3};c.forEach(([n,p],i)=>{v['n'+i]=n;v['p'+i]=p;});
+    openForm('Reminder phone numbers',F,v,o=>{S.settings.contacts=[0,1,2,3].map(i=>[String(o['n'+i]||'').trim(),String(o['p'+i]||'').trim()]).filter(x=>x[0]&&x[1]);S.settings.remindDays=num(o.days)||3;toast('Numbers saved');});},
+  async copyReminder(){const t=reminderText().text;try{await navigator.clipboard.writeText(t);toast('Message copied');}catch(e){toast('Could not copy here');}},
 
+  editShares(){const ps=S.settings.partners;openForm('Profit shares (%)',ps.map(p=>({k:p,label:p,type:'number',hint:'Leave all at 0 to split equally'})),Object.fromEntries(ps.map(p=>[p,num(S.settings.partnerShares[p])])),o=>{S.settings.partnerShares=o;toast('Shares saved');});},
+  addEmp(){openForm('Add employee',empFields,{},o=>{S.employees.push({id:uid(),...o});});},
+  editEmp(id){const e=byId(S.employees,id),old=e.name;openForm('Edit employee',empFields,e,o=>{Object.assign(e,o);if(o.name!==old){S.issues.forEach(i=>{if(i.assignedTo===old)i.assignedTo=o.name;});S.subtech.forEach(w=>{if(w.name===old)w.name=o.name;});}});},
+  async delEmp(id){if(S.checks.some(c=>c.emp===id)&&!await ask('This employee has daily checks. Delete anyway?','Continue'))return;del(S.employees,id,'employee');},
+  addCheck(id){openForm('Daily check',checkFields(),{emp:id||S.employees[0]?.id},o=>{S.checks.push({id:uid(),...o});toast('Check saved');});},
+  editCheck(id){const c=byId(S.checks,id);openForm('Edit daily check',checkFields(),c,o=>{Object.assign(c,o);});},
+  delCheck(id){del(S.checks,id,'daily check');},
+  addBank(ty){openForm(ty==='in'?'Bank deposit':'Bank withdrawal',bankFields(),{type:ty==='in'?'in':'out'},o=>{S.bankTx.push({id:uid(),...o});});},
+  editBank(id){const x=byId(S.bankTx,id);openForm('Edit bank record',bankFields(),x,o=>{Object.assign(x,o);});},
+  delBank(id){del(S.bankTx,id,'bank record');},
+  addLump(){openForm('Add monthly income total',lumpFields(),{},o=>{S.lumpIncome.push({id:uid(),...o});});},
+  editLump(id){const x=byId(S.lumpIncome,id);openForm('Edit monthly income total',lumpFields(),x,o=>{Object.assign(x,o);});},
+  delLump(id){del(S.lumpIncome,id,'income total');},
+  addAsset(){openForm('Add equipment',assetFields(),{},o=>{S.assets.push({id:uid(),...o});});},
+  editAsset(id){const x=byId(S.assets,id);openForm('Edit equipment',assetFields(),x,o=>{Object.assign(x,o);});},
+  delAsset(id){del(S.assets,id,'equipment item');},
+  addIssue(){openForm('Report site issue',issueFields(),{},o=>{S.issues.push({id:uid(),...o,fixedOn:o.status==='Fixed'?o.date:''});});},
+  editIssue(id){const i=byId(S.issues,id);openForm('Edit issue',issueFields(),i,o=>{if(o.status==='Fixed'&&i.status!=='Fixed')o.fixedOn=today();Object.assign(i,o);});},
+  fixIssue(id){const i=byId(S.issues,id);openForm('Mark as fixed',[{k:'action',label:'What was done',type:'textarea'},fDate('fixedOn','Fixed on')],{...i,fixedOn:i.fixedOn||today()},o=>{Object.assign(i,o,{status:'Fixed'});});},
+  delIssue(id){del(S.issues,id,'issue');},
+  async exportJSON(){
+    const prev=S.lastBackup;S.lastBackup=today();
+    if(await download(`dala-genzi-backup-${today()}.json`,JSON.stringify(S,null,1),'application/json')){save();toast('Backup downloaded. Keep it safe (e.g. email it to yourself).');render();}
+    else S.lastBackup=prev;
+  },
   importJSON(){$('#importFile').click();},
   exportCSV(){
     const dates=Object.keys(S.earnings).sort();
@@ -1428,7 +1458,6 @@ const CHG={
   costPayer(el){UI.costPayer=el.value;render();},
   partRange(el){UI.partRange=el.value;render();},
   ownRange(el){UI.ownRange=el.value;render();},
-  ispTok(el){const k=el.dataset.id,v=el.value.trim();if(!v)return;S.settings.isp={...(S.settings.isp||{})};S.settings.isp[k]={...ispCfg(k),token:v};save();render();toast('Access Token saved');},
   bankRange(el){UI.bankRange=el.value;render();},
   teamRange(el){UI.teamRange=el.value;render();},
   partners(el){const l=el.value.split(',').map(x=>x.trim()).filter(Boolean);if(l.length){S.settings.partners=l;save();toast('Saved');}},
@@ -1483,6 +1512,6 @@ connectOnline();
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791576189';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791576908';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

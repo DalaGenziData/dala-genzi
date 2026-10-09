@@ -1,7 +1,0 @@
-{
-  "name": "dala-genzi",
-  "main": "/home/claude/dala-genzi/worker.js",
-  "compatibility_date": "2025-09-01",
-  "assets": { "directory": "/home/claude/dala-genzi/public", "binding": "ASSETS" },
-  "d1_databases": [{ "binding": "DB", "database_name": "dala-genzi-data", "database_id": "00000000-0000-0000-0000-000000000000" }]
-}

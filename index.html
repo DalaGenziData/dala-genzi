@@ -69,6 +69,19 @@ tr.click:hover td{background:var(--brand-2)}
 .b-dala{background:var(--brand-2);color:var(--brand)}
 .b-genzi{background:color-mix(in srgb,var(--genzi) 16%,transparent);color:var(--genzi)}
 .pos{color:var(--good)}
+.hbtn{background:transparent!important;color:var(--on-head)!important;border-color:var(--on-head-2)!important}
+#fab{position:fixed;right:18px;bottom:18px;width:56px;height:56px;border-radius:50%;border:0;background:var(--brand);color:var(--on-brand);font-size:30px;line-height:1;box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:pointer;z-index:20}
+.steps{display:flex;gap:4px;margin-top:10px;overflow-x:auto}
+.step{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;font-size:12px;color:var(--muted)}
+.step:not(:last-child)::after{content:'';position:absolute;top:13px;left:calc(50% + 15px);right:calc(-50% + 15px);height:3px;background:var(--line);border-radius:2px}
+.step.done:not(:last-child)::after{background:var(--good)}
+.step .dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--line);color:var(--muted);font-weight:700;margin-bottom:4px}
+.step.done .dot{background:var(--good);color:#fff}
+.step.next .dot{background:var(--warn-bg);color:var(--warn);outline:2px solid var(--warn)}
+.step.done .sl{color:var(--ink);font-weight:600}
+.step .st{font-size:11px;margin-top:2px}
+@media (max-width:520px){.step{font-size:10.5px}.step .st{font-size:9.5px}.step .dot{width:24px;height:24px}.step:not(:last-child)::after{top:11px}}
+main{padding-bottom:90px!important}
 a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .ownbar{display:flex;height:34px;border-radius:10px;overflow:hidden;margin-top:12px;border:1px solid var(--line)}
 .ownbar>div{display:flex;align-items:center;justify-content:center;min-width:0;color:#fff;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden}
@@ -127,8 +140,8 @@ details summary{cursor:pointer;color:var(--brand)}
 <body>
 <header class="top">
   <div class="brand">
-    <div class="brandrow"><img class="logo" alt="DalaWifi" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA3NTEgMjQwIj48dGl0bGU+RGFsYVdpZmk8L3RpdGxlPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iZyIgeDE9IjAiIHkxPSIwIiB4Mj0iMSIgeTI9IjEiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzAwNTdBNiIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzBkOTQ4OCIvPjwvbGluZWFyR3JhZGllbnQ+PGxpbmVhckdyYWRpZW50IGlkPSJ3IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeDE9IjQ5NyIgeTE9IjAiIHgyPSI3MjciIHkyPSIwIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM2MGE1ZmEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM1ZWVhZDQiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyMCAyMCkgc2NhbGUoMSkiPjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiByeD0iNDgiIGZpbGw9InVybCgjZykiLz48Y2lyY2xlIGN4PSI4NiIgY3k9IjEzNiIgcj0iMzQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIyMCIvPjxwYXRoIGQ9Ik0xMzIgOTZWMTcwIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMjAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utd2lkdGg9IjEwIj48cGF0aCBkPSJNMTE1LjAgNzkuMEEyNCAyNCAwIDAgMSAxNDkuMCA3OS4wIi8+PHBhdGggZD0iTTEwMC45IDY0LjlBNDQgNDQgMCAwIDEgMTYzLjEgNjQuOSIgb3BhY2l0eT0iLjg1Ii8+PHBhdGggZD0iTTg2LjcgNTAuN0E2NCA2NCAwIDAgMSAxNzcuMyA1MC43IiBvcGFjaXR5PSIuNjUiLz48L2c+PC9nPjxwYXRoIGQ9Ik0yODcuNjEgMTM2QzMxMy4yNyAxMzYgMzI5LjEzIDEyMC4xNCAzMjkuMTMgOTMuOEMzMjkuMTMgNjcuNDYgMzEzLjI3IDUxLjYxIDI4Ny42MSA1MS42MUgyNTYuNTdWMTM2Wk0yNzYuNTYgMTE4Ljg5VjY4LjcxSDI4Ni40OEMzMDEuMjYgNjguNzEgMzA5LjEzIDc1LjUxIDMwOS4xMyA5My44QzMwOS4xMyAxMTIuMSAzMDEuMjYgMTE4Ljg5IDI4Ni43NiAxMTguODlaTTM1Ni4wNyAxMzcuMTNDMzY0Ljg1IDEzNy4xMyAzNzAuOTcgMTMzLjYyIDM3NC40MiAxMjcuMTFIMzc0LjkzVjEzNkgzOTMuNTFWOTMuMDFDMzkzLjUxIDc5LjQyIDM4MS4xMSA3MS44OCAzNjUuMzYgNzEuODhDMzQ5LjUgNzEuODggMzM5LjUzIDc5LjMgMzM3LjA0IDkwLjEyTDM1NC45NCA5Mi40NEMzNTYuMDEgODguNDggMzU5LjcgODUuOTMgMzY1LjE5IDg1LjkzQzM3MC41NyA4NS45MyAzNzMuOCA4OC40MiAzNzMuOCA5Mi43OFY5My4wMUMzNzMuOCA5Ni45MiAzNjkuNDkgOTcuNzEgMzU4Ljc5IDk4LjYyQzM0NS45OSA5OS42OSAzMzUuMjMgMTA0LjM5IDMzNS4yMyAxMTguNDRDMzM1LjIzIDEzMC45NiAzNDMuODkgMTM3LjEzIDM1Ni4wNyAxMzcuMTNaTTM2Mi4wNyAxMjQuMDVDMzU3LjMyIDEyNC4wNSAzNTMuOTIgMTIxLjc4IDM1My45MiAxMTcuNTRDMzUzLjkyIDExMy4zNCAzNTcuMiAxMTAuODUgMzYzLjA0IDExMEMzNjYuNzIgMTA5LjQ0IDM3MS43IDEwOC41OSAzNzMuOTcgMTA3LjRWMTEzLjQ2QzM3My45NyAxMTkuNjkgMzY4LjcgMTI0LjA1IDM2Mi4wNyAxMjQuMDVaTTQyNC4zNiA1MS42MUg0MDQuNTlWMTM2SDQyNC4zNlpNNDUzLjE3IDEzNy4xM0M0NjEuOTUgMTM3LjEzIDQ2OC4wNyAxMzMuNjIgNDcxLjUzIDEyNy4xMUg0NzIuMDRWMTM2SDQ5MC42MVY5My4wMUM0OTAuNjEgNzkuNDIgNDc4LjIxIDcxLjg4IDQ2Mi40NiA3MS44OEM0NDYuNiA3MS44OCA0MzYuNjMgNzkuMyA0MzQuMTQgOTAuMTJMNDUyLjA0IDkyLjQ0QzQ1My4xMiA4OC40OCA0NTYuOCA4NS45MyA0NjIuMjkgODUuOTNDNDY3LjY3IDg1LjkzIDQ3MC45IDg4LjQyIDQ3MC45IDkyLjc4VjkzLjAxQzQ3MC45IDk2LjkyIDQ2Ni42IDk3LjcxIDQ1NS44OSA5OC42MkM0NDMuMDkgOTkuNjkgNDMyLjMzIDEwNC4zOSA0MzIuMzMgMTE4LjQ0QzQzMi4zMyAxMzAuOTYgNDQxIDEzNy4xMyA0NTMuMTcgMTM3LjEzWk00NTkuMTggMTI0LjA1QzQ1NC40MiAxMjQuMDUgNDUxLjAyIDEyMS43OCA0NTEuMDIgMTE3LjU0QzQ1MS4wMiAxMTMuMzQgNDU0LjMxIDExMC44NSA0NjAuMTQgMTEwQzQ2My44MiAxMDkuNDQgNDY4LjgxIDEwOC41OSA0NzEuMDcgMTA3LjRWMTEzLjQ2QzQ3MS4wNyAxMTkuNjkgNDY1LjggMTI0LjA1IDQ1OS4xOCAxMjQuMDVaIiBmaWxsPSIjZmZmZmZmIi8+PHBhdGggZD0iTTUyMC4zOSAxMzZINTQzLjFMNTUyLjk2IDk3LjAzQzU1NC41NCA5MC42MyA1NTUuNTEgODMuNzIgNTU2LjUzIDc2LjdDNTU3LjYgODMuODMgNTU4LjY4IDkwLjggNTYwLjI2IDk3LjAzTDU3MC4xMiAxMzZINTkyLjc4TDYxNS4zMiA1MS42MUg1OTMuMTdMNTg0Ljg1IDg4LjkzQzU4My4xNSA5Ni43NSA1ODEuNzkgMTA2LjI2IDU4MC40OCAxMTUuMjFDNTc5LjAxIDEwNi4yNiA1NzcuNTQgOTYuNzUgNTc1LjY3IDg4LjkzTDU2Ni43OCA1MS42MUg1NDYuNDRMNTM3LjQ5IDg4LjkzQzUzNS42MiA5Ni44NiA1MzQuMTUgMTA2LjQzIDUzMi42OCAxMTUuNDRDNTMxLjMyIDEwNi40MyA1MjkuOTYgOTYuODYgNTI4LjMyIDg4LjkzTDUxOS45OSA1MS42MUg0OTcuODVaTTYyMi40OSAxMzZINjQyLjI2VjcyLjY4SDYyMi40OVpNNjMyLjM1IDY1LjI2QzYzOC4wMSA2NS4yNiA2NDIuNiA2MS4wMSA2NDIuNiA1NS43NEM2NDIuNiA1MC40NyA2MzguMDEgNDYuMjIgNjMyLjM1IDQ2LjIyQzYyNi43NCA0Ni4yMiA2MjIuMTUgNTAuNDcgNjIyLjE1IDU1Ljc0QzYyMi4xNSA2MS4wMSA2MjYuNzQgNjUuMjYgNjMyLjM1IDY1LjI2Wk02OTAuOTYgNzIuNjhINjc4LjI3VjY5LjExQzY3OC4yNyA2NS4zNyA2NzkuODUgNjMuMSA2ODQuNTUgNjMuMUM2ODYuNTQgNjMuMSA2ODguOCA2My41IDY5MC4yOCA2My45TDY5My40NSA0OS40NUM2OTEuMTIgNDguNzcgNjg1Ljc0IDQ3LjY0IDY4MC4xNCA0Ny42NEM2NjcuNDUgNDcuNjQgNjU4LjYxIDU0Ljc4IDY1OC42MSA2OS4yOFY3Mi42OEg2NDcuOTZWODcuMzVINjU4LjYxVjEzNkg2NzguMjdWODcuMzVINjkwLjk2Wk03MDAuMjMgMTM2SDcxOS45OVY3Mi42OEg3MDAuMjNaTTcxMC4wOCA2NS4yNkM3MTUuNzUgNjUuMjYgNzIwLjMzIDYxLjAxIDcyMC4zMyA1NS43NEM3MjAuMzMgNTAuNDcgNzE1Ljc1IDQ2LjIyIDcxMC4wOCA0Ni4yMkM3MDQuNDcgNDYuMjIgNjk5Ljg5IDUwLjQ3IDY5OS44OSA1NS43NEM2OTkuODkgNjEuMDEgNzA0LjQ3IDY1LjI2IDcxMC4wOCA2NS4yNloiIGZpbGw9InVybCgjdykiLz48cGF0aCBkPSJNMjU0LjYxIDE5MEgyNTcuNDhWMTgzLjZIMjY0LjE0VjE4MS4yMUgyNTcuNDhWMTc2LjQxSDI2NC44NlYxNzMuOTlIMjU0LjYxWk0yNjkuNTggMTkwSDI3Mi43MkwyNzQuMDMgMTg2LjA0SDI4MC4wMUwyODEuMzggMTkwSDI4NC41MkwyNzguODEgMTczLjk5SDI3NS4xN1pNMjc0Ljc5IDE4My43MyAyNzUuNDcgMTgxLjY5QzI3NS45MSAxODAuMjYgMjc2LjM5IDE3OC40NiAyNzYuOTYgMTc2LjIzQzI3Ny41NSAxNzguNDQgMjc4LjA2IDE4MC4yMSAyNzguNTMgMTgxLjY5TDI3OS4yMyAxODMuNzNaTTI5Ny4xNiAxOTAuMjVDMzAwLjk5IDE5MC4yNSAzMDMuMjIgMTg4LjMyIDMwMy4yMiAxODUuNTFDMzAzLjIyIDE4Mi43MiAzMDAuODkgMTgxLjQ4IDI5OC41MiAxODAuOTFMMjk3LjAyIDE4MC41M0MyOTUuNzIgMTgwLjIgMjk0LjI5IDE3OS42NyAyOTQuMjkgMTc4LjMyQzI5NC4yOSAxNzcuMTEgMjk1LjM5IDE3Ni4yMiAyOTcuMTkgMTc2LjIyQzI5OC45MiAxNzYuMjIgMzAwLjA4IDE3Ny4wMSAzMDAuMjIgMTc4LjM4SDMwMy4wMUMzMDIuOTMgMTc1LjcgMzAwLjY1IDE3My43OCAyOTcuMjQgMTczLjc4QzI5My44OSAxNzMuNzggMjkxLjM5IDE3NS42NyAyOTEuMzkgMTc4LjVDMjkxLjM5IDE4MC43NSAyOTIuOTcgMTgyLjEgMjk1LjY1IDE4Mi43OUwyOTcuNDYgMTgzLjI2QzI5OS4xOSAxODMuNzIgMzAwLjM1IDE4NC4yNCAzMDAuMzUgMTg1LjQ5QzMwMC4zNSAxODYuODYgMjk5LjAzIDE4Ny44IDI5Ny4xNCAxODcuOEMyOTUuMzQgMTg3LjggMjkzLjkxIDE4Ni45OCAyOTMuNzggMTg1LjI5SDI5MC45NUMyOTEuMDggMTg4LjQ1IDI5My40MyAxOTAuMjUgMjk3LjE2IDE5MC4yNVpNMzEwLjI0IDE3Ni40MUgzMTUuMThWMTkwSDMxOC4wNVYxNzYuNDFIMzIyLjk4VjE3My45OUgzMTAuMjRaTTM0My4xMyAxODQuMTJDMzQ0LjEgMTg0LjEyIDM0NC44NiAxODMuMzcgMzQ0Ljg2IDE4Mi40MUMzNDQuODYgMTgxLjQ0IDM0NC4xIDE4MC43IDM0My4xMyAxODAuN0MzNDIuMTcgMTgwLjcgMzQxLjQyIDE4MS40NCAzNDEuNDIgMTgyLjQxQzM0MS40MiAxODMuMzcgMzQyLjE3IDE4NC4xMiAzNDMuMTMgMTg0LjEyWk0zNjIuOTQgMTkwSDM2Ni4wOEwzNjcuMzkgMTg2LjA0SDM3My4zOEwzNzQuNzQgMTkwSDM3Ny44OUwzNzIuMTcgMTczLjk5SDM2OC41M1pNMzY4LjE1IDE4My43MyAzNjguODMgMTgxLjY5QzM2OS4yNyAxODAuMjYgMzY5Ljc2IDE3OC40NiAzNzAuMzIgMTc2LjIzQzM3MC45MiAxNzguNDQgMzcxLjQyIDE4MC4yMSAzNzEuODkgMTgxLjY5TDM3Mi41OSAxODMuNzNaTTM4NS4xMyAxOTBIMzg4VjE4My42SDM5NC42NlYxODEuMjFIMzg4VjE3Ni40MUgzOTUuMzhWMTczLjk5SDM4NS4xM1pNNDAzLjE4IDE5MEg0MDYuMDRWMTgzLjZINDEyLjdWMTgxLjIxSDQwNi4wNFYxNzYuNDFINDEzLjQyVjE3My45OUg0MDMuMThaTTQyOC4wNyAxOTAuMjFDNDMyLjI2IDE5MC4yMSA0MzUuNDEgMTg3LjE3IDQzNS40MSAxODIuMDFDNDM1LjQxIDE3Ni44MyA0MzIuMjYgMTczLjc4IDQyOC4wNyAxNzMuNzhDNDIzLjg3IDE3My43OCA0MjAuNzEgMTc2LjgzIDQyMC43MSAxODIuMDFDNDIwLjcxIDE4Ny4xNiA0MjMuODcgMTkwLjIxIDQyOC4wNyAxOTAuMjFaTTQyOC4wNyAxODcuNjVDNDI1LjQ1IDE4Ny42NSA0MjMuNTkgMTg1LjY1IDQyMy41OSAxODIuMDFDNDIzLjU5IDE3OC4zNCA0MjUuNDUgMTc2LjM1IDQyOC4wNyAxNzYuMzVDNDMwLjY3IDE3Ni4zNSA0MzIuNTIgMTc4LjMzIDQzMi41MiAxODIuMDFDNDMyLjUyIDE4NS42NiA0MzAuNjcgMTg3LjY1IDQyOC4wNyAxODcuNjVaTTQ0My4yMyAxOTBINDQ2LjFWMTg0LjEySDQ0OS4wOUw0NTIuMjQgMTkwSDQ1NS40NUw0NTEuOTggMTgzLjY0QzQ1My44NyAxODIuODkgNDU0Ljg2IDE4MS4yOSA0NTQuODYgMTc5LjEyQzQ1NC44NiAxNzYuMDcgNDUyLjkgMTczLjk5IDQ0OS4yMiAxNzMuOTlINDQzLjIzWk00NDYuMSAxODEuNzVWMTc2LjRINDQ4Ljc4QzQ1MC45NiAxNzYuNCA0NTEuOTIgMTc3LjQxIDQ1MS45MiAxNzkuMTJDNDUxLjkyIDE4MC44MiA0NTAuOTYgMTgxLjc1IDQ0OC44IDE4MS43NVpNNDY4LjExIDE5MEM0NzIuOTggMTkwIDQ3NS44NSAxODYuOTggNDc1Ljg1IDE4MS45OEM0NzUuODUgMTc3IDQ3Mi45OCAxNzMuOTkgNDY4LjIyIDE3My45OUg0NjIuNjlWMTkwWk00NjUuNTYgMTg3LjUyVjE3Ni40OEg0NjguMDRDNDcxLjMyIDE3Ni40OCA0NzMuMDMgMTc4LjMxIDQ3My4wMyAxODEuOThDNDczLjAzIDE4NS42NyA0NzEuMzIgMTg3LjUyIDQ2Ny45NyAxODcuNTJaTTQ4MS43NSAxOTBINDg0Ljg4TDQ4Ni4xOSAxODYuMDRINDkyLjE4TDQ5My41NCAxOTBINDk2LjY5TDQ5MC45NyAxNzMuOTlINDg3LjMzWk00ODYuOTYgMTgzLjczIDQ4Ny42MyAxODEuNjlDNDg4LjA3IDE4MC4yNiA0ODguNTYgMTc4LjQ2IDQ4OS4xMyAxNzYuMjNDNDg5LjcyIDE3OC40NCA0OTAuMjIgMTgwLjIxIDQ5MC42OSAxODEuNjlMNDkxLjM5IDE4My43M1pNNTAzLjkzIDE5MEg1MTAuMzlDNTE0LjA1IDE5MCA1MTUuODUgMTg4LjEzIDUxNS44NSAxODUuNjRDNTE1Ljg1IDE4My4yMiA1MTQuMTMgMTgxLjggNTEyLjQzIDE4MS43MlYxODEuNTZDNTEzLjk5IDE4MS4xOSA1MTUuMjIgMTgwLjEgNTE1LjIyIDE3OC4xNUM1MTUuMjIgMTc1Ljc4IDUxMy41MiAxNzMuOTkgNTEwLjA2IDE3My45OUg1MDMuOTNaTTUwNi44IDE4Ny42VjE4Mi44OUg1MTAuMDRDNTExLjgyIDE4Mi44OSA1MTIuOTQgMTg0IDUxMi45NCAxODUuNDJDNTEyLjk0IDE4Ni42OSA1MTIuMDYgMTg3LjYgNTA5Ljk0IDE4Ny42Wk01MDYuOCAxODAuODJWMTc2LjM4SDUwOS43NkM1MTEuNDggMTc2LjM4IDUxMi4zNiAxNzcuMjggNTEyLjM2IDE3OC41MkM1MTIuMzYgMTc5LjkzIDUxMS4yMSAxODAuODIgNTA5LjY5IDE4MC44MlpNNTIzLjU0IDE5MEg1MzMuNDhWMTg3LjU4SDUyNi40MVYxNzMuOTlINTIzLjU0Wk01NDEuMDkgMTkwSDU1MS41M1YxODcuNThINTQzLjk2VjE4My4xMUg1NTAuOTNWMTgwLjczSDU0My45NlYxNzYuNDFINTUxLjQ5VjE3My45OUg1NDEuMDlaTTU3Mi4wNiAxODQuMTJDNTczLjAzIDE4NC4xMiA1NzMuNzkgMTgzLjM3IDU3My43OSAxODIuNDFDNTczLjc5IDE4MS40NCA1NzMuMDMgMTgwLjcgNTcyLjA2IDE4MC43QzU3MS4xIDE4MC43IDU3MC4zNCAxODEuNDQgNTcwLjM0IDE4Mi40MUM1NzAuMzQgMTgzLjM3IDU3MS4xIDE4NC4xMiA1NzIuMDYgMTg0LjEyWk01OTIuOTUgMTkwSDU5NS44MlYxODQuMTJINTk4LjhMNjAxLjk1IDE5MEg2MDUuMTZMNjAxLjY5IDE4My42NEM2MDMuNTggMTgyLjg5IDYwNC41NyAxODEuMjkgNjA0LjU3IDE3OS4xMkM2MDQuNTcgMTc2LjA3IDYwMi42MSAxNzMuOTkgNTk4LjkzIDE3My45OUg1OTIuOTVaTTU5NS44MiAxODEuNzVWMTc2LjRINTk4LjQ5QzYwMC42NyAxNzYuNCA2MDEuNjQgMTc3LjQxIDYwMS42NCAxNzkuMTJDNjAxLjY0IDE4MC44MiA2MDAuNjcgMTgxLjc1IDU5OC41MSAxODEuNzVaTTYxMi40MSAxOTBINjIyLjg1VjE4Ny41OEg2MTUuMjhWMTgzLjExSDYyMi4yNVYxODAuNzNINjE1LjI4VjE3Ni40MUg2MjIuODFWMTczLjk5SDYxMi40MVpNNjMwLjg0IDE5MEg2NDAuNzdWMTg3LjU4SDYzMy43VjE3My45OUg2MzAuODRaTTY1MS4yNSAxNzMuOTlINjQ4LjM4VjE5MEg2NTEuMjVaTTY1OC41MSAxOTBINjYxLjY1TDY2Mi45NiAxODYuMDRINjY4Ljk0TDY3MC4zIDE5MEg2NzMuNDVMNjY3Ljc0IDE3My45OUg2NjQuMDlaTTY2My43MiAxODMuNzMgNjY0LjQgMTgxLjY5QzY2NC44NCAxODAuMjYgNjY1LjMyIDE3OC40NiA2NjUuODkgMTc2LjIzQzY2Ni40OCAxNzguNDQgNjY2Ljk4IDE4MC4yMSA2NjcuNDYgMTgxLjY5TDY2OC4xNiAxODMuNzNaTTY4MC43IDE5MEg2ODcuMTVDNjkwLjgyIDE5MCA2OTIuNjEgMTg4LjEzIDY5Mi42MSAxODUuNjRDNjkyLjYxIDE4My4yMiA2OTAuODkgMTgxLjggNjg5LjE5IDE4MS43MlYxODEuNTZDNjkwLjc1IDE4MS4xOSA2OTEuOTkgMTgwLjEgNjkxLjk5IDE3OC4xNUM2OTEuOTkgMTc1Ljc4IDY5MC4yOCAxNzMuOTkgNjg2LjgyIDE3My45OUg2ODAuN1pNNjgzLjU3IDE4Ny42VjE4Mi44OUg2ODYuOEM2ODguNTggMTgyLjg5IDY4OS43IDE4NCA2ODkuNyAxODUuNDJDNjg5LjcgMTg2LjY5IDY4OC44MiAxODcuNiA2ODYuNyAxODcuNlpNNjgzLjU3IDE4MC44MlYxNzYuMzhINjg2LjUyQzY4OC4yNCAxNzYuMzggNjg5LjEyIDE3Ny4yOCA2ODkuMTIgMTc4LjUyQzY4OS4xMiAxNzkuOTMgNjg3Ljk3IDE4MC44MiA2ODYuNDYgMTgwLjgyWk03MDAuMzEgMTkwSDcxMC4yNFYxODcuNThINzAzLjE4VjE3My45OUg3MDAuMzFaTTcxNy44NiAxOTBINzI4LjNWMTg3LjU4SDcyMC43MlYxODMuMTFINzI3LjdWMTgwLjczSDcyMC43MlYxNzYuNDFINzI4LjI1VjE3My45OUg3MTcuODZaIiBmaWxsPSIjOWZiMGM4Ii8+PC9zdmc+"><div><h1 id="bizName">Dala & Genzi WiFi</h1><div class="sub">ISP business manager · <span id="netState">Saved on this device</span></div></div></div>
-    <button class="btn sm noprint" data-act="exportJSON" style="background:transparent;color:var(--on-head);border-color:var(--on-head-2)">Backup</button>
+    <div class="brandrow"><img class="logo" alt="DalaWifi" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA3NTEgMjQwIj48dGl0bGU+RGFsYVdpZmk8L3RpdGxlPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iZyIgeDE9IjAiIHkxPSIwIiB4Mj0iMSIgeTI9IjEiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzAwNTdBNiIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzBkOTQ4OCIvPjwvbGluZWFyR3JhZGllbnQ+PGxpbmVhckdyYWRpZW50IGlkPSJ3IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeDE9IjQ5NyIgeTE9IjAiIHgyPSI3MjciIHkyPSIwIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM2MGE1ZmEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM1ZWVhZDQiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyMCAyMCkgc2NhbGUoMSkiPjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiByeD0iNDgiIGZpbGw9InVybCgjZykiLz48Y2lyY2xlIGN4PSI4NiIgY3k9IjEzNiIgcj0iMzQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIyMCIvPjxwYXRoIGQ9Ik0xMzIgOTZWMTcwIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMjAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utd2lkdGg9IjEwIj48cGF0aCBkPSJNMTE1LjAgNzkuMEEyNCAyNCAwIDAgMSAxNDkuMCA3OS4wIi8+PHBhdGggZD0iTTEwMC45IDY0LjlBNDQgNDQgMCAwIDEgMTYzLjEgNjQuOSIgb3BhY2l0eT0iLjg1Ii8+PHBhdGggZD0iTTg2LjcgNTAuN0E2NCA2NCAwIDAgMSAxNzcuMyA1MC43IiBvcGFjaXR5PSIuNjUiLz48L2c+PC9nPjxwYXRoIGQ9Ik0yODcuNjEgMTM2QzMxMy4yNyAxMzYgMzI5LjEzIDEyMC4xNCAzMjkuMTMgOTMuOEMzMjkuMTMgNjcuNDYgMzEzLjI3IDUxLjYxIDI4Ny42MSA1MS42MUgyNTYuNTdWMTM2Wk0yNzYuNTYgMTE4Ljg5VjY4LjcxSDI4Ni40OEMzMDEuMjYgNjguNzEgMzA5LjEzIDc1LjUxIDMwOS4xMyA5My44QzMwOS4xMyAxMTIuMSAzMDEuMjYgMTE4Ljg5IDI4Ni43NiAxMTguODlaTTM1Ni4wNyAxMzcuMTNDMzY0Ljg1IDEzNy4xMyAzNzAuOTcgMTMzLjYyIDM3NC40MiAxMjcuMTFIMzc0LjkzVjEzNkgzOTMuNTFWOTMuMDFDMzkzLjUxIDc5LjQyIDM4MS4xMSA3MS44OCAzNjUuMzYgNzEuODhDMzQ5LjUgNzEuODggMzM5LjUzIDc5LjMgMzM3LjA0IDkwLjEyTDM1NC45NCA5Mi40NEMzNTYuMDEgODguNDggMzU5LjcgODUuOTMgMzY1LjE5IDg1LjkzQzM3MC41NyA4NS45MyAzNzMuOCA4OC40MiAzNzMuOCA5Mi43OFY5My4wMUMzNzMuOCA5Ni45MiAzNjkuNDkgOTcuNzEgMzU4Ljc5IDk4LjYyQzM0NS45OSA5OS42OSAzMzUuMjMgMTA0LjM5IDMzNS4yMyAxMTguNDRDMzM1LjIzIDEzMC45NiAzNDMuODkgMTM3LjEzIDM1Ni4wNyAxMzcuMTNaTTM2Mi4wNyAxMjQuMDVDMzU3LjMyIDEyNC4wNSAzNTMuOTIgMTIxLjc4IDM1My45MiAxMTcuNTRDMzUzLjkyIDExMy4zNCAzNTcuMiAxMTAuODUgMzYzLjA0IDExMEMzNjYuNzIgMTA5LjQ0IDM3MS43IDEwOC41OSAzNzMuOTcgMTA3LjRWMTEzLjQ2QzM3My45NyAxMTkuNjkgMzY4LjcgMTI0LjA1IDM2Mi4wNyAxMjQuMDVaTTQyNC4zNiA1MS42MUg0MDQuNTlWMTM2SDQyNC4zNlpNNDUzLjE3IDEzNy4xM0M0NjEuOTUgMTM3LjEzIDQ2OC4wNyAxMzMuNjIgNDcxLjUzIDEyNy4xMUg0NzIuMDRWMTM2SDQ5MC42MVY5My4wMUM0OTAuNjEgNzkuNDIgNDc4LjIxIDcxLjg4IDQ2Mi40NiA3MS44OEM0NDYuNiA3MS44OCA0MzYuNjMgNzkuMyA0MzQuMTQgOTAuMTJMNDUyLjA0IDkyLjQ0QzQ1My4xMiA4OC40OCA0NTYuOCA4NS45MyA0NjIuMjkgODUuOTNDNDY3LjY3IDg1LjkzIDQ3MC45IDg4LjQyIDQ3MC45IDkyLjc4VjkzLjAxQzQ3MC45IDk2LjkyIDQ2Ni42IDk3LjcxIDQ1NS44OSA5OC42MkM0NDMuMDkgOTkuNjkgNDMyLjMzIDEwNC4zOSA0MzIuMzMgMTE4LjQ0QzQzMi4zMyAxMzAuOTYgNDQxIDEzNy4xMyA0NTMuMTcgMTM3LjEzWk00NTkuMTggMTI0LjA1QzQ1NC40MiAxMjQuMDUgNDUxLjAyIDEyMS43OCA0NTEuMDIgMTE3LjU0QzQ1MS4wMiAxMTMuMzQgNDU0LjMxIDExMC44NSA0NjAuMTQgMTEwQzQ2My44MiAxMDkuNDQgNDY4LjgxIDEwOC41OSA0NzEuMDcgMTA3LjRWMTEzLjQ2QzQ3MS4wNyAxMTkuNjkgNDY1LjggMTI0LjA1IDQ1OS4xOCAxMjQuMDVaIiBmaWxsPSIjZmZmZmZmIi8+PHBhdGggZD0iTTUyMC4zOSAxMzZINTQzLjFMNTUyLjk2IDk3LjAzQzU1NC41NCA5MC42MyA1NTUuNTEgODMuNzIgNTU2LjUzIDc2LjdDNTU3LjYgODMuODMgNTU4LjY4IDkwLjggNTYwLjI2IDk3LjAzTDU3MC4xMiAxMzZINTkyLjc4TDYxNS4zMiA1MS42MUg1OTMuMTdMNTg0Ljg1IDg4LjkzQzU4My4xNSA5Ni43NSA1ODEuNzkgMTA2LjI2IDU4MC40OCAxMTUuMjFDNTc5LjAxIDEwNi4yNiA1NzcuNTQgOTYuNzUgNTc1LjY3IDg4LjkzTDU2Ni43OCA1MS42MUg1NDYuNDRMNTM3LjQ5IDg4LjkzQzUzNS42MiA5Ni44NiA1MzQuMTUgMTA2LjQzIDUzMi42OCAxMTUuNDRDNTMxLjMyIDEwNi40MyA1MjkuOTYgOTYuODYgNTI4LjMyIDg4LjkzTDUxOS45OSA1MS42MUg0OTcuODVaTTYyMi40OSAxMzZINjQyLjI2VjcyLjY4SDYyMi40OVpNNjMyLjM1IDY1LjI2QzYzOC4wMSA2NS4yNiA2NDIuNiA2MS4wMSA2NDIuNiA1NS43NEM2NDIuNiA1MC40NyA2MzguMDEgNDYuMjIgNjMyLjM1IDQ2LjIyQzYyNi43NCA0Ni4yMiA2MjIuMTUgNTAuNDcgNjIyLjE1IDU1Ljc0QzYyMi4xNSA2MS4wMSA2MjYuNzQgNjUuMjYgNjMyLjM1IDY1LjI2Wk02OTAuOTYgNzIuNjhINjc4LjI3VjY5LjExQzY3OC4yNyA2NS4zNyA2NzkuODUgNjMuMSA2ODQuNTUgNjMuMUM2ODYuNTQgNjMuMSA2ODguOCA2My41IDY5MC4yOCA2My45TDY5My40NSA0OS40NUM2OTEuMTIgNDguNzcgNjg1Ljc0IDQ3LjY0IDY4MC4xNCA0Ny42NEM2NjcuNDUgNDcuNjQgNjU4LjYxIDU0Ljc4IDY1OC42MSA2OS4yOFY3Mi42OEg2NDcuOTZWODcuMzVINjU4LjYxVjEzNkg2NzguMjdWODcuMzVINjkwLjk2Wk03MDAuMjMgMTM2SDcxOS45OVY3Mi42OEg3MDAuMjNaTTcxMC4wOCA2NS4yNkM3MTUuNzUgNjUuMjYgNzIwLjMzIDYxLjAxIDcyMC4zMyA1NS43NEM3MjAuMzMgNTAuNDcgNzE1Ljc1IDQ2LjIyIDcxMC4wOCA0Ni4yMkM3MDQuNDcgNDYuMjIgNjk5Ljg5IDUwLjQ3IDY5OS44OSA1NS43NEM2OTkuODkgNjEuMDEgNzA0LjQ3IDY1LjI2IDcxMC4wOCA2NS4yNloiIGZpbGw9InVybCgjdykiLz48cGF0aCBkPSJNMjU0LjYxIDE5MEgyNTcuNDhWMTgzLjZIMjY0LjE0VjE4MS4yMUgyNTcuNDhWMTc2LjQxSDI2NC44NlYxNzMuOTlIMjU0LjYxWk0yNjkuNTggMTkwSDI3Mi43MkwyNzQuMDMgMTg2LjA0SDI4MC4wMUwyODEuMzggMTkwSDI4NC41MkwyNzguODEgMTczLjk5SDI3NS4xN1pNMjc0Ljc5IDE4My43MyAyNzUuNDcgMTgxLjY5QzI3NS45MSAxODAuMjYgMjc2LjM5IDE3OC40NiAyNzYuOTYgMTc2LjIzQzI3Ny41NSAxNzguNDQgMjc4LjA2IDE4MC4yMSAyNzguNTMgMTgxLjY5TDI3OS4yMyAxODMuNzNaTTI5Ny4xNiAxOTAuMjVDMzAwLjk5IDE5MC4yNSAzMDMuMjIgMTg4LjMyIDMwMy4yMiAxODUuNTFDMzAzLjIyIDE4Mi43MiAzMDAuODkgMTgxLjQ4IDI5OC41MiAxODAuOTFMMjk3LjAyIDE4MC41M0MyOTUuNzIgMTgwLjIgMjk0LjI5IDE3OS42NyAyOTQuMjkgMTc4LjMyQzI5NC4yOSAxNzcuMTEgMjk1LjM5IDE3Ni4yMiAyOTcuMTkgMTc2LjIyQzI5OC45MiAxNzYuMjIgMzAwLjA4IDE3Ny4wMSAzMDAuMjIgMTc4LjM4SDMwMy4wMUMzMDIuOTMgMTc1LjcgMzAwLjY1IDE3My43OCAyOTcuMjQgMTczLjc4QzI5My44OSAxNzMuNzggMjkxLjM5IDE3NS42NyAyOTEuMzkgMTc4LjVDMjkxLjM5IDE4MC43NSAyOTIuOTcgMTgyLjEgMjk1LjY1IDE4Mi43OUwyOTcuNDYgMTgzLjI2QzI5OS4xOSAxODMuNzIgMzAwLjM1IDE4NC4yNCAzMDAuMzUgMTg1LjQ5QzMwMC4zNSAxODYuODYgMjk5LjAzIDE4Ny44IDI5Ny4xNCAxODcuOEMyOTUuMzQgMTg3LjggMjkzLjkxIDE4Ni45OCAyOTMuNzggMTg1LjI5SDI5MC45NUMyOTEuMDggMTg4LjQ1IDI5My40MyAxOTAuMjUgMjk3LjE2IDE5MC4yNVpNMzEwLjI0IDE3Ni40MUgzMTUuMThWMTkwSDMxOC4wNVYxNzYuNDFIMzIyLjk4VjE3My45OUgzMTAuMjRaTTM0My4xMyAxODQuMTJDMzQ0LjEgMTg0LjEyIDM0NC44NiAxODMuMzcgMzQ0Ljg2IDE4Mi40MUMzNDQuODYgMTgxLjQ0IDM0NC4xIDE4MC43IDM0My4xMyAxODAuN0MzNDIuMTcgMTgwLjcgMzQxLjQyIDE4MS40NCAzNDEuNDIgMTgyLjQxQzM0MS40MiAxODMuMzcgMzQyLjE3IDE4NC4xMiAzNDMuMTMgMTg0LjEyWk0zNjIuOTQgMTkwSDM2Ni4wOEwzNjcuMzkgMTg2LjA0SDM3My4zOEwzNzQuNzQgMTkwSDM3Ny44OUwzNzIuMTcgMTczLjk5SDM2OC41M1pNMzY4LjE1IDE4My43MyAzNjguODMgMTgxLjY5QzM2OS4yNyAxODAuMjYgMzY5Ljc2IDE3OC40NiAzNzAuMzIgMTc2LjIzQzM3MC45MiAxNzguNDQgMzcxLjQyIDE4MC4yMSAzNzEuODkgMTgxLjY5TDM3Mi41OSAxODMuNzNaTTM4NS4xMyAxOTBIMzg4VjE4My42SDM5NC42NlYxODEuMjFIMzg4VjE3Ni40MUgzOTUuMzhWMTczLjk5SDM4NS4xM1pNNDAzLjE4IDE5MEg0MDYuMDRWMTgzLjZINDEyLjdWMTgxLjIxSDQwNi4wNFYxNzYuNDFINDEzLjQyVjE3My45OUg0MDMuMThaTTQyOC4wNyAxOTAuMjFDNDMyLjI2IDE5MC4yMSA0MzUuNDEgMTg3LjE3IDQzNS40MSAxODIuMDFDNDM1LjQxIDE3Ni44MyA0MzIuMjYgMTczLjc4IDQyOC4wNyAxNzMuNzhDNDIzLjg3IDE3My43OCA0MjAuNzEgMTc2LjgzIDQyMC43MSAxODIuMDFDNDIwLjcxIDE4Ny4xNiA0MjMuODcgMTkwLjIxIDQyOC4wNyAxOTAuMjFaTTQyOC4wNyAxODcuNjVDNDI1LjQ1IDE4Ny42NSA0MjMuNTkgMTg1LjY1IDQyMy41OSAxODIuMDFDNDIzLjU5IDE3OC4zNCA0MjUuNDUgMTc2LjM1IDQyOC4wNyAxNzYuMzVDNDMwLjY3IDE3Ni4zNSA0MzIuNTIgMTc4LjMzIDQzMi41MiAxODIuMDFDNDMyLjUyIDE4NS42NiA0MzAuNjcgMTg3LjY1IDQyOC4wNyAxODcuNjVaTTQ0My4yMyAxOTBINDQ2LjFWMTg0LjEySDQ0OS4wOUw0NTIuMjQgMTkwSDQ1NS40NUw0NTEuOTggMTgzLjY0QzQ1My44NyAxODIuODkgNDU0Ljg2IDE4MS4yOSA0NTQuODYgMTc5LjEyQzQ1NC44NiAxNzYuMDcgNDUyLjkgMTczLjk5IDQ0OS4yMiAxNzMuOTlINDQzLjIzWk00NDYuMSAxODEuNzVWMTc2LjRINDQ4Ljc4QzQ1MC45NiAxNzYuNCA0NTEuOTIgMTc3LjQxIDQ1MS45MiAxNzkuMTJDNDUxLjkyIDE4MC44MiA0NTAuOTYgMTgxLjc1IDQ0OC44IDE4MS43NVpNNDY4LjExIDE5MEM0NzIuOTggMTkwIDQ3NS44NSAxODYuOTggNDc1Ljg1IDE4MS45OEM0NzUuODUgMTc3IDQ3Mi45OCAxNzMuOTkgNDY4LjIyIDE3My45OUg0NjIuNjlWMTkwWk00NjUuNTYgMTg3LjUyVjE3Ni40OEg0NjguMDRDNDcxLjMyIDE3Ni40OCA0NzMuMDMgMTc4LjMxIDQ3My4wMyAxODEuOThDNDczLjAzIDE4NS42NyA0NzEuMzIgMTg3LjUyIDQ2Ny45NyAxODcuNTJaTTQ4MS43NSAxOTBINDg0Ljg4TDQ4Ni4xOSAxODYuMDRINDkyLjE4TDQ5My41NCAxOTBINDk2LjY5TDQ5MC45NyAxNzMuOTlINDg3LjMzWk00ODYuOTYgMTgzLjczIDQ4Ny42MyAxODEuNjlDNDg4LjA3IDE4MC4yNiA0ODguNTYgMTc4LjQ2IDQ4OS4xMyAxNzYuMjNDNDg5LjcyIDE3OC40NCA0OTAuMjIgMTgwLjIxIDQ5MC42OSAxODEuNjlMNDkxLjM5IDE4My43M1pNNTAzLjkzIDE5MEg1MTAuMzlDNTE0LjA1IDE5MCA1MTUuODUgMTg4LjEzIDUxNS44NSAxODUuNjRDNTE1Ljg1IDE4My4yMiA1MTQuMTMgMTgxLjggNTEyLjQzIDE4MS43MlYxODEuNTZDNTEzLjk5IDE4MS4xOSA1MTUuMjIgMTgwLjEgNTE1LjIyIDE3OC4xNUM1MTUuMjIgMTc1Ljc4IDUxMy41MiAxNzMuOTkgNTEwLjA2IDE3My45OUg1MDMuOTNaTTUwNi44IDE4Ny42VjE4Mi44OUg1MTAuMDRDNTExLjgyIDE4Mi44OSA1MTIuOTQgMTg0IDUxMi45NCAxODUuNDJDNTEyLjk0IDE4Ni42OSA1MTIuMDYgMTg3LjYgNTA5Ljk0IDE4Ny42Wk01MDYuOCAxODAuODJWMTc2LjM4SDUwOS43NkM1MTEuNDggMTc2LjM4IDUxMi4zNiAxNzcuMjggNTEyLjM2IDE3OC41MkM1MTIuMzYgMTc5LjkzIDUxMS4yMSAxODAuODIgNTA5LjY5IDE4MC44MlpNNTIzLjU0IDE5MEg1MzMuNDhWMTg3LjU4SDUyNi40MVYxNzMuOTlINTIzLjU0Wk01NDEuMDkgMTkwSDU1MS41M1YxODcuNThINTQzLjk2VjE4My4xMUg1NTAuOTNWMTgwLjczSDU0My45NlYxNzYuNDFINTUxLjQ5VjE3My45OUg1NDEuMDlaTTU3Mi4wNiAxODQuMTJDNTczLjAzIDE4NC4xMiA1NzMuNzkgMTgzLjM3IDU3My43OSAxODIuNDFDNTczLjc5IDE4MS40NCA1NzMuMDMgMTgwLjcgNTcyLjA2IDE4MC43QzU3MS4xIDE4MC43IDU3MC4zNCAxODEuNDQgNTcwLjM0IDE4Mi40MUM1NzAuMzQgMTgzLjM3IDU3MS4xIDE4NC4xMiA1NzIuMDYgMTg0LjEyWk01OTIuOTUgMTkwSDU5NS44MlYxODQuMTJINTk4LjhMNjAxLjk1IDE5MEg2MDUuMTZMNjAxLjY5IDE4My42NEM2MDMuNTggMTgyLjg5IDYwNC41NyAxODEuMjkgNjA0LjU3IDE3OS4xMkM2MDQuNTcgMTc2LjA3IDYwMi42MSAxNzMuOTkgNTk4LjkzIDE3My45OUg1OTIuOTVaTTU5NS44MiAxODEuNzVWMTc2LjRINTk4LjQ5QzYwMC42NyAxNzYuNCA2MDEuNjQgMTc3LjQxIDYwMS42NCAxNzkuMTJDNjAxLjY0IDE4MC44MiA2MDAuNjcgMTgxLjc1IDU5OC41MSAxODEuNzVaTTYxMi40MSAxOTBINjIyLjg1VjE4Ny41OEg2MTUuMjhWMTgzLjExSDYyMi4yNVYxODAuNzNINjE1LjI4VjE3Ni40MUg2MjIuODFWMTczLjk5SDYxMi40MVpNNjMwLjg0IDE5MEg2NDAuNzdWMTg3LjU4SDYzMy43VjE3My45OUg2MzAuODRaTTY1MS4yNSAxNzMuOTlINjQ4LjM4VjE5MEg2NTEuMjVaTTY1OC41MSAxOTBINjYxLjY1TDY2Mi45NiAxODYuMDRINjY4Ljk0TDY3MC4zIDE5MEg2NzMuNDVMNjY3Ljc0IDE3My45OUg2NjQuMDlaTTY2My43MiAxODMuNzMgNjY0LjQgMTgxLjY5QzY2NC44NCAxODAuMjYgNjY1LjMyIDE3OC40NiA2NjUuODkgMTc2LjIzQzY2Ni40OCAxNzguNDQgNjY2Ljk4IDE4MC4yMSA2NjcuNDYgMTgxLjY5TDY2OC4xNiAxODMuNzNaTTY4MC43IDE5MEg2ODcuMTVDNjkwLjgyIDE5MCA2OTIuNjEgMTg4LjEzIDY5Mi42MSAxODUuNjRDNjkyLjYxIDE4My4yMiA2OTAuODkgMTgxLjggNjg5LjE5IDE4MS43MlYxODEuNTZDNjkwLjc1IDE4MS4xOSA2OTEuOTkgMTgwLjEgNjkxLjk5IDE3OC4xNUM2OTEuOTkgMTc1Ljc4IDY5MC4yOCAxNzMuOTkgNjg2LjgyIDE3My45OUg2ODAuN1pNNjgzLjU3IDE4Ny42VjE4Mi44OUg2ODYuOEM2ODguNTggMTgyLjg5IDY4OS43IDE4NCA2ODkuNyAxODUuNDJDNjg5LjcgMTg2LjY5IDY4OC44MiAxODcuNiA2ODYuNyAxODcuNlpNNjgzLjU3IDE4MC44MlYxNzYuMzhINjg2LjUyQzY4OC4yNCAxNzYuMzggNjg5LjEyIDE3Ny4yOCA2ODkuMTIgMTc4LjUyQzY4OS4xMiAxNzkuOTMgNjg3Ljk3IDE4MC44MiA2ODYuNDYgMTgwLjgyWk03MDAuMzEgMTkwSDcxMC4yNFYxODcuNThINzAzLjE4VjE3My45OUg3MDAuMzFaTTcxNy44NiAxOTBINzI4LjNWMTg3LjU4SDcyMC43MlYxODMuMTFINzI3LjdWMTgwLjczSDcyMC43MlYxNzYuNDFINzI4LjI1VjE3My45OUg3MTcuODZaIiBmaWxsPSIjOWZiMGM4Ii8+PC9zdmc+"><div><h1 id="bizName">Dala & Genzi WiFi</h1><div class="sub">ISP business manager · <a href="#" id="meName" data-act="pickMe" style="color:inherit"></a> · <span id="netState">Saved on this device</span></div></div></div>
+    <div class="row noprint" style="flex-wrap:nowrap;gap:6px"><button class="btn sm hbtn" data-act="goSearch" title="Search">🔍</button><button class="btn sm hbtn" data-act="exportJSON">Backup</button></div>
   </div>
   <nav id="nav"></nav>
 </header>
@@ -137,6 +150,7 @@ details summary{cursor:pointer;color:var(--brand)}
 <dialog id="dlg"></dialog>
 <dialog id="dlg2"></dialog>
 <div id="toast"></div>
+<button id="fab" class="noprint" data-act="quickAdd" title="Quick add" aria-label="Quick add">+</button>
 <input type="file" id="importFile" accept=".json,application/json" hidden>
 <input type="file" id="upFile" accept=".html,.htm,.mhtml,.mht,.csv,.txt" multiple hidden>
 
@@ -171,11 +185,11 @@ const INV_CAT='Equipment & investment';
 const EXP_CATS=['Motorbike fuel','Tech salary','Electricity tokens','Wifi subscription','Materials','Repairs & maintenance','Transport','Airtime / SMS','Rent',INV_CAT,'Other'];
 const isInv=x=>x.category===INV_CAT;
 const SUBTECH_CAT='Sub-tech wages';
-const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup']];
+const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup']];
 
 // Main menu: each main page holds related subpages, shown as tabs under the menu.
-const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','upcoming','assets','issues']],['Costs',['costs','mat']],['Employees',['staff','team']],['Profit & Loss',['pl','debts','bank']],['Owners',['directors','partners']],['Settings',['settings']]];
-const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup'};
+const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','sitecosts','mat']],['Employees',['staff','team']],['Profit & Loss',['pl','debts','bank']],['Owners',['directors','partners']],['Settings',['settings','activity','search']]];
+const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',sitecosts:'Costs per Site',search:'Search',activity:'Activity History'};
 const groupOf=pg=>GROUPS.find(g=>g[1].includes(pg))||GROUPS[0];
 
 /* ---------- state ---------- */
@@ -185,7 +199,7 @@ function defaultState(){
   return {version:1,
     settings:{business:'Dala & Genzi WiFi',subtechRate:500,subtechName:'Sub-tech',techName:'Technician',techSalary:0,tokenWarnDays:30,wifiWarnDays:5,partners:['FIDEL','DOROTHY','MAURICE'],partnerShares:{},lastPayer:'',own:{},contacts:[['FIDELIS','+254740396568'],['DOROTHY','+254114920486'],['MAURICE','+254723025729']],remindDays:3},
     sites:SITES_SEED.map(s=>({...s,tokenMeter:'',powerName:'',powerPhone:'',tokenLastPaid:'',tokenLastAmount:0,wifiProvider:'',wifiAccount:'',wifiLastPaid:'',wifiAmount:0,wifiCycleDays:30,notes:''})),
-    earnings,expenses:[],subtech:[],store:[],toBuy:[],matLog:[],debts:[],issues:[],assets:[],targets:{},partnerTx:[],equityTx:[],lumpIncome:[],bankTx:[],employees:[],checks:[],lastBackup:''};
+    earnings,expenses:[],subtech:[],store:[],toBuy:[],matLog:[],debts:[],issues:[],assets:[],targets:{},partnerTx:[],equityTx:[],tickets:[],activity:[],lumpIncome:[],bankTx:[],employees:[],checks:[],lastBackup:''};
 }
 // Combine a backup into the current data without losing anything: union by id, the backup wins on the same entry.
 function mergeState(cur,inc){
@@ -227,7 +241,7 @@ function save(){
   scheduleSync();
 }
 /* ---------- online storage: when opened from the shared link, data lives in the artifact's database ---------- */
-const SPLIT=['expenses','subtech','matLog','checks','issues','partnerTx','bankTx'];
+const SPLIT=['expenses','subtech','matLog','checks','issues','partnerTx','bankTx','tickets'];
 // Google hosting: the page runs inside Apps Script (google.script.run), or on another host that calls the
 // Apps Script web app at API_URL. Either way the data lives in the owner's Google Sheet.
 const GOOGLE_API='https://script.google.com/macros/s/AKfycbya2gpt059ZbFsh2IMXrWqeFObhJIfrISVSZo4AjQYWV-QeJBCswzU_MsMi1vK3Frx4/exec';
@@ -363,7 +377,7 @@ async function connectOnline(){
     db.collection('earnings').onSnapshot(q=>{lastSnaps.earn=q.docs;applyRemote();},()=>setNet('err'));
   }catch(e){setNet('err');}
 }
-const UI={page:(location.hash.slice(1)||'dash'),earnDate:'',earnMonth:'',perfRange:'30',costMonth:'',costCat:'',costSite:'',staffMonth:'',plMonth:'',issueFilter:'Open',debtFilter:'open',tgtMonth:'',assetSite:'',costPayer:'',partRange:'month',bankRange:'all',ownRange:'30',teamRange:'30'};
+const UI={page:(location.hash.slice(1)||'dash'),earnDate:'',earnMonth:'',perfRange:'30',costMonth:'',costCat:'',costSite:'',staffMonth:'',plMonth:'',issueFilter:'Open',debtFilter:'open',tgtMonth:'',assetSite:'',costPayer:'',partRange:'month',bankRange:'all',ownRange:'30',scRange:'month',tFilter:'Open',q:'',teamRange:'30'};
 if(!PAGES.some(p=>p[0]===UI.page))UI.page='dash';
 
 /* ---------- helpers ---------- */
@@ -407,6 +421,7 @@ function rangeOf(key){
   if(key==='month')return [t.slice(0,8)+'01',t];
   if(key==='lastmonth')return [iso(new Date(d.getFullYear(),d.getMonth()-1,1)),iso(new Date(d.getFullYear(),d.getMonth(),0))];
   if(key==='all')return ['0000-01-01','9999-12-31'];
+  if(key==='week'||key==='lastweek'){const mon=addDays(t,-((d.getDay()+6)%7));return key==='week'?[mon,t]:[addDays(mon,-7),addDays(mon,-1)];}
   return [addDays(t,-(Number(key)-1)),t];
 }
 
@@ -532,7 +547,7 @@ function openForm(title,fields,vals,onSave){
     for(const f of fields){const el=form.elements[f.k];out[f.k]=f.type==='checkbox'?el.checked:(f.type==='number'?num(el.value):el.value.trim());}
     const t0=Date.now();
     if(out.paidBy)S.settings.lastPayer=out.paidBy;
-    if(onSave(out)!==false){save();dlg.close();render();toast((toast.t0>=t0?toast.last:'Saved')+' · '+profitNote());}
+    if(onSave(out)!==false){try{logAct(title+(out.amount?': '+fmt(num(out.amount)):'')+(out.site?' · '+siteName(out.site):'')+(out.desc?' · '+out.desc:out.note?' · '+out.note:''));}catch(e){}save();dlg.close();render();toast((toast.t0>=t0?toast.last:'Saved')+' · '+profitNote());}
   };
   dlg.showModal();
 }
@@ -674,6 +689,7 @@ function alerts(){
   if(faulty)a.push({cls:'b-bad',tag:'Equipment',html:`${faulty} faulty equipment item${faulty>1?'s':''}. <a href="#assets" data-go="assets">View</a>`});
   const open=S.issues.filter(i=>i.status!=='Fixed').length;
   {const r=reminderText();if(r.n)a.unshift({cls:r.od?'b-bad':'b-warn',tag:'Payments',html:`${r.n} payment${r.n>1?'s':''} overdue or due soon (${fmt(sum(upcomingList().filter(x=>x.left!==null&&x.left<=(num(S.settings.remindDays)||3)),x=>x.amount))}). <a href="#upcoming" data-go="upcoming">Send reminders</a>`});}
+  {const w=(S.tickets||[]).filter(t=>t.stage<4).length;if(w)a.unshift({cls:'b-bad',tag:'Customers',html:`${w} customer issue${w>1?'s':''} not finished. <a href="#tickets" data-go="tickets">View</a>`});}
   if(open)a.push({cls:'b-bad',tag:'Issues',html:`${open} open site issue${open>1?'s':''}. <a href="#issues" data-go="issues">View</a>`});
   if(!S.lastBackup||diffDays(S.lastBackup,t)>7)a.push({cls:'b-warn',tag:'Backup',html:`${S.lastBackup?'Last backup was '+fmtD(S.lastBackup):'No backup made yet'}. <a href="#" data-act="exportJSON">Download backup</a>`});
   return a;
@@ -1180,6 +1196,121 @@ P.upcoming=()=>{
   </div>`;
 };
 
+/* ---------- who is using this phone (for the activity history) ---------- */
+const meName=()=>{try{return localStorage.getItem('isp.me')||'';}catch(e){return '';}};
+function pickMe(){const names=[...new Set([...(S.settings.partners||[]),...S.employees.map(e=>e.name)].filter(Boolean))];
+  openForm('Who is using this phone?',[{k:'me',label:'Your name',type:'select',options:[...names,'Other']},{k:'other',label:'If Other, type your name'}],{me:meName()||names[0]},o=>{const n=(o.me==='Other'?o.other:o.me)||'';try{localStorage.setItem('isp.me',n.trim());}catch(e){}renderHead();toast('Hello '+n);return false;});}
+
+/* ---------- activity history and undo ---------- */
+function logAct(text,extra){
+  S.activity=S.activity||[];
+  S.activity.push({id:uid(),at:new Date().toISOString(),who:meName()||'Someone',text,...(extra||{})});
+  if(S.activity.length>500)S.activity=S.activity.sort((a,b)=>a.at.localeCompare(b.at)).slice(-500);
+}
+function itemLabel(x){return [x.category,x.what,x.name,x.person,x.customer,x.problem&&String(x.problem).slice(0,40),x.site&&siteName(x.site),x.amount!==undefined?fmt(num(x.amount)):x.cost!==undefined?fmt(num(x.cost)):''].filter(Boolean).join(' · ');}
+P.activity=()=>{
+  const L=(S.activity||[]).slice().sort((a,b)=>b.at.localeCompare(a.at)).slice(0,300);
+  const restored=new Set((S.activity||[]).filter(a=>a.undoOf).map(a=>a.undoOf));
+  return `<div class="card"><h2 style="margin-bottom:6px">Activity history</h2>
+    <p class="small muted" style="margin-top:0">Every save and delete, newest first, with who did it. Deleted entries can be brought back with <b>Undo</b>. You are using this phone as <b>${esc(meName()||'not set')}</b> · <a href="#" data-act="pickMe">change</a></p>
+    ${L.length?`<div class="tbl-wrap"><table><thead><tr><th>When</th><th>Who</th><th>What happened</th><th></th></tr></thead><tbody>
+    ${L.map(a=>`<tr><td class="small">${esc(new Date(a.at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}))}</td><td><b>${esc(a.who)}</b></td><td class="wrap">${esc(a.text)}</td><td>${a.item&&!restored.has(a.id)?`<button class="btn sm" data-act="undoDel" data-id="${a.id}">Undo</button>`:a.item?'<span class="badge b-ok">Restored</span>':''}</td></tr>`).join('')}
+    </tbody></table></div>`:'<div class="empty">Nothing recorded yet. Changes made from now on will show here.</div>'}
+  </div>`;
+};
+
+/* ---------- search everything ---------- */
+const SEARCH_SRC=()=>[
+  ['expenses','Cost','costs',x=>x.date,x=>x.amount],['subtech','Sub-tech day','staff',x=>x.date,x=>x.amount],['debts','Debt','debts',x=>x.date,x=>x.amount],
+  ['issues','Site issue','issues',x=>x.date,()=>0],['tickets','Customer issue','tickets',x=>x.date,()=>0],['assets','Equipment','assets',x=>x.date,x=>x.cost],
+  ['bankTx','Bank','bank',x=>x.date,x=>x.amount],['equityTx','Director money','directors',x=>x.date,x=>x.amount],['partnerTx','Partner money','partners',x=>x.date,x=>x.amount],
+  ['employees','Employee','staff',()=>'',()=>0],['sites','Site','bills',()=>'',()=>0],['store','Material','mat',()=>'',()=>0],['matLog','Material use','mat',x=>x.date,()=>0]];
+function searchRun(q){
+  const words=String(q||'').toLowerCase().split(/\s+/).filter(Boolean);if(!words.length)return [];
+  const out=[];
+  SEARCH_SRC().forEach(([k,label,go,dateOf,amtOf])=>(S[k]||[]).forEach(x=>{const hay=(JSON.stringify(x)+' '+itemLabel(x)+' '+label).toLowerCase();if(words.every(w=>hay.includes(w)))out.push({label,go,date:dateOf(x)||'',amount:num(amtOf(x)),text:itemLabel(x)||x.name||x.desc||'',note:x.desc||x.note||x.phone||''});}));
+  return out.sort((a,b)=>b.date.localeCompare(a.date)).slice(0,150);
+}
+function searchResults(){
+  const r=searchRun(UI.q);
+  if(!UI.q)return '<div class="empty">Type a name, phone number, site, amount or word.</div>';
+  return r.length?`<p class="small muted">${r.length} found</p><div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Details</th><th>Note</th><th class="n">Amount</th></tr></thead><tbody>
+    ${r.map(x=>`<tr data-go="${x.go}" style="cursor:pointer"><td>${x.date?fmtDs(x.date):''}</td><td><span class="badge b-info">${esc(x.label)}</span></td><td class="wrap">${esc(x.text)}</td><td class="wrap small">${esc(x.note)}</td><td class="n">${x.amount?fmt(x.amount):''}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Nothing found.</div>';
+}
+P.search=()=>`<div class="card"><h2 style="margin-bottom:10px">Search</h2>
+  <input id="q" type="search" placeholder="Search costs, debts, customers, phones, sites…" value="${esc(UI.q||'')}" style="width:100%;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)">
+  <div id="sres" style="margin-top:10px">${searchResults()}</div></div>`;
+document.addEventListener('input',e=>{if(e.target.id==='q'){UI.q=e.target.value;const r=$('#sres');if(r)r.innerHTML=searchResults();}});
+
+/* ---------- customer issues: from the client's call to the confirming call back ---------- */
+const TSTAGES=['Client raised issue','Received by customer care','Sent to technician','Resolved by technician','Confirmed with client'];
+const techList=()=>S.employees.filter(e=>e.phone).map(e=>[e.id,e.name+' ('+(e.role||'')+')']);
+function stepLine(t){
+  const at=s=>(t.log||[]).find(l=>l.s===s);
+  return `<div class="steps">${TSTAGES.map((n,i)=>{const l=at(i),done=i<=t.stage;return `<div class="step ${done?'done':''} ${i===t.stage+1?'next':''}"><span class="dot">${done?'✓':i+1}</span><span class="sl">${n}</span>${l?`<span class="st">${esc(new Date(l.at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}))}${l.by?' · '+esc(l.by):''}</span>`:''}</div>`;}).join('')}</div>`;
+}
+const tAge=t=>{const a=(t.log||[])[0];return a?Math.max(0,Math.round((Date.now()-new Date(a.at))/3600000)):0;};
+function ticketMsg(t){return `DalaWifi customer issue\nCustomer: ${t.customer||'-'}\nPhone: ${t.phone||'-'}\nSite: ${siteName(t.site)}\nProblem: ${t.problem}\nPlease call the customer and fix it, then tell customer care when done.`;}
+P.tickets=()=>{
+  const f=UI.tFilter||'Open',all=(S.tickets||[]).slice().sort((a,b)=>(b.log&&b.log[0]?b.log[0].at:b.date).localeCompare(a.log&&a.log[0]?a.log[0].at:a.date));
+  const L=all.filter(t=>f==='All'||(f==='Open'?t.stage<4:t.stage>=4));
+  const cnt=s=>all.filter(t=>t.stage===s).length;
+  const doneT=all.filter(t=>t.stage>=3).map(t=>{const a=(t.log||[]).find(l=>l.s===0),b=(t.log||[]).find(l=>l.s===3);return a&&b?(new Date(b.at)-new Date(a.at))/3600000:null;}).filter(x=>x!==null);
+  return `
+  <div class="card"><div class="h2row"><h2>Customer issues</h2><div class="row"><select data-chg="tFilter">${['Open','Done','All'].map(o=>`<option${o===f?' selected':''}>${o}</option>`).join('')}</select><button class="btn primary" data-act="addTicket">+ New customer issue</button></div></div>
+    <div class="note">Customer care records the client's problem and phone number, sends it to the technician on WhatsApp, and follows it to the end: <b>raised → received → sent to technician → resolved → confirmed by calling the client</b>.</div>
+    <div class="kpis"><div class="kpi"><div class="l">Waiting to send to technician</div><div class="v ${cnt(1)?'neg':''}">${cnt(1)}</div></div><div class="kpi"><div class="l">With technician</div><div class="v">${cnt(2)}</div></div><div class="kpi"><div class="l">Resolved, call client to confirm</div><div class="v">${cnt(3)}</div></div><div class="kpi"><div class="l">Average time to resolve</div><div class="v">${doneT.length?(sum(doneT)/doneT.length).toFixed(1)+' h':'—'}</div><div class="s">${cnt(4)} confirmed</div></div></div>
+  </div>
+  ${L.length?L.map(t=>`<div class="card ticket">
+    <div class="h2row"><div><b style="font-size:16px">${esc(t.customer||'Customer')}</b> ${t.phone?`<a href="tel:${esc(t.phone)}">${esc(t.phone)}</a>`:''} · ${esc(siteName(t.site))} ${t.stage<4&&tAge(t)>=24?`<span class="badge b-bad">${Math.floor(tAge(t)/24)}d old</span>`:''}</div>
+      <div class="row noprint" style="flex-wrap:nowrap"><button class="btn sm" data-act="editTicket" data-id="${t.id}">Edit</button><button class="btn sm danger" data-act="delTicket" data-id="${t.id}">✕</button></div></div>
+    <div class="wrap" style="margin:6px 0">${esc(t.problem)}</div>${t.fix?`<div class="small muted">Done: ${esc(t.fix)}</div>`:''}${t.tech?`<div class="small muted">Technician: ${esc(t.tech)}</div>`:''}
+    ${stepLine(t)}
+    <div class="row noprint" style="margin-top:8px">${t.stage===1?`<button class="btn primary" data-act="sendTech" data-id="${t.id}">Send to technician (WhatsApp)</button>`:''}
+      ${t.stage===2?`<button class="btn" data-act="sendTech" data-id="${t.id}">Send again</button><button class="btn primary" data-act="resolveTicket" data-id="${t.id}">Mark resolved</button>`:''}
+      ${t.stage===3?`${t.phone?`<a class="btn" href="tel:${esc(t.phone)}">📞 Call client</a>`:''}<button class="btn primary" data-act="confirmTicket" data-id="${t.id}">Client confirmed it works</button>`:''}
+      ${t.stage>=4?'<span class="badge b-ok">Closed</span>':''}</div>
+  </div>`).join(''):'<div class="card"><div class="empty">No customer issues in this list.</div></div>'}`;
+};
+const ticketFields=()=>[fDate(),{k:'customer',label:'Customer name'},{k:'phone',label:'Customer phone',type:'tel',req:true},{k:'site',label:'Site',type:'select',options:siteOpts(false)},{k:'problem',label:'Problem (what the client said)',type:'textarea',req:true}];
+function tStep(t,s,extra){t.stage=s;(t.log=t.log||[]).push({s,at:new Date().toISOString(),by:meName()});Object.assign(t,extra||{});}
+
+/* ---------- costs per site, added up (tokens, WiFi, motorbike, everything) ---------- */
+const SC_RANGES=[['week','This week'],['lastweek','Last week'],...RANGE_OPTS];
+P.sitecosts=()=>{
+  const key=UI.scRange||'month',[f,t]=rangeOf(key),c=costsIn(f,t);
+  const order=[...EXP_CATS,SUBTECH_CAT,DEBT_CAT];const cats=[...new Set(c.map(x=>x.category))].sort((a,b)=>(order.indexOf(a)+99)%999-(order.indexOf(b)+99)%999);
+  const rows=[...S.sites.map(s=>[s.id,s.name]),['general','General / shared']];
+  const cell=(sid,cat)=>sum(c.filter(x=>(x.site||'general')===sid&&x.category===cat),x=>x.amount);
+  const rowT=sid=>sum(c.filter(x=>(x.site||'general')===sid),x=>x.amount);
+  const colT=cat=>sum(c.filter(x=>x.category===cat),x=>x.amount);
+  return `<div class="card"><div class="h2row"><h2>Costs per site (added up)</h2><div class="row"><select data-chg="scRange">${SC_RANGES.map(([v,l])=>`<option value="${v}"${v===key?' selected':''}>${l}</option>`).join('')}</select><button class="btn noprint" data-act="printPage">Print</button></div></div>
+    <div class="note">Every payment adds up per site: all the tokens, WiFi, motorbike fuel, repairs and other costs for each site, then the total for all sites. Example: a token of 400 last week and 500 this week shows as 900 under "Last 14 days". ${fmtD(f)} to ${fmtD(t>today()?today():t)}.</div>
+    ${c.length?`<div class="tbl-wrap"><table><thead><tr><th>Site</th>${cats.map(k=>`<th class="n">${esc(k)}</th>`).join('')}<th class="n">Total</th></tr></thead><tbody>
+    ${rows.map(([id,n])=>`<tr><td><b>${esc(n)}</b></td>${cats.map(k=>{const v=cell(id,k);return `<td class="n">${v?fmt(v):'<span class="muted">—</span>'}</td>`;}).join('')}<td class="n"><b>${fmt(rowT(id))}</b></td></tr>`).join('')}
+    </tbody><tfoot><tr><td>All sites</td>${cats.map(k=>`<td class="n">${fmt(colT(k))}</td>`).join('')}<td class="n">${fmt(sum(c,x=>x.amount))}</td></tr></tfoot></table></div>`:'<div class="empty">No costs in this period.</div>'}
+  </div>`;
+};
+
+/* ---------- quick add (+) ---------- */
+function quickAdd(){
+  const opts=[['earn','Daily earnings'],['cost','A cost (fuel, repairs, salary…)'],['token','Token payment'],['wifi','WiFi payment'],['ticket','Customer issue'],['issue','Site issue'],['debt','Debt we owe'],['owed','Someone owes us']];
+  openForm('Quick add',[{k:'what',label:'What do you want to add?',type:'select',options:opts},{k:'site',label:'Site (for token or WiFi)',type:'select',options:siteOpts(false)}],{},o=>{
+    setTimeout(()=>{({earn:()=>goto('earn'),cost:()=>ACT.addExp(),token:()=>ACT.payToken(o.site),wifi:()=>ACT.payWifi(o.site),ticket:()=>ACT.addTicket(),issue:()=>ACT.addIssue(),debt:()=>ACT.addDebt('weOwe'),owed:()=>ACT.addDebt('owedToUs')})[o.what]();},60);
+    return false;});
+}
+
+/* ---------- automatic daily backups kept online ---------- */
+function backupCard(){
+  if(API_URL!=='/api')return '';
+  if(!UI.bkAsked){UI.bkAsked=1;remote('listBackups',PIN).then(r=>{UI.bkList=r;if(UI.page==='settings')render();}).catch(()=>{UI.bkList=[];});}
+  const L=UI.bkList;
+  return `<div class="card"><h2 style="margin-bottom:6px">Automatic daily backups</h2>
+    <p class="small muted" style="margin-top:0">Every night at midnight a full copy of all data is saved online. The last 30 days are kept. Download any day and use <b>Restore from backup</b> if something goes wrong.</p>
+    ${!L?'<div class="small muted">Loading…</div>':L.length?`<div class="row">${L.map(b=>`<button class="btn sm" data-act="getBackup" data-id="${esc(b.day)}">⬇ ${esc(fmtDs(b.day))}</button>`).join('')}</div>`:'<div class="small muted">The first automatic backup will be made tonight at midnight.</div>'}
+  </div>`;
+}
+
 const CHECK_DONE=['Yes','Partly','No'];
 function empStats(emp,from,to){
   const inR=d=>d>=from&&d<=to,n=emp.name;
@@ -1239,6 +1370,7 @@ P.settings=()=>{
   const st=S.settings;
   const counts=`${Object.keys(S.earnings).length} earning days, ${S.expenses.length} costs, ${S.subtech.length} sub-tech days, ${S.debts.length} debts, ${S.store.length+S.toBuy.length} material items`;
   return `
+  ${backupCard()}
   <div class="card"><h2 style="margin-bottom:6px">Backup your data</h2>
     <div class="note">${ONLINE?'Your data is saved <b>online with this link</b>, so it is the same on any phone or computer that opens it. Download a backup now and then as an extra copy.':'Your data is saved in <b>this browser on this device</b>. Download a backup at least once a week, and use it to move your data to another phone or computer.'} Last backup: <b>${S.lastBackup?fmtD(S.lastBackup):'never'}</b>.</div>
     <div class="row"><button class="btn primary" data-act="exportJSON">⬇ Download backup</button><button class="btn" data-act="importJSON">⬆ Restore from backup</button><button class="btn" data-act="exportCSV">Earnings CSV (Excel)</button></div>
@@ -1259,7 +1391,7 @@ P.settings=()=>{
 
 /* ---------- actions ---------- */
 const byId=(arr,id)=>arr.find(x=>x.id===id);
-async function del(arr,id,what){if(!await ask(`Delete this ${what}?`,'Delete'))return;const i=arr.findIndex(x=>x.id===id);if(i>=0)arr.splice(i,1);save();render();toast('Deleted');}
+async function del(arr,id,what){if(!await ask(`Delete this ${what}?`,'Delete'))return;const i=arr.findIndex(x=>x.id===id);if(i>=0){const it=arr[i];arr.splice(i,1);const key=Object.keys(S).find(k=>S[k]===arr);logAct('Deleted '+what+': '+itemLabel(it),key?{key,item:it}:null);}save();render();toast('Deleted. You can undo it in Settings → Activity History');}
 const BIZ='Business money';
 const payerOpts=()=>[...S.settings.partners,BIZ];
 const fPaid=(label='Paid by')=>({k:'paidBy',label,type:'select',options:payerOpts(),def:S.settings.lastPayer||S.settings.partners[0]});
@@ -1400,6 +1532,23 @@ const ACT={
     rows.push([]);rows.push(['Ownership now',...n.map(x=>x+' '+(R.share[x]*100).toFixed(2)+'% ('+Math.round(R.cap[x])+')')]);
     download(`directors-statement-${today()}.csv`,rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');},
   printPage(){window.print();},
+  pickMe(){pickMe();},
+  quickAdd(){quickAdd();},
+  goSearch(){goto('search');setTimeout(()=>{const q=$('#q');if(q)q.focus();},50);},
+  addTicket(){openForm('New customer issue',ticketFields(),{},o=>{const now=new Date().toISOString();S.tickets.push({id:uid(),...o,stage:1,log:[{s:0,at:now,by:''},{s:1,at:now,by:meName()}]});toast('Customer issue saved. Next: send it to the technician.');});},
+  editTicket(id){const t=byId(S.tickets,id);openForm('Edit customer issue',ticketFields(),t,o=>{Object.assign(t,o);});},
+  delTicket(id){del(S.tickets,id,'customer issue');},
+  sendTech(id){const t=byId(S.tickets,id),L=techList();
+    if(!L.length){toast('Add the technician\'s phone number on Employees → Staff first');return;}
+    openForm('Send to technician',[{k:'tech',label:'Technician',type:'select',options:L,def:(S.employees.find(e=>/tech/i.test(e.role||'')&&e.phone)||{}).id}],{},o=>{const e=byId(S.employees,o.tech);
+      window.open(`https://wa.me/${waNum(e.phone)}?text=${encodeURIComponent(ticketMsg(t))}`,'_blank');
+      if(t.stage<2)tStep(t,2,{tech:e.name});else t.tech=e.name;toast('Sent to '+e.name);});},
+  resolveTicket(id){const t=byId(S.tickets,id);openForm('Resolved by technician',[{k:'fix',label:'What was done',type:'textarea'}],{},o=>{tStep(t,3,{fix:o.fix});toast('Now call the client to confirm');});},
+  async confirmTicket(id){const t=byId(S.tickets,id);if(!await ask('Did you call the client and they confirmed the internet works?','Yes, confirmed'))return;tStep(t,4);logAct('Customer issue confirmed: '+(t.customer||t.phone));save();render();toast('Issue closed');},
+  async undoDel(id){const a=(S.activity||[]).find(x=>x.id===id);if(!a||!a.item)return;const arr=S[a.key];if(!Array.isArray(arr)){toast('Cannot restore this');return;}
+    if(!arr.some(x=>x.id===a.item.id))arr.push(a.item);logAct('Restored: '+a.text.replace(/^Deleted /,''),{undoOf:a.id});save();render();toast('Restored');},
+  async getBackup(day){try{const r=await remote('getBackup',PIN,day);const sn=fakeSnaps(r.docs);const st=migrate(fromDocs(sn.st,sn.ea));
+    download(`dala-genzi-backup-${day}.json`,JSON.stringify(st,null,1),'application/json');}catch(e){toast('Could not get that backup: '+(e.message||e));}},
   editContacts(){const c=S.settings.contacts||[],F=[];for(let i=0;i<4;i++)F.push({k:'n'+i,label:'Name '+(i+1)+(i>2?' (optional)':'')},{k:'p'+i,label:'Phone '+(i+1),type:'tel'});
     F.push({k:'days',label:'Remind how many days before a payment is due',type:'number'});
     const v={days:num(S.settings.remindDays)||3};c.forEach(([n,p],i)=>{v['n'+i]=n;v['p'+i]=p;});
@@ -1458,6 +1607,8 @@ const CHG={
   costPayer(el){UI.costPayer=el.value;render();},
   partRange(el){UI.partRange=el.value;render();},
   ownRange(el){UI.ownRange=el.value;render();},
+  scRange(el){UI.scRange=el.value;render();},
+  tFilter(el){UI.tFilter=el.value;render();},
   bankRange(el){UI.bankRange=el.value;render();},
   teamRange(el){UI.teamRange=el.value;render();},
   partners(el){const l=el.value.split(',').map(x=>x.trim()).filter(Boolean);if(l.length){S.settings.partners=l;save();toast('Saved');}},
@@ -1497,6 +1648,7 @@ window.addEventListener('hashchange',()=>{const p=location.hash.slice(1);if(PAGE
 function goto(p){UI.page=p;if(location.hash!=='#'+p){try{history.pushState(null,'','#'+p);}catch(e){}}render();scrollTo(0,0);}
 function renderHead(){
   $('#bizName').textContent=S.settings.business||'Dala & Genzi WiFi';
+  {const m=$('#meName');if(m)m.textContent=meName()?'You: '+meName():'Who are you?';}
   document.title=(S.settings.business||'Dala & Genzi WiFi')+' Manager';
   const g=groupOf(UI.page);UI.lastSub=UI.lastSub||{};UI.lastSub[g[0]]=UI.page;
   $('#nav').innerHTML=GROUPS.map(([n,pg])=>`<button data-go="${UI.lastSub[n]||pg[0]}" class="${n===g[0]?'on':''}">${esc(n)}</button>`).join('');
@@ -1512,6 +1664,6 @@ connectOnline();
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791576908';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791577138';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

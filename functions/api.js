@@ -5,6 +5,7 @@
 const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS docs (path TEXT PRIMARY KEY, data TEXT NOT NULL, updated INTEGER NOT NULL)',
   'CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)',
+  'CREATE TABLE IF NOT EXISTS backups (day TEXT PRIMARY KEY, data TEXT NOT NULL)',
 ];
 
 async function ready(db) {
@@ -32,6 +33,17 @@ async function checkPin(db, pin) {
 const stamp = async db => (await getMeta(db, 'stamp')) || '0';
 
 const FNS = {
+  async listBackups(db, pin) {
+    await checkPin(db, pin);
+    const { results } = await db.prepare('SELECT day, length(data) AS size FROM backups ORDER BY day DESC').all();
+    return results;
+  },
+  async getBackup(db, pin, day) {
+    await checkPin(db, pin);
+    const r = await db.prepare('SELECT data FROM backups WHERE day = ?').bind(String(day)).first();
+    if (!r) throw new Error('no_backup');
+    return { docs: JSON.parse(r.data) };
+  },
   async getStamp(db, pin) {
     await checkPin(db, pin);
     return stamp(db);
@@ -75,3 +87,19 @@ export async function onRequestGet({ env }) {
   return new Response(env.DB ? 'Dala & Genzi data service is working.' : 'Database not connected yet.', { headers: { 'content-type': 'text/plain' } });
 }
 
+
+// Nightly backup: a full copy of every document, one row per day, the last 30 days kept.
+export async function dailyBackup(env) {
+  if (!env.DB) return;
+  const db = env.DB;
+  await ready(db);
+  const { results } = await db.prepare('SELECT path, data FROM docs').all();
+  if (!results.length) return;
+  const docs = {};
+  for (const r of results) docs[r.path] = r.data;
+  const day = new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10); // Kenya date
+  await db.batch([
+    db.prepare('INSERT INTO backups (day, data) VALUES (?, ?) ON CONFLICT(day) DO UPDATE SET data = excluded.data').bind(day, JSON.stringify(docs)),
+    db.prepare('DELETE FROM backups WHERE day NOT IN (SELECT day FROM backups ORDER BY day DESC LIMIT 30)'),
+  ]);
+}

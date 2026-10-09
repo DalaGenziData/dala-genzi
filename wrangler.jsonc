@@ -7,6 +7,7 @@
     { "pattern": "dalawifi.com", "custom_domain": true },
     { "pattern": "www.dalawifi.com", "custom_domain": true }
   ],
+  "triggers": { "crons": ["55 20 * * *"] },
   "assets": { "directory": "./public", "binding": "ASSETS" },
   "d1_databases": [
     { "binding": "DB", "database_name": "dala-genzi-data", "database_id": "ce3776e9-c0ae-49e8-bbba-21c03baea236" }

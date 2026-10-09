@@ -69,6 +69,12 @@ tr.click:hover td{background:var(--brand-2)}
 .b-dala{background:var(--brand-2);color:var(--brand)}
 .b-genzi{background:color-mix(in srgb,var(--genzi) 16%,transparent);color:var(--genzi)}
 .pos{color:var(--good)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:4px}.legend i{display:inline-block;width:12px;height:4px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.chart{overflow-x:auto}
+.donut{display:flex;gap:18px;align-items:center;flex-wrap:wrap}.donut text{fill:var(--muted);font-size:11px}.donut .dt{fill:var(--ink);font-size:20px;font-weight:700}
+.dleg{flex:1;min-width:220px}.dleg div{display:grid;grid-template-columns:14px 1fr auto 40px;gap:8px;align-items:center;padding:3px 0;font-size:14px}.dleg i{width:12px;height:12px;border-radius:3px}.dleg b{font-weight:600}
+.report h3{margin:16px 0 6px}.rhead{display:flex;gap:14px;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid var(--brand)}
+@media print{#subnav,#fab{display:none!important}.report{border:0;padding:0}main{padding:0!important}}
 .hbtn{background:transparent!important;color:var(--on-head)!important;border-color:var(--on-head-2)!important}
 #fab{position:fixed;right:18px;bottom:18px;width:56px;height:56px;border-radius:50%;border:0;background:var(--brand);color:var(--on-brand);font-size:30px;line-height:1;box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:pointer;z-index:20}
 .steps{display:flex;gap:4px;margin-top:10px;overflow-x:auto}
@@ -185,11 +191,11 @@ const INV_CAT='Equipment & investment';
 const EXP_CATS=['Motorbike fuel','Tech salary','Electricity tokens','Wifi subscription','Materials','Repairs & maintenance','Transport','Airtime / SMS','Rent',INV_CAT,'Other'];
 const isInv=x=>x.category===INV_CAT;
 const SUBTECH_CAT='Sub-tech wages';
-const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup']];
+const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['analysis','Analysis'],['report','Monthly Report'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup']];
 
 // Main menu: each main page holds related subpages, shown as tabs under the menu.
-const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','sitecosts','mat']],['Employees',['staff','team']],['Profit & Loss',['pl','debts','bank']],['Owners',['directors','partners']],['Settings',['settings','activity','search']]];
-const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',sitecosts:'Costs per Site',search:'Search',activity:'Activity History'};
+const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','sitecosts','mat']],['Employees',['staff','team']],['Profit & Loss',['pl','analysis','report','debts','bank']],['Owners',['directors','partners']],['Settings',['settings','activity','search']]];
+const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',analysis:'Analysis',report:'Monthly Report',sitecosts:'Costs per Site',search:'Search',activity:'Activity History'};
 const groupOf=pg=>GROUPS.find(g=>g[1].includes(pg))||GROUPS[0];
 
 /* ---------- state ---------- */
@@ -377,7 +383,7 @@ async function connectOnline(){
     db.collection('earnings').onSnapshot(q=>{lastSnaps.earn=q.docs;applyRemote();},()=>setNet('err'));
   }catch(e){setNet('err');}
 }
-const UI={page:(location.hash.slice(1)||'dash'),earnDate:'',earnMonth:'',perfRange:'30',costMonth:'',costCat:'',costSite:'',staffMonth:'',plMonth:'',issueFilter:'Open',debtFilter:'open',tgtMonth:'',assetSite:'',costPayer:'',partRange:'month',bankRange:'all',ownRange:'30',scRange:'month',tFilter:'Open',q:'',teamRange:'30'};
+const UI={page:(location.hash.slice(1)||'dash'),earnDate:'',earnMonth:'',perfRange:'30',costMonth:'',costCat:'',costSite:'',staffMonth:'',plMonth:'',issueFilter:'Open',debtFilter:'open',tgtMonth:'',assetSite:'',costPayer:'',partRange:'month',bankRange:'all',ownRange:'30',scRange:'month',tFilter:'Open',q:'',anBy:'month',anRange:'',cmpA:'',cmpB:'',repMonth:'',teamRange:'30'};
 if(!PAGES.some(p=>p[0]===UI.page))UI.page='dash';
 
 /* ---------- helpers ---------- */
@@ -660,6 +666,7 @@ P.dash=()=>{
   </div>
   ${profitBreakdown(e.total,c,'How this month\'s profit is worked out')}
   ${siteNet(e,c,'Net profit per site this month')}
+  ${dashCharts()}
   <div class="two">
     <div class="card"><div class="h2row"><h2>Daily earnings, last 14 days</h2><button class="btn sm" data-go="earn">Enter earnings</button></div>${vbars(last14)}</div>
     <div class="card"><div class="h2row"><h2>Needs attention</h2><span class="badge ${al.length?'b-warn':'b-ok'}">${al.length||'All clear'}</span></div>
@@ -1311,6 +1318,127 @@ function backupCard(){
   </div>`;
 }
 
+/* ---------- more charts ---------- */
+// Line chart: several series over the same labels. series=[{name,color,values:[]}]
+function lineChart(labels,series,h=190,half=false){
+  if(!labels.length)return '<div class="empty">No data yet</div>';
+  const vw=window.innerWidth||800,W=Math.max(280,Math.min(1100,vw-(vw>820?120:56))/(half&&vw>820?2:1),labels.length*14),padL=44,padB=26,top=12,all=series.flatMap(s=>s.values),max=Math.max(1,...all),min=Math.min(0,...all),rng=max-min||1;
+  const x=i=>padL+(labels.length===1?0:i*(W-padL-10)/(labels.length-1)),y=v=>top+(max-v)/rng*(h-top-padB);
+  const grid=[0,.25,.5,.75,1].map(f=>{const v=min+f*rng;return `<line x1="${padL}" x2="${W-6}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${padL-6}" y="${y(v)+4}" text-anchor="end">${fmtK(v)}</text>`;}).join('');
+  const step=Math.ceil(labels.length/10);
+  const xl=labels.map((l,i)=>i%step===0||i===labels.length-1?`<text x="${x(i)}" y="${h-6}" text-anchor="middle">${esc(l)}</text>`:'').join('');
+  const lines=series.map(s=>`<polyline fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linejoin="round" points="${s.values.map((v,i)=>x(i)+','+y(v)).join(' ')}"/>`+s.values.map((v,i)=>`<circle cx="${x(i)}" cy="${y(v)}" r="2.5" fill="${s.color}"><title>${esc(s.name)} ${esc(labels[i])}: ${fmt(v)}</title></circle>`).join('')).join('');
+  const zero=min<0?`<line x1="${padL}" x2="${W-6}" y1="${y(0)}" y2="${y(0)}" stroke="var(--muted)" stroke-dasharray="3 3"/>`:'';
+  return `<div class="legend">${series.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div><div class="chart"><svg viewBox="0 0 ${W} ${h}" role="img">${grid}${zero}${lines}${xl}</svg></div>`;
+}
+const PIE_COLORS=['#0057A6','#0d9488','#f59e0b','#7c3aed','#db2777','#16a34a','#ea580c','#0891b2','#64748b','#a16207','#4f46e5','#be123c'];
+function donut(items){
+  items=items.filter(i=>i.v>0).sort((a,b)=>b.v-a.v);const tot=sum(items,i=>i.v);
+  if(!tot)return '<div class="empty">No costs yet</div>';
+  let a=0;const R=70,r=44,cx=90,cy=90;
+  const arcs=items.map((it,i)=>{const a0=a,a1=a+it.v/tot*Math.PI*2;a=a1;const big=a1-a0>Math.PI?1:0,p=(ang,rad)=>[cx+rad*Math.sin(ang),cy-rad*Math.cos(ang)];
+    const [x0,y0]=p(a0,R),[x1,y1]=p(a1-1e-6,R),[x2,y2]=p(a1-1e-6,r),[x3,y3]=p(a0,r);
+    return `<path d="M${x0} ${y0}A${R} ${R} 0 ${big} 1 ${x1} ${y1}L${x2} ${y2}A${r} ${r} 0 ${big} 0 ${x3} ${y3}Z" fill="${PIE_COLORS[i%PIE_COLORS.length]}"><title>${esc(it.label)}: ${fmt(it.v)}</title></path>`;}).join('');
+  return `<div class="donut"><svg viewBox="0 0 180 180" width="180" height="180">${arcs}<text x="90" y="86" text-anchor="middle" class="dt">${fmtK(tot)}</text><text x="90" y="104" text-anchor="middle">total</text></svg>
+    <div class="dleg">${items.map((it,i)=>`<div><i style="background:${PIE_COLORS[i%PIE_COLORS.length]}"></i><span>${esc(it.label)}</span><b>${fmt(it.v)}</b><span class="muted small">${Math.round(it.v/tot*100)}%</span></div>`).join('')}</div></div>`;
+}
+function dashCharts(){
+  const t=today(),days=[];for(let i=29;i>=0;i--)days.push(addDays(t,-i));
+  const f=days[0],e=earnIn(f,t),cb={};costsIn(f,t).forEach(c=>cb[c.date]=(cb[c.date]||0)+c.amount);
+  const ev=days.map(d=>e.byDate[d]||0),cv=days.map(d=>cb[d]||0);
+  const months=monthsWithData().slice(0,12).reverse(),ms=months.map(m=>monthStats(m));
+  const [mf,mt]=rangeOf('month'),cat={};costsIn(mf,mt).forEach(c=>cat[c.category]=(cat[c.category]||0)+c.amount);
+  return `<div class="two">
+    <div class="card"><h2 style="margin-bottom:6px">Earnings vs costs, last 30 days</h2>${lineChart(days.map(fmtDs),[{name:'Earnings',color:'var(--brand)',values:ev},{name:'Costs',color:'#ea580c',values:cv}],190,true)}</div>
+    <div class="card"><h2 style="margin-bottom:6px">Profit by month</h2>${lineChart(months.map(m=>monthLabel(m).slice(0,3)+' '+m.slice(2,4)),[{name:'Earnings',color:'var(--brand)',values:ms.map(x=>x.e)},{name:'Costs',color:'#ea580c',values:ms.map(x=>x.c)},{name:'Profit',color:'var(--good)',values:ms.map(x=>x.p)}],190,true)}</div>
+  </div>
+  <div class="card"><div class="h2row"><h2>Where the money went this month</h2><button class="btn sm" data-go="sitecosts">Costs per site</button></div>${donut(Object.entries(cat).map(([label,v])=>({label,v})))}</div>`;
+}
+
+/* ---------- analysis: day, week, month, season, year, site by site, compare ---------- */
+const SEASONS=[['01','03','Jan–Mar'],['04','06','Apr–Jun'],['07','09','Jul–Sep'],['10','12','Oct–Dec']];
+function periodKey(d,by){
+  if(by==='day')return d;
+  if(by==='week'){const dt=parse(d),mon=addDays(d,-((dt.getDay()+6)%7));return mon;}
+  if(by==='month')return d.slice(0,7);
+  if(by==='season'){const m=d.slice(5,7),q=SEASONS.findIndex(s=>m>=s[0]&&m<=s[1]);return d.slice(0,4)+'-Q'+(q+1);}
+  return d.slice(0,4);
+}
+function periodLabel(k,by){
+  if(by==='day')return fmtD(k);
+  if(by==='week')return 'Week of '+fmtDs(k);
+  if(by==='month')return monthLabel(k);
+  if(by==='season'){const [y,q]=k.split('-Q');return SEASONS[q-1][2]+' '+y;}
+  return k;
+}
+function analysisData(by,from,to){
+  const c=costsIn(from,to),G={};
+  const get=k=>G[k]=G[k]||{e:0,c:0,days:new Set(),site:{},sc:{}};
+  for(const d in S.earnings){if(d<from||d>to)continue;const r=get(periodKey(d,by));r.days.add(d);for(const id in S.earnings[d]){const v=num(S.earnings[d][id]);r.e+=v;r.site[id]=(r.site[id]||0)+v;}}
+  (S.lumpIncome||[]).forEach(x=>{if(x.date<from||x.date>to)return;get(periodKey(x.date,by)).e+=num(x.amount);});
+  c.forEach(x=>{const r=get(periodKey(x.date,by));r.c+=x.amount;const k=x.site&&site(x.site)?x.site:'general';r.sc[k]=(r.sc[k]||0)+x.amount;});
+  return Object.keys(G).sort().map(k=>({k,label:periodLabel(k,by),...G[k],p:G[k].e-G[k].c,n:G[k].days.size}));
+}
+const heat=(v,max)=>max>0&&v>0?`background:color-mix(in srgb,var(--brand) ${Math.round(8+v/max*42)}%,transparent)`:'';
+P.analysis=()=>{
+  const by=UI.anBy||'month',rk=UI.anRange||(by==='day'?'30':by==='week'?'90':'all'),[f,t]=rangeOf(rk),rows=analysisData(by,f,t);
+  const maxE=Math.max(0,...rows.flatMap(r=>S.sites.map(s=>r.site[s.id]||0)));
+  const chg=(a,b)=>{const v=pct(a,b);return v===null||!isFinite(v)?'':`<span class="small ${v<0?'neg':'pos'}">${v>0?'▲':'▼'}${Math.abs(v).toFixed(0)}%</span>`;};
+  // weekday pattern
+  const wd=[0,0,0,0,0,0,0],wn=[0,0,0,0,0,0,0];for(const d in S.earnings){if(d<f||d>t)continue;const i=(parse(d).getDay()+6)%7;wd[i]+=sum(Object.values(S.earnings[d]));wn[i]++;}
+  const WD=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  // compare two periods
+  const months=monthsWithData(),A=UI.cmpA||months[0],B=UI.cmpB||months[1]||months[0];
+  const sa=monthStats(A),sb=monthStats(B),ea=earnIn(...monthRange(A)),eb=earnIn(...monthRange(B));
+  const grp=(e,g)=>sum(S.sites.filter(s=>s.group===g),s=>e.bySite[s.id].total);
+  return `
+  <div class="card"><div class="h2row"><h2>Analysis</h2><div class="row">
+    <select data-chg="anBy">${[['day','Day by day'],['week','Week by week'],['month','Month by month'],['season','Season (quarter)'],['year','Year by year']].map(([v,l])=>`<option value="${v}"${v===by?' selected':''}>${l}</option>`).join('')}</select>
+    <select data-chg="anRange">${RANGE_OPTS.map(([v,l])=>`<option value="${v}"${v===rk?' selected':''}>${l}</option>`).join('')}</select></div></div>
+    ${rows.length?lineChart(rows.map(r=>by==='day'?fmtDs(r.k):by==='month'?monthLabel(r.k).slice(0,3)+' '+r.k.slice(2,4):r.label.replace('Week of ','')),[{name:'Earnings',color:'var(--brand)',values:rows.map(r=>r.e)},{name:'Costs',color:'#ea580c',values:rows.map(r=>r.c)},{name:'Profit',color:'var(--good)',values:rows.map(r=>r.p)}]):''}
+    ${rows.length?`<div class="tbl-wrap"><table><thead><tr><th>${esc({day:'Day',week:'Week',month:'Month',season:'Season',year:'Year'}[by])}</th><th class="n">Earnings</th><th class="n">Costs</th><th class="n">Profit</th><th class="n">Margin</th><th class="n">Avg / day</th></tr></thead><tbody>
+    ${rows.slice().reverse().map((r,i,arr)=>{const prev=arr[i+1];return `<tr><td>${esc(r.label)}</td><td class="n">${fmt(r.e)} ${prev?chg(r.e,prev.e):''}</td><td class="n">${fmt(r.c)}</td><td class="n">${pnl(r.p)} ${prev?chg(r.p,prev.p):''}</td><td class="n">${r.e?Math.round(r.p/r.e*100)+'%':'—'}</td><td class="n">${r.n?fmt(r.e/r.n):'—'}</td></tr>`;}).join('')}
+    </tbody><tfoot><tr><td>Total</td><td class="n">${fmt(sum(rows,r=>r.e))}</td><td class="n">${fmt(sum(rows,r=>r.c))}</td><td class="n">${pnl(sum(rows,r=>r.p))}</td><td class="n">${sum(rows,r=>r.e)?Math.round(sum(rows,r=>r.p)/sum(rows,r=>r.e)*100)+'%':''}</td><td></td></tr></tfoot></table></div>`:'<div class="empty">No data in this period.</div>'}
+  </div>
+  <div class="card"><h2 style="margin-bottom:6px">Site by site earnings</h2><p class="small muted" style="margin-top:0">Darker = earned more. Read across to see each site's trend.</p>
+    ${rows.length?`<div class="tbl-wrap"><table><thead><tr><th>Site</th>${rows.map(r=>`<th class="n">${esc(by==='day'?fmtDs(r.k):by==='month'?monthLabel(r.k).slice(0,3)+' '+r.k.slice(2,4):r.label.replace('Week of ',''))}</th>`).join('')}<th class="n">Total</th><th class="n">Costs</th><th class="n">Profit</th></tr></thead><tbody>
+    ${S.sites.map(s=>{const tE=sum(rows,r=>r.site[s.id]||0),tC=sum(rows,r=>r.sc[s.id]||0);return `<tr><td><b>${esc(s.name)}</b></td>${rows.map(r=>`<td class="n" style="${heat(r.site[s.id]||0,maxE)}">${r.site[s.id]?fmtK(r.site[s.id]):'—'}</td>`).join('')}<td class="n"><b>${fmt(tE)}</b></td><td class="n">${fmt(tC)}</td><td class="n">${pnl(tE-tC)}</td></tr>`;}).join('')}
+    </tbody></table></div><p class="small muted">Site costs here are the costs entered for that site. Shared costs (motorbike, salary…) are on the Profit &amp; Loss page.</p>`:''}
+  </div>
+  <div class="two">
+  <div class="card"><h2 style="margin-bottom:6px">Compare two months</h2>
+    <div class="row">${monthSelect('cmpA',A)}<span>vs</span>${monthSelect('cmpB',B)}</div>
+    <div class="tbl-wrap"><table><thead><tr><th></th><th class="n">${esc(monthLabel(A))}</th><th class="n">${esc(monthLabel(B))}</th><th class="n">Difference</th></tr></thead><tbody>
+    ${[['Earnings',sa.e,sb.e],['Costs',sa.c,sb.c],['Profit',sa.p,sb.p],['Dala sites',grp(ea,'Dala'),grp(eb,'Dala')],['Genzi sites',grp(ea,'Genzi'),grp(eb,'Genzi')],...S.sites.map(s=>[s.name,ea.bySite[s.id].total,eb.bySite[s.id].total])].map(([l,a,b])=>`<tr><td>${esc(l)}</td><td class="n">${fmt(a)}</td><td class="n">${fmt(b)}</td><td class="n">${pnl(a-b)} ${chg(a,b)}</td></tr>`).join('')}
+    </tbody></table></div></div>
+  <div class="card"><h2 style="margin-bottom:6px">Best days of the week</h2><p class="small muted" style="margin-top:0">Average earnings for each weekday in the period chosen above.</p>
+    ${vbars(WD.map((l,i)=>({label:l,v:wn[i]?wd[i]/wn[i]:0})))}
+    <h2 style="margin:14px 0 6px">Dala vs Genzi</h2>${(()=>{const e=earnIn(f,t);return hbars(['Dala','Genzi'].map(g=>({label:g,v:grp(e,g),cls:g==='Genzi'?'g':''})));})()}
+  </div></div>`;
+};
+
+/* ---------- monthly report (print or save as PDF) ---------- */
+P.report=()=>{
+  const m=UI.repMonth||today().slice(0,7),[f,t]=monthRange(m),e=earnIn(f,t),c=costsIn(f,t),exp=sum(c,x=>x.amount),profit=e.total-exp;
+  const cat={};c.forEach(x=>cat[x.category]=(cat[x.category]||0)+x.amount);
+  const R=ownCalc(),md=R.days.filter(r=>r.date>=f&&r.date<=t);
+  const owedUs=sum(S.debts.filter(d=>d.type==='owedToUs'),debtBal),weOwe=sum(S.debts.filter(d=>d.type==='weOwe'),debtBal);
+  const tk=(S.tickets||[]).filter(x=>x.date>=f&&x.date<=t);
+  return `<div class="card noprint"><div class="h2row"><h2>Monthly report</h2><div class="row">${monthSelect('repMonth',m)}<button class="btn primary" data-act="printPage">Save as PDF / Print</button><button class="btn" data-act="shareReport">Share summary on WhatsApp</button></div></div>
+    <p class="small muted" style="margin:0">Tap <b>Save as PDF / Print</b>, then choose <b>Save as PDF</b> as the printer to get a PDF file you can send.</p></div>
+  <div class="card report">
+    <div class="rhead"><img src="${$('header .logo').src}" alt="DalaWifi" style="height:46px"><div><h2 style="margin:0">${esc(S.settings.business||'Dala & Genzi WiFi')}: monthly report</h2><div class="muted">${esc(monthLabel(m))} · made ${fmtD(today())}</div></div></div>
+    <div class="kpis"><div class="kpi"><div class="l">Earnings</div><div class="v">${fmt(e.total)}</div><div class="s">${e.days} days recorded</div></div><div class="kpi"><div class="l">All money out</div><div class="v">${fmt(exp)}</div></div><div class="kpi"><div class="l">${profit<0?'Loss':'Net profit'}</div><div class="v ${profit<0?'neg':'pos'}">${fmt(profit)}</div><div class="s">margin ${e.total?Math.round(profit/e.total*100):0}%</div></div><div class="kpi"><div class="l">Debts</div><div class="v small">${fmt(owedUs)} owed to us</div><div class="s">${fmt(weOwe)} we owe</div></div></div>
+    ${siteNet(e,c,'Net profit per site')}
+    <h3>Costs by type</h3><table><tbody>${Object.entries(cat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="n">${fmt(v)}</td><td class="n muted">${exp?Math.round(v/exp*100):0}%</td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td class="n">${fmt(exp)}</td><td></td></tr></tfoot></table>
+    <h3>Directors' share of profit</h3><table><tbody>${R.names.map(n=>`<tr><td>${esc(n)}</td><td class="n">${(R.share[n]*100).toFixed(1)}%</td><td class="n">${pnl(sum(md,r=>r.each[n]))}</td></tr>`).join('')}</tbody></table>
+    <h3>Customer issues</h3><p>${tk.length} reported · ${tk.filter(x=>x.stage>=4).length} confirmed fixed · ${tk.filter(x=>x.stage<4).length} still open</p>
+  </div>`;
+};
+function reportText(m){const [f,t]=monthRange(m),st=monthStats(m),e=earnIn(f,t);
+  const best=S.sites.map(s=>[s.name,e.bySite[s.id].total]).sort((a,b)=>b[1]-a[1]);
+  return `${S.settings.business||'DalaWifi'} report, ${monthLabel(m)}\nEarnings: ${fmt(st.e)}\nMoney out: ${fmt(st.c)}\nNet profit: ${fmt(st.p)}\nBest site: ${best[0]?best[0][0]+' '+fmt(best[0][1]):'-'}\nLowest site: ${best.length?best[best.length-1][0]+' '+fmt(best[best.length-1][1]):'-'}\nFull report: https://dalawifi.com/#report`;}
+
 const CHECK_DONE=['Yes','Partly','No'];
 function empStats(emp,from,to){
   const inR=d=>d>=from&&d<=to,n=emp.name;
@@ -1533,6 +1661,7 @@ const ACT={
     download(`directors-statement-${today()}.csv`,rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');},
   printPage(){window.print();},
   pickMe(){pickMe();},
+  shareReport(){window.open('https://wa.me/?text='+encodeURIComponent(reportText(UI.repMonth||today().slice(0,7))),'_blank');},
   quickAdd(){quickAdd();},
   goSearch(){goto('search');setTimeout(()=>{const q=$('#q');if(q)q.focus();},50);},
   addTicket(){openForm('New customer issue',ticketFields(),{},o=>{const now=new Date().toISOString();S.tickets.push({id:uid(),...o,stage:1,log:[{s:0,at:now,by:''},{s:1,at:now,by:meName()}]});toast('Customer issue saved. Next: send it to the technician.');});},
@@ -1608,6 +1737,11 @@ const CHG={
   partRange(el){UI.partRange=el.value;render();},
   ownRange(el){UI.ownRange=el.value;render();},
   scRange(el){UI.scRange=el.value;render();},
+  anBy(el){UI.anBy=el.value;UI.anRange='';render();},
+  anRange(el){UI.anRange=el.value;render();},
+  cmpA(el){UI.cmpA=el.value;render();},
+  cmpB(el){UI.cmpB=el.value;render();},
+  repMonth(el){UI.repMonth=el.value;render();},
   tFilter(el){UI.tFilter=el.value;render();},
   bankRange(el){UI.bankRange=el.value;render();},
   teamRange(el){UI.teamRange=el.value;render();},
@@ -1664,6 +1798,6 @@ connectOnline();
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791577138';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791577369';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

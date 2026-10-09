@@ -26,6 +26,11 @@ nav{display:flex;gap:2px;overflow-x:auto;max-width:1200px;margin:8px auto 0;scro
 nav::-webkit-scrollbar{display:none}
 nav button{background:none;border:0;color:var(--on-head-2);padding:10px 12px;border-bottom:3px solid transparent;white-space:nowrap;font:inherit;cursor:pointer}
 nav button.on{color:var(--on-head);border-color:var(--on-head);font-weight:600}
+#subnav{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.subnav-in{display:flex;gap:6px;max-width:1200px;margin:0 auto;padding:8px 16px;overflow-x:auto;scrollbar-width:none}
+.subnav-in::-webkit-scrollbar{display:none}
+.subnav-in button{background:var(--bg);border:1px solid var(--line);color:var(--ink);padding:7px 14px;border-radius:99px;white-space:nowrap;font:inherit;font-size:14px;cursor:pointer}
+.subnav-in button.on{background:var(--brand);border-color:var(--brand);color:var(--on-brand);font-weight:600}
 @media (max-width:800px){nav{flex-wrap:wrap;overflow:visible;gap:4px;padding-bottom:6px}nav button{padding:6px 9px;border:1px solid rgba(255,255,255,.35);border-radius:8px;font-size:13px}nav button.on{background:rgba(255,255,255,.18)}}
 main{max-width:1200px;margin:0 auto;padding:16px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
@@ -126,6 +131,7 @@ details summary{cursor:pointer;color:var(--brand)}
   </div>
   <nav id="nav"></nav>
 </header>
+<div id="subnav" class="noprint" hidden></div>
 <main id="main"></main>
 <dialog id="dlg"></dialog>
 <dialog id="dlg2"></dialog>
@@ -164,7 +170,12 @@ const INV_CAT='Equipment & investment';
 const EXP_CATS=['Motorbike fuel','Tech salary','Electricity tokens','Wifi subscription','Materials','Repairs & maintenance','Transport','Airtime / SMS','Rent',INV_CAT,'Other'];
 const isInv=x=>x.category===INV_CAT;
 const SUBTECH_CAT='Sub-tech wages';
-const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup']];
+const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup']];
+
+// Main menu: each main page holds related subpages, shown as tabs under the menu.
+const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','upcoming','assets','issues']],['Costs',['costs','mat']],['Employees',['staff','team']],['Profit & Loss',['pl','debts','bank']],['Owners',['directors','partners']],['Settings',['settings']]];
+const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup'};
+const groupOf=pg=>GROUPS.find(g=>g[1].includes(pg))||GROUPS[0];
 
 /* ---------- state ---------- */
 function defaultState(){
@@ -1109,6 +1120,33 @@ P.directors=()=>{
 const rangeLabel=k=>(RANGE_OPTS.find(r=>r[0]===k)||['',''])[1];
 const equityFields=type=>{const n=ownSet().dirs.map(d=>d[0]);return [fDate(),{k:'person',label:'Director',type:'select',options:n,def:n[0]},{k:'type',label:'Type',type:'select',options:[['in','Put money into the company'],['out','Took money out of the company']],def:type||'in'},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'note',label:'Note (e.g. M-Pesa code, what it was for)'}];};
 
+/* ---------- upcoming payments: every bill and amount still to pay, soonest first ---------- */
+P.upcoming=()=>{
+  const t=today(),L=[];
+  S.sites.forEach(s=>{
+    if(s.wifiLastPaid){const due=wifiDue(s),left=diffDays(t,due);L.push({date:due,left,what:'WiFi subscription',who:s.name,detail:(s.wifiProvider||'')+(s.wifiAccount?' · acc '+s.wifiAccount:''),amount:num(s.wifiAmount),go:'bills'});}
+    else L.push({date:'',left:null,what:'WiFi subscription',who:s.name,detail:'No payment date entered yet',amount:num(s.wifiAmount),go:'bills'});
+    const k=tokenStatus(s);
+    if(k.ago!==null){const est=addDays(s.tokenLastPaid,num(S.settings.tokenWarnDays)||30);L.push({date:est,left:diffDays(t,est),what:'Electricity token (estimate)',who:s.name,detail:'Last bought '+fmtDs(s.tokenLastPaid)+(s.powerPhone?' · power house '+s.powerPhone:''),amount:num(s.tokenLastAmount),go:'bills'});}
+  });
+  S.debts.filter(d=>d.type==='weOwe'&&debtBal(d)>0).forEach(d=>L.push({date:d.due||'',left:d.due?diffDays(t,d.due):null,what:'Debt we owe',who:d.person,detail:d.phone||'',amount:debtBal(d),go:'debts'}));
+  const unpaid=S.subtech.filter(w=>!w.paid);
+  if(unpaid.length)L.push({date:t,left:0,what:'Unpaid sub-tech days',who:unpaid.length+' days',detail:'',amount:sum(unpaid,w=>w.amount),go:'staff'});
+  const m=t.slice(0,7),[f]=monthRange(m),techPaid=sum(costsIn(f,t).filter(x=>x.category==='Tech salary'),x=>x.amount),techLeft=Math.max(0,num(S.settings.techSalary)-techPaid);
+  if(techLeft)L.push({date:monthRange(m)[1],left:diffDays(t,monthRange(m)[1]),what:'Tech salary (rest of this month)',who:S.settings.techName||'Technician',detail:'',amount:techLeft,go:'staff'});
+  L.sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999'));
+  const badge=x=>x.left===null?'<span class="badge b-info">No date</span>':x.left<0?`<span class="badge b-bad">Overdue ${-x.left}d</span>`:x.left===0?'<span class="badge b-warn">Today</span>':x.left<=7?`<span class="badge b-warn">In ${x.left}d</span>`:`<span class="badge b-ok">In ${x.left}d</span>`;
+  const within=n=>sum(L.filter(x=>x.left!==null&&x.left<=n),x=>x.amount);
+  return `
+  <div class="card"><div class="h2row"><h2>Upcoming payments</h2><button class="btn noprint" data-act="printPage">Print</button></div>
+    <div class="note">Every bill the business still has to pay, soonest first. WiFi dates come from the last payment plus the cycle days. Token dates are an estimate from the last purchase. Pay a bill on <a href="#bills" data-go="bills">Tokens &amp; WiFi</a> and it moves to its next date.</div>
+    <div class="kpis"><div class="kpi"><div class="l">Overdue or due today</div><div class="v ${within(0)?'neg':''}">${fmt(within(0))}</div></div><div class="kpi"><div class="l">Due in the next 7 days</div><div class="v">${fmt(within(7))}</div></div><div class="kpi"><div class="l">Due in the next 30 days</div><div class="v">${fmt(within(30))}</div></div></div>
+    <div class="tbl-wrap"><table><thead><tr><th>When</th><th>Status</th><th>What</th><th>Site / who</th><th>Details</th><th class="n">Amount</th></tr></thead><tbody>
+    ${L.map(x=>`<tr data-go="${x.go}" style="cursor:pointer"><td>${x.date?fmtD(x.date):'—'}</td><td>${badge(x)}</td><td>${esc(x.what)}</td><td><b>${esc(x.who)}</b></td><td class="wrap small">${esc(x.detail)}</td><td class="n">${x.amount?fmt(x.amount):'—'}</td></tr>`).join('')}
+    </tbody></table></div>
+  </div>`;
+};
+
 const CHECK_DONE=['Yes','Partly','No'];
 function empStats(emp,from,to){
   const inR=d=>d>=from&&d<=to,n=emp.name;
@@ -1421,7 +1459,10 @@ function goto(p){UI.page=p;if(location.hash!=='#'+p){try{history.pushState(null,
 function renderHead(){
   $('#bizName').textContent=S.settings.business||'Dala & Genzi WiFi';
   document.title=(S.settings.business||'Dala & Genzi WiFi')+' Manager';
-  $('#nav').innerHTML=PAGES.map(([k,l])=>`<button data-go="${k}" class="${k===UI.page?'on':''}">${l}</button>`).join('');
+  const g=groupOf(UI.page);UI.lastSub=UI.lastSub||{};UI.lastSub[g[0]]=UI.page;
+  $('#nav').innerHTML=GROUPS.map(([n,pg])=>`<button data-go="${UI.lastSub[n]||pg[0]}" class="${n===g[0]?'on':''}">${esc(n)}</button>`).join('');
+  $('#subnav').innerHTML=g[1].length>1?`<div class="subnav-in">${g[1].map(k=>`<button data-go="${k}" class="${k===UI.page?'on':''}">${esc(SUBNAME[k]||k)}</button>`).join('')}</div>`:'';
+  $('#subnav').hidden=g[1].length<2;
   const on=$('#nav .on');if(on)on.scrollIntoView({block:'nearest',inline:'nearest'});
 }
 function render(){renderHead();$('#main').innerHTML=P[UI.page]();}
@@ -1432,6 +1473,6 @@ connectOnline();
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791571705';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791572408';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

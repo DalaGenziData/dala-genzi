@@ -17,6 +17,11 @@ async function getMeta(db, k) {
   return r ? r.v : null;
 }
 
+// Each person can have their own PIN (stored only as a hash). The main PIN is the owners' PIN.
+const hashPin = async pin => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('dgz:' + pin)))].map(b => b.toString(16).padStart(2, '0')).join('');
+async function users(db) { return JSON.parse((await getMeta(db, 'users')) || '[]'); }
+
+// Returns who the PIN belongs to: { name, role } (role 'owner' or 'staff').
 async function checkPin(db, pin) {
   pin = String(pin || '').trim();
   if (!pin) throw new Error('bad_pin');
@@ -25,21 +30,52 @@ async function checkPin(db, pin) {
     // first visit sets the PIN; OR IGNORE keeps the first one if two phones race
     await db.prepare('INSERT OR IGNORE INTO meta (k, v) VALUES (?, ?)').bind('pin', pin).run();
     if ((await getMeta(db, 'pin')) !== pin) throw new Error('bad_pin');
-    return;
+    return { name: '', role: 'owner' };
   }
-  if (pin !== saved) throw new Error('bad_pin');
+  if (pin === saved) return { name: '', role: 'owner' };
+  const h = await hashPin(pin), u = (await users(db)).find(x => x.h === h);
+  if (!u) throw new Error('bad_pin');
+  return { name: u.name, role: u.role === 'staff' ? 'staff' : 'owner' };
+}
+async function checkOwner(db, pin) {
+  const me = await checkPin(db, pin);
+  if (me.role !== 'owner') throw new Error('owners_only');
+  return me;
 }
 
 const stamp = async db => (await getMeta(db, 'stamp')) || '0';
 
 const FNS = {
+  async whoami(db, pin) {
+    return checkPin(db, pin);
+  },
+  async listUsers(db, pin) {
+    await checkOwner(db, pin);
+    return (await users(db)).map(u => ({ name: u.name, role: u.role }));
+  },
+  // set or change one person's PIN; an empty newPin removes the person
+  async setUser(db, pin, name, role, newPin) {
+    await checkOwner(db, pin);
+    name = String(name || '').trim().toUpperCase();
+    if (!name) throw new Error('no_name');
+    let list = (await users(db)).filter(u => u.name !== name);
+    newPin = String(newPin || '').trim();
+    if (newPin) {
+      if (newPin.length < 4) throw new Error('pin_too_short');
+      const h = await hashPin(newPin);
+      if (newPin === (await getMeta(db, 'pin')) || list.some(u => u.h === h)) throw new Error('pin_in_use');
+      list.push({ name, role: role === 'staff' ? 'staff' : 'owner', h });
+    }
+    await db.prepare('INSERT INTO meta (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v').bind('users', JSON.stringify(list)).run();
+    return list.map(u => ({ name: u.name, role: u.role }));
+  },
   async listBackups(db, pin) {
-    await checkPin(db, pin);
+    await checkOwner(db, pin);
     const { results } = await db.prepare('SELECT day, length(data) AS size FROM backups ORDER BY day DESC').all();
     return results;
   },
   async getBackup(db, pin, day) {
-    await checkPin(db, pin);
+    await checkOwner(db, pin);
     const r = await db.prepare('SELECT data FROM backups WHERE day = ?').bind(String(day)).first();
     if (!r) throw new Error('no_backup');
     return { docs: JSON.parse(r.data) };

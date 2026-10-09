@@ -1159,7 +1159,7 @@ function ispCard(){
       <label class="fld"><span>Dashboard address</span><input value="${esc(c.url)}" data-chg="ispUrl" data-id="${k}"></label>
       <label class="fld"><span>Access Token ${c.token?'<span class="badge b-ok">saved</span>':''}</span><input type="password" autocomplete="off" placeholder="${c.token?'•••••• (saved, paste a new one to change)':'Paste the Access Token here'}" data-chg="ispTok" data-id="${k}"></label>
       <div class="row"><button class="btn" data-act="ispTest" data-id="${k}"${online?'':' disabled'}>Test connection</button></div>
-      <pre id="ispOut-${k}" class="small" style="white-space:pre-wrap;word-break:break-all;max-height:260px;overflow:auto;background:var(--bg);padding:8px;border-radius:8px;margin:8px 0 0" hidden></pre></div>`;}).join('')}
+      <pre id="ispOut-${k}" class="small" style="white-space:pre-wrap;word-break:break-all;max-height:260px;overflow:auto;background:var(--bg);padding:8px;border-radius:8px;margin:8px 0 0"${(UI.ispOut||{})[k]?'':' hidden'}>${esc((UI.ispOut||{})[k]||'')}</pre></div>`;}).join('')}
   </div>`;
 }
 function ispSummary(res){
@@ -1390,10 +1390,10 @@ const ACT={
     rows.push([]);rows.push(['Ownership now',...n.map(x=>x+' '+(R.share[x]*100).toFixed(2)+'% ('+Math.round(R.cap[x])+')')]);
     download(`directors-statement-${today()}.csv`,rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');},
   printPage(){window.print();},
-  async ispTest(k){const c=ispCfg(k),out=$('#ispOut-'+k);if(!c.token){toast('Paste the Access Token first');return;}
-    out.hidden=false;out.textContent='Testing…';
+  async ispTest(k){const c=ispCfg(k);if(!c.token){toast('Paste the Access Token first');return;}
+    UI.ispOut=UI.ispOut||{};const show=t=>{UI.ispOut[k]=t;const o=$('#ispOut-'+k);if(o){o.hidden=false;o.textContent=t;}};show('Testing… please wait');
     const tries=[['dashboard',''],['reports/income-overview','period=daily'],['reports','']];let txt='';
-    for(const [r,q] of tries){try{const res=await remote('ispFetch',PIN,c.url,c.token,r,q);txt+=`== ${r} ${q}\n`+ispSummary(res)+'\n\n';}catch(e){txt+=`== ${r}\nError: ${e.message||e}\n\n`;}out.textContent=txt;}
+    for(const [r,q] of tries){try{const res=await remote('ispFetch',PIN,c.url,c.token,r,q);txt+=`== ${r} ${q}\n`+ispSummary(res)+'\n\n';}catch(e){txt+=`== ${r}\nError: ${e.message||e}\n\n`;}show(txt);}
   },
   editShares(){const ps=S.settings.partners;openForm('Profit shares (%)',ps.map(p=>({k:p,label:p,type:'number',hint:'Leave all at 0 to split equally'})),Object.fromEntries(ps.map(p=>[p,num(S.settings.partnerShares[p])])),o=>{S.settings.partnerShares=o;toast('Shares saved');});},
   addEmp(){openForm('Add employee',empFields,{},o=>{S.employees.push({id:uid(),...o});});},
@@ -1503,6 +1503,6 @@ connectOnline();
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791573198';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791574108';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

@@ -220,6 +220,8 @@ if(!S.employees.length)S=migrate(S);
 // never applied over it. The ".dirty" flag marks edits not yet confirmed online, so they survive a reload.
 let saveSeq=0;
 function save(){
+  try{const q={items:upcomingList().filter(x=>x.date&&x.amount>0).map(x=>({date:x.date,what:x.what,who:x.who,amount:Math.round(x.amount)}))};
+    if(JSON.stringify(q)!==JSON.stringify(S.remindQueue))S.remindQueue=q;}catch(e){}
   saveSeq++;
   try{localStorage.setItem(KEY,JSON.stringify(S));if(ONLINE||REMOTE)localStorage.setItem(KEY+'.dirty','1');}
   catch(e){if(!ONLINE)toast('Could not save in this browser. Use Backup to keep your data.');}
@@ -1136,6 +1138,18 @@ function reminderText(){
   return {n:L.length,od:od.length,text:parts.join('\n')};
 }
 const waNum=p=>String(p||'').replace(/[^0-9]/g,'').replace(/^0/,'254');
+
+function smsBlock(){
+  const online=API_URL==='/api',sp=UI.smsPrev;
+  if(online&&!UI.smsAsked){UI.smsAsked=1;remote('smsPreview',PIN).then(r=>{UI.smsPrev=r;if(UI.page==='upcoming')render();}).catch(e=>{UI.smsPrev={err:String(e.message||e)};});}
+  const on=S.settings.autoSms!==false,last=sp&&sp.last;
+  return `<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px"><b>Automatic SMS every morning (8:00)</b> ${on?'<span class="badge b-ok">On</span>':'<span class="badge b-info">Off</span>'}
+    <p class="small muted" style="margin:4px 0 8px">Each morning the website sends one short SMS to everyone above, but only on days something is overdue or due. It needs an Africa's Talking account (see the setup steps in the chat).</p>
+    ${sp&&sp.count!==undefined?`<div class="small" style="background:var(--bg);padding:8px;border-radius:8px;margin-bottom:8px">Tomorrow's SMS: ${esc(sp.count?sp.text:'nothing due, no SMS will be sent')}</div>`:''}
+    ${last?`<div class="small muted" style="margin-bottom:8px">Last SMS ${esc(new Date(last.at).toLocaleString('en-GB'))}${last.test?' (test)':''}: ${last.ok?'<span class="pos">sent</span>':'<span class="neg">failed</span>'} · ${esc(last.detail||'')}</div>`:''}
+    <div class="row"><button class="btn" data-act="toggleSms">${on?'Turn off':'Turn on'}</button><button class="btn" data-act="smsTest"${online?'':' disabled'}>Send a test SMS now</button></div>
+    <div id="smsOut" class="small" style="margin-top:6px">${esc(UI.smsOut||'')}</div></div>`;
+}
 function remindCard(){
   const r=reminderText(),c=S.settings.contacts||[],enc=encodeURIComponent(r.text);
   return `<div class="card"><div class="h2row"><h2>Send reminders</h2><div class="row"><button class="btn sm" data-act="editContacts">Phone numbers</button></div></div>
@@ -1143,6 +1157,7 @@ function remindCard(){
     <pre class="small" style="white-space:pre-wrap;background:var(--bg);padding:10px;border-radius:8px;margin:0 0 10px">${esc(r.text)}</pre>
     <div class="row">${c.map(([n,p])=>`<a class="btn primary" target="_blank" rel="noopener" href="https://wa.me/${waNum(p)}?text=${enc}">WhatsApp ${esc(n)}</a><a class="btn" href="sms:${esc(p)}?body=${enc}">SMS ${esc(n)}</a>`).join('')}
       <button class="btn" data-act="copyReminder">Copy message</button></div>
+    ${smsBlock()}
   </div>`;
 }
 
@@ -1421,6 +1436,11 @@ const ACT={
     rows.push([]);rows.push(['Ownership now',...n.map(x=>x+' '+(R.share[x]*100).toFixed(2)+'% ('+Math.round(R.cap[x])+')')]);
     download(`directors-statement-${today()}.csv`,rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');},
   printPage(){window.print();},
+  toggleSms(){S.settings.autoSms=S.settings.autoSms===false;save();render();toast(S.settings.autoSms?'Automatic SMS on':'Automatic SMS off');},
+  async smsTest(){const o=t=>{UI.smsOut=t;const e=$('#smsOut');if(e)e.textContent=t;};o('Sending…');
+    try{const r=await remote('smsTest',PIN);o(r.ok?'Sent: '+r.detail:'Not sent: '+r.detail);}
+    catch(e){const m=String(e.message||e);o(m==='sms_not_set_up'?'Not set up yet: the Africa\'s Talking username and API key still need to be added in Cloudflare.':'Error: '+m);}
+    UI.smsAsked=0;},
   editContacts(){const c=S.settings.contacts||[],F=[];for(let i=0;i<4;i++)F.push({k:'n'+i,label:'Name '+(i+1)+(i>2?' (optional)':'')},{k:'p'+i,label:'Phone '+(i+1),type:'tel'});
     F.push({k:'days',label:'Remind how many days before a payment is due',type:'number'});
     const v={days:num(S.settings.remindDays)||3};c.forEach(([n,p],i)=>{v['n'+i]=n;v['p'+i]=p;});
@@ -1539,6 +1559,6 @@ connectOnline();
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791575025';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791575234';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

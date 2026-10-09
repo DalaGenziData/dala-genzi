@@ -64,6 +64,9 @@ tr.click:hover td{background:var(--brand-2)}
 .b-dala{background:var(--brand-2);color:var(--brand)}
 .b-genzi{background:color-mix(in srgb,var(--genzi) 16%,transparent);color:var(--genzi)}
 .pos{color:var(--good)}
+.ownbar{display:flex;height:34px;border-radius:10px;overflow:hidden;margin-top:12px;border:1px solid var(--line)}
+.ownbar>div{display:flex;align-items:center;justify-content:center;min-width:0;color:#fff;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden}
+.ownbar span{padding:0 6px;overflow:hidden;text-overflow:ellipsis}
 .neg{color:var(--bad)}
 input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);width:100%}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--brand);outline-offset:-1px}
@@ -161,16 +164,16 @@ const INV_CAT='Equipment & investment';
 const EXP_CATS=['Motorbike fuel','Tech salary','Electricity tokens','Wifi subscription','Materials','Repairs & maintenance','Transport','Airtime / SMS','Rent',INV_CAT,'Other'];
 const isInv=x=>x.category===INV_CAT;
 const SUBTECH_CAT='Sub-tech wages';
-const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup']];
+const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup']];
 
 /* ---------- state ---------- */
 function defaultState(){
   const earnings={};
   SEED_DATES.forEach((d,i)=>{earnings[d]={};for(const k in SEED_VALUES)earnings[d][k]=SEED_VALUES[k][i];});
   return {version:1,
-    settings:{business:'Dala & Genzi WiFi',subtechRate:500,subtechName:'Sub-tech',techName:'Technician',techSalary:0,tokenWarnDays:30,wifiWarnDays:5,partners:['FIDEL','DOROTHY','MAURICE'],partnerShares:{},lastPayer:''},
+    settings:{business:'Dala & Genzi WiFi',subtechRate:500,subtechName:'Sub-tech',techName:'Technician',techSalary:0,tokenWarnDays:30,wifiWarnDays:5,partners:['FIDEL','DOROTHY','MAURICE'],partnerShares:{},lastPayer:'',own:{}},
     sites:SITES_SEED.map(s=>({...s,tokenMeter:'',powerName:'',powerPhone:'',tokenLastPaid:'',tokenLastAmount:0,wifiProvider:'',wifiAccount:'',wifiLastPaid:'',wifiAmount:0,wifiCycleDays:30,notes:''})),
-    earnings,expenses:[],subtech:[],store:[],toBuy:[],matLog:[],debts:[],issues:[],assets:[],targets:{},partnerTx:[],lumpIncome:[],bankTx:[],employees:[],checks:[],lastBackup:''};
+    earnings,expenses:[],subtech:[],store:[],toBuy:[],matLog:[],debts:[],issues:[],assets:[],targets:{},partnerTx:[],equityTx:[],lumpIncome:[],bankTx:[],employees:[],checks:[],lastBackup:''};
 }
 // Combine a backup into the current data without losing anything: union by id, the backup wins on the same entry.
 function mergeState(cur,inc){
@@ -347,7 +350,7 @@ async function connectOnline(){
     db.collection('earnings').onSnapshot(q=>{lastSnaps.earn=q.docs;applyRemote();},()=>setNet('err'));
   }catch(e){setNet('err');}
 }
-const UI={page:(location.hash.slice(1)||'dash'),earnDate:'',earnMonth:'',perfRange:'30',costMonth:'',costCat:'',costSite:'',staffMonth:'',plMonth:'',issueFilter:'Open',debtFilter:'open',tgtMonth:'',assetSite:'',costPayer:'',partRange:'month',bankRange:'all',teamRange:'30'};
+const UI={page:(location.hash.slice(1)||'dash'),earnDate:'',earnMonth:'',perfRange:'30',costMonth:'',costCat:'',costSite:'',staffMonth:'',plMonth:'',issueFilter:'Open',debtFilter:'open',tgtMonth:'',assetSite:'',costPayer:'',partRange:'month',bankRange:'all',ownRange:'30',teamRange:'30'};
 if(!PAGES.some(p=>p[0]===UI.page))UI.page='dash';
 
 /* ---------- helpers ---------- */
@@ -624,6 +627,7 @@ P.dash=()=>{
     <div class="kpi"><div class="l">Latest day (${latest?fmtDs(latest):'—'})</div><div class="v">${fmt(latestTot)}</div><div class="s">${latest?(()=>{const dc=dayCalc(latest);return 'costs '+fmt(dc.c)+' · '+(dc.p<0?'loss ':'profit ')+fmt(Math.abs(dc.p));})():'all 9 sites'}</div></div>
     <div class="kpi"><div class="l">Expected month-end ${pj.projP<0?'loss':'profit'}</div><div class="v ${pj.projP<0?'neg':'pos'}">${fmt(pj.projP)}</div><div class="s">Break-even: ${fmt(pj.breakEven)}/day</div></div>
     <div class="kpi"><div class="l">People owe us</div><div class="v">${fmt(owedUs)}</div><div class="s">We owe ${fmt(weOwe)}</div></div>
+    ${(()=>{const R=ownCalc(),md=R.days.filter(r=>r.date>=mf);return `<div class="kpi" data-go="directors" style="cursor:pointer"><div class="l">Directors' profit this month</div>${R.names.map(n=>`<div class="s"><b>${esc(n)}</b> ${(R.share[n]*100).toFixed(1)}% · ${pnl(sum(md,r=>r.each[n]))}</div>`).join('')}</div>`;})()}
     <div class="kpi"><div class="l">Unpaid sub-tech</div><div class="v">${fmt(unpaidSub)}</div><div class="s">${S.subtech.filter(w=>!w.paid).length} days not paid</div></div>
   </div>
   ${profitBreakdown(e.total,c,'How this month\'s profit is worked out')}
@@ -1036,6 +1040,75 @@ P.partners=()=>{
   </div>`;
 };
 
+
+/* ---------- directors & ownership ---------- */
+// Each director has a capital account. It starts at their % of the starting company value, grows with money
+// they put in, falls with money they take out, and takes its share of every day's profit (or loss).
+// Ownership % = their capital / everyone's capital, so it changes only when someone puts money in or takes it out.
+const OWN_COLORS=['var(--brand)','var(--genzi)','#b45309','#7c3aed','#be185d'];
+function ownSet(){
+  const o=S.settings.own||{};
+  const dirs=(o.directors&&o.directors.length?o.directors:[['FIDELIS',88],['DOROTHY',12]]).map(([n,p])=>[String(n),num(p)]);
+  const firstDay=Object.keys(S.earnings).sort()[0]||today();
+  return {dirs,start:o.start||firstDay,base:num(o.base),baseSet:num(o.base)>0};
+}
+function ownCalc(upTo){
+  const o=ownSet(),t=upTo||today(),names=o.dirs.map(d=>d[0]);
+  const pt=sum(o.dirs,d=>d[1])||1;
+  const cap=Object.fromEntries(o.dirs.map(([n,p])=>[n,o.base*p/pt]));
+  const shareNow=()=>{const tot=o.baseSet?sum(names,n=>Math.max(0,cap[n])):0;return Object.fromEntries(names.map(n=>[n,tot>0?Math.max(0,cap[n])/tot:(o.dirs.find(d=>d[0]===n)[1]/pt)]));};
+  const tx=(S.equityTx||[]).filter(x=>names.includes(x.person)).map(x=>({...x,d:x.date<o.start?o.start:x.date})).sort((a,b)=>a.d.localeCompare(b.d));
+  const e=earnIn(o.start,t),costBy={};
+  costsIn(o.start,t).forEach(c=>{costBy[c.date]=(costBy[c.date]||0)+c.amount;});
+  const days=[],tot={};names.forEach(n=>tot[n]={inj:0,wd:0,profit:0});
+  let ti=0;
+  for(let d=o.start;d<=t;d=addDays(d,1)){
+    const sh=shareNow(),p=(e.byDate[d]||0)-(costBy[d]||0),row={date:d,profit:p,has:d in e.byDate||d in costBy,share:sh,each:{}};
+    names.forEach(n=>{const v=p*sh[n];cap[n]+=v;row.each[n]=v;tot[n].profit+=v;});
+    while(ti<tx.length&&tx[ti].d===d){const x=tx[ti++],v=num(x.amount);if(x.type==='in'){cap[x.person]+=v;tot[x.person].inj+=v;}else{cap[x.person]-=v;tot[x.person].wd+=v;}}
+    row.after=shareNow();days.push(row);
+  }
+  return {o,names,cap,share:shareNow(),days,tot};
+}
+P.directors=()=>{
+  const R=ownCalc(),{o,names,cap,share,days,tot}=R,[f,t]=rangeOf(UI.ownRange);
+  const shown=days.filter(r=>r.date>=f&&r.date<=t&&r.has).reverse();
+  const rangeTot=Object.fromEntries(names.map(n=>[n,sum(shown,r=>r.each[n])]));
+  const td=days.find(r=>r.date===today())||{each:{},profit:0};
+  const pctTxt=v=>(v*100).toFixed(1)+'%';
+  const totalCap=sum(names,n=>cap[n]);
+  const tx=(S.equityTx||[]).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  // monthly summary
+  const months={};days.forEach(r=>{const m=r.date.slice(0,7);const x=months[m]=months[m]||{p:0,each:{}};x.p+=r.profit;names.forEach(n=>x.each[n]=(x.each[n]||0)+r.each[n]);});
+  const mKeys=Object.keys(months).sort().reverse().slice(0,6);
+  return `
+  <div class="card"><div class="h2row"><h2>Directors &amp; Ownership</h2><div class="row noprint"><button class="btn primary" data-act="addEquity" data-id="in">+ Put money in</button><button class="btn" data-act="addEquity" data-id="out">− Take money out</button><button class="btn" data-act="ownSetup">Starting setup</button><button class="btn" data-act="exportOwn">Export statement</button><button class="btn" data-act="printPage">Print</button></div></div>
+    <div class="note">Ownership starts at ${o.dirs.map(([n,p])=>`<b>${esc(n)} ${p}%</b>`).join(' and ')} of a company value of <b>${fmt(o.base)}</b> on ${fmtD(o.start)}. When a director puts money in, their % goes up. When they take money out, it goes down. Each day's profit (earnings minus all money out) is shared by the % on that day.</div>
+    ${o.baseSet?'':`<div class="note" style="background:var(--warn-bg);color:var(--warn)"><b>One thing needed:</b> tap <b>Starting setup</b> and enter the company value, meaning the total money invested in the business so far. Until then the % stays at ${o.dirs.map(([n,p])=>esc(n)+' '+p+'%').join(' / ')}. Money put in or taken out is still recorded, but it won't change the % yet.</div>`}
+    <div class="ownbar" title="Ownership now">${names.map((n,i)=>`<div style="width:${(share[n]*100).toFixed(2)}%;background:${OWN_COLORS[i%OWN_COLORS.length]}"><span>${esc(n)} ${pctTxt(share[n])}</span></div>`).join('')}</div>
+    <div class="kpis" style="margin-top:14px">${names.map((n,i)=>`<div class="kpi" style="border-top:4px solid ${OWN_COLORS[i%OWN_COLORS.length]}"><div class="l">${esc(n)}</div><div class="v">${pctTxt(share[n])}</div><div class="s">Stake value <b>${fmt(cap[n])}</b></div><div class="s">Today: ${pnl(td.each[n]||0)} · ${esc(rangeLabel(UI.ownRange))}: ${pnl(rangeTot[n])}</div><div class="s">Put in ${fmt(tot[n].inj)} · took out ${fmt(tot[n].wd)}</div></div>`).join('')}
+      <div class="kpi"><div class="l">Company value (all stakes)</div><div class="v">${fmt(totalCap)}</div><div class="s">start ${fmt(o.base)} + money in − money out + profit kept</div></div></div>
+  </div>
+  <div class="card"><div class="h2row"><h2>Daily profit per director</h2><div class="row"><select data-chg="ownRange">${RANGE_OPTS.map(([v,l])=>`<option value="${v}"${v===UI.ownRange?' selected':''}>${l}</option>`).join('')}</select></div></div>
+    ${shown.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th class="n">Business profit</th>${names.map(n=>`<th class="n">${esc(n)}</th>`).join('')}</tr></thead><tbody>
+    ${shown.map(r=>`<tr><td>${fmtD(r.date)}</td><td class="n">${pnl(r.profit)}</td>${names.map(n=>`<td class="n">${pnl(r.each[n])} <span class="muted small">${pctTxt(r.share[n])}</span></td>`).join('')}</tr>`).join('')}
+    </tbody><tfoot><tr><td>Total</td><td class="n">${pnl(sum(shown,r=>r.profit))}</td>${names.map(n=>`<td class="n">${pnl(rangeTot[n])}</td>`).join('')}</tr></tfoot></table></div>`:'<div class="empty">No earnings or costs in this period.</div>'}
+    <p class="small muted">Days with a big payment (WiFi, equipment, tokens) can show a loss. The monthly totals below give the fairer picture.</p>
+  </div>
+  <div class="card"><h2 style="margin-bottom:10px">Monthly profit per director</h2>
+    <div class="tbl-wrap"><table><thead><tr><th>Month</th><th class="n">Business profit</th>${names.map(n=>`<th class="n">${esc(n)}</th>`).join('')}</tr></thead><tbody>
+    ${mKeys.map(m=>`<tr><td>${monthLabel(m)}</td><td class="n">${pnl(months[m].p)}</td>${names.map(n=>`<td class="n">${pnl(months[m].each[n])}</td>`).join('')}</tr>`).join('')}
+    </tbody></table></div>
+  </div>
+  <div class="card"><h2 style="margin-bottom:10px">Money put in and taken out</h2>
+    ${tx.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Director</th><th>Type</th><th class="n">Amount</th><th>Note</th><th class="n">% after</th><th></th></tr></thead><tbody>
+    ${tx.map(x=>{const r=days.find(d=>d.date===(x.date<o.start?o.start:x.date));return `<tr><td>${fmtD(x.date)}</td><td><b>${esc(x.person)}</b></td><td>${x.type==='in'?'<span class="badge b-ok">Put in</span>':'<span class="badge b-warn">Took out</span>'}</td><td class="n">${fmt(x.amount)}</td><td class="wrap small">${esc(x.note||'')}</td><td class="n small">${r?names.map(n=>esc(n.slice(0,3))+' '+pctTxt(r.after[n])).join(' · '):''}</td><td><div class="row noprint" style="flex-wrap:nowrap"><button class="btn sm" data-act="editEquity" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delEquity" data-id="${x.id}">✕</button></div></td></tr>`;}).join('')}
+    </tbody></table></div>`:'<div class="empty">Nothing recorded yet. Use <b>+ Put money in</b> or <b>− Take money out</b>.</div>'}
+  </div>`;
+};
+const rangeLabel=k=>(RANGE_OPTS.find(r=>r[0]===k)||['',''])[1];
+const equityFields=type=>{const n=ownSet().dirs.map(d=>d[0]);return [fDate(),{k:'person',label:'Director',type:'select',options:n,def:n[0]},{k:'type',label:'Type',type:'select',options:[['in','Put money into the company'],['out','Took money out of the company']],def:type||'in'},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'note',label:'Note (e.g. M-Pesa code, what it was for)'}];};
+
 const CHECK_DONE=['Yes','Partly','No'];
 function empStats(emp,from,to){
   const inR=d=>d>=from&&d<=to,n=emp.name;
@@ -1239,6 +1312,23 @@ const ACT={
     openForm('Monthly targets (Ksh)',S.sites.map(s=>({k:s.id,label:s.name,type:'number',hint:'Last 30 days: '+fmt(e.bySite[s.id].total)})),Object.fromEntries(S.sites.map(s=>[s.id,num(S.targets[s.id])||Math.round(e.bySite[s.id].total/100)*100||''])),o=>{S.targets=o;toast('Targets saved');});},
   addPartnerTx(){openForm('Partner money in / out',[fDate(),{k:'person',label:'Partner',type:'select',options:S.settings.partners,def:S.settings.lastPayer&&S.settings.partners.includes(S.settings.lastPayer)?S.settings.lastPayer:S.settings.partners[0]},{k:'type',label:'Type',type:'select',options:[['in','Put money into the business'],['out','Took money out (e.g. withdrew earnings)']]},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'note',label:'Note'}],{},o=>{S.partnerTx.push({id:uid(),...o});toast('Saved');});},
   delPartnerTx(id){del(S.partnerTx,id,'partner entry');},
+  addEquity(type){openForm(type==='out'?'Take money out of the company':'Put money into the company',equityFields(type),{},o=>{S.equityTx.push({id:uid(),...o});const r=ownCalc();toast('New ownership: '+r.names.map(n=>n+' '+(r.share[n]*100).toFixed(1)+'%').join(' · '));});},
+  editEquity(id){const x=byId(S.equityTx,id);openForm('Edit money in / out',equityFields(x.type),x,o=>{Object.assign(x,o);});},
+  delEquity(id){del(S.equityTx,id,'money in / out entry');},
+  ownSetup(){const o=ownSet(),d=o.dirs,F=[fDate('start','Start date (ownership counted from this day)'),{k:'base',label:'Company value on that day (Ksh)',type:'number',req:true,hint:'Total money invested in the business so far'}];
+    for(let i=0;i<3;i++)F.push({k:'n'+i,label:'Director '+(i+1)+' name'+(i>1?' (optional)':'')},{k:'p'+i,label:'Director '+(i+1)+' starting %',type:'number'});
+    const v={start:o.start,base:o.base||''};d.forEach(([n,p],i)=>{v['n'+i]=n;v['p'+i]=p;});
+    openForm('Ownership starting setup',F,v,x=>{const dirs=[0,1,2].map(i=>[String(x['n'+i]||'').trim().toUpperCase(),num(x['p'+i])]).filter(z=>z[0]&&z[1]>0);
+      if(!dirs.length){toast('Enter at least one director with a %');return false;}
+      const tot=sum(dirs,z=>z[1]);S.settings.own={start:x.start,base:num(x.base),directors:dirs};
+      toast(Math.round(tot)===100?'Ownership saved':'Saved. The % added up to '+tot+', so they were scaled to 100%');});},
+  exportOwn(){const R=ownCalc(),n=R.names,rows=[['Date','Business profit',...n.map(x=>x+' profit'),...n.map(x=>x+' %')]];
+    R.days.filter(r=>r.has).forEach(r=>rows.push([r.date,Math.round(r.profit),...n.map(x=>Math.round(r.each[x])),...n.map(x=>(r.share[x]*100).toFixed(2))]));
+    rows.push([]);rows.push(['Money in / out']);rows.push(['Date','Director','Type','Amount','Note']);
+    (S.equityTx||[]).slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(x=>rows.push([x.date,x.person,x.type==='in'?'Put in':'Took out',x.amount,x.note||'']));
+    rows.push([]);rows.push(['Ownership now',...n.map(x=>x+' '+(R.share[x]*100).toFixed(2)+'% ('+Math.round(R.cap[x])+')')]);
+    download(`directors-statement-${today()}.csv`,rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');},
+  printPage(){window.print();},
   editShares(){const ps=S.settings.partners;openForm('Profit shares (%)',ps.map(p=>({k:p,label:p,type:'number',hint:'Leave all at 0 to split equally'})),Object.fromEntries(ps.map(p=>[p,num(S.settings.partnerShares[p])])),o=>{S.settings.partnerShares=o;toast('Shares saved');});},
   addEmp(){openForm('Add employee',empFields,{},o=>{S.employees.push({id:uid(),...o});});},
   editEmp(id){const e=byId(S.employees,id),old=e.name;openForm('Edit employee',empFields,e,o=>{Object.assign(e,o);if(o.name!==old){S.issues.forEach(i=>{if(i.assignedTo===old)i.assignedTo=o.name;});S.subtech.forEach(w=>{if(w.name===old)w.name=o.name;});}});},
@@ -1290,6 +1380,7 @@ const CHG={
   costSite(el){UI.costSite=el.value;render();},
   costPayer(el){UI.costPayer=el.value;render();},
   partRange(el){UI.partRange=el.value;render();},
+  ownRange(el){UI.ownRange=el.value;render();},
   bankRange(el){UI.bankRange=el.value;render();},
   teamRange(el){UI.teamRange=el.value;render();},
   partners(el){const l=el.value.split(',').map(x=>x.trim()).filter(Boolean);if(l.length){S.settings.partners=l;save();toast('Saved');}},
@@ -1341,6 +1432,6 @@ connectOnline();
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791570918';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791571705';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

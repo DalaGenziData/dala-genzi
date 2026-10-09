@@ -69,6 +69,7 @@ tr.click:hover td{background:var(--brand-2)}
 .b-dala{background:var(--brand-2);color:var(--brand)}
 .b-genzi{background:color-mix(in srgb,var(--genzi) 16%,transparent);color:var(--genzi)}
 .pos{color:var(--good)}
+a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .ownbar{display:flex;height:34px;border-radius:10px;overflow:hidden;margin-top:12px;border:1px solid var(--line)}
 .ownbar>div{display:flex;align-items:center;justify-content:center;min-width:0;color:#fff;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden}
 .ownbar span{padding:0 6px;overflow:hidden;text-overflow:ellipsis}
@@ -182,7 +183,7 @@ function defaultState(){
   const earnings={};
   SEED_DATES.forEach((d,i)=>{earnings[d]={};for(const k in SEED_VALUES)earnings[d][k]=SEED_VALUES[k][i];});
   return {version:1,
-    settings:{business:'Dala & Genzi WiFi',subtechRate:500,subtechName:'Sub-tech',techName:'Technician',techSalary:0,tokenWarnDays:30,wifiWarnDays:5,partners:['FIDEL','DOROTHY','MAURICE'],partnerShares:{},lastPayer:'',own:{}},
+    settings:{business:'Dala & Genzi WiFi',subtechRate:500,subtechName:'Sub-tech',techName:'Technician',techSalary:0,tokenWarnDays:30,wifiWarnDays:5,partners:['FIDEL','DOROTHY','MAURICE'],partnerShares:{},lastPayer:'',own:{},contacts:[['FIDELIS','+254740396568'],['DOROTHY','+254114920486'],['MAURICE','+254723025729']],remindDays:3},
     sites:SITES_SEED.map(s=>({...s,tokenMeter:'',powerName:'',powerPhone:'',tokenLastPaid:'',tokenLastAmount:0,wifiProvider:'',wifiAccount:'',wifiLastPaid:'',wifiAmount:0,wifiCycleDays:30,notes:''})),
     earnings,expenses:[],subtech:[],store:[],toBuy:[],matLog:[],debts:[],issues:[],assets:[],targets:{},partnerTx:[],equityTx:[],lumpIncome:[],bankTx:[],employees:[],checks:[],lastBackup:''};
 }
@@ -671,6 +672,7 @@ function alerts(){
   const faulty=S.assets.filter(x=>x.status==='Faulty').length;
   if(faulty)a.push({cls:'b-bad',tag:'Equipment',html:`${faulty} faulty equipment item${faulty>1?'s':''}. <a href="#assets" data-go="assets">View</a>`});
   const open=S.issues.filter(i=>i.status!=='Fixed').length;
+  {const r=reminderText();if(r.n)a.unshift({cls:r.od?'b-bad':'b-warn',tag:'Payments',html:`${r.n} payment${r.n>1?'s':''} overdue or due soon (${fmt(sum(upcomingList().filter(x=>x.left!==null&&x.left<=(num(S.settings.remindDays)||3)),x=>x.amount))}). <a href="#upcoming" data-go="upcoming">Send reminders</a>`});}
   if(open)a.push({cls:'b-bad',tag:'Issues',html:`${open} open site issue${open>1?'s':''}. <a href="#issues" data-go="issues">View</a>`});
   if(!S.lastBackup||diffDays(S.lastBackup,t)>7)a.push({cls:'b-warn',tag:'Backup',html:`${S.lastBackup?'Last backup was '+fmtD(S.lastBackup):'No backup made yet'}. <a href="#" data-act="exportJSON">Download backup</a>`});
   return a;
@@ -1120,8 +1122,32 @@ P.directors=()=>{
 const rangeLabel=k=>(RANGE_OPTS.find(r=>r[0]===k)||['',''])[1];
 const equityFields=type=>{const n=ownSet().dirs.map(d=>d[0]);return [fDate(),{k:'person',label:'Director',type:'select',options:n,def:n[0]},{k:'type',label:'Type',type:'select',options:[['in','Put money into the company'],['out','Took money out of the company']],def:type||'in'},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'note',label:'Note (e.g. M-Pesa code, what it was for)'}];};
 
+/* ---------- reminders: a ready-made message for each partner by WhatsApp or SMS ---------- */
+function reminderText(){
+  const days=num(S.settings.remindDays)||3,L=upcomingList().filter(x=>x.left!==null&&x.left<=days&&x.amount>0);
+  const line=x=>`- ${x.who}: ${x.what} ${x.amount?fmt(x.amount):''}${x.left<0?` (${-x.left} days late)`:x.left===0?' (today)':` (in ${x.left} day${x.left>1?'s':''}, ${fmtDs(x.date)})`}`;
+  const od=L.filter(x=>x.left<0),td=L.filter(x=>x.left===0),soon=L.filter(x=>x.left>0);
+  if(!L.length)return {n:0,text:`DalaWifi update ${fmtDs(today())}: nothing overdue and nothing due in the next ${days} days. ${profitNote()}.`};
+  const parts=[`DalaWifi reminder ${fmtDs(today())}`];
+  if(od.length)parts.push('OVERDUE:',...od.map(line));
+  if(td.length)parts.push('DUE TODAY:',...td.map(line));
+  if(soon.length)parts.push(`DUE IN ${days} DAYS:`,...soon.map(line));
+  parts.push(`Total: ${fmt(sum(L,x=>x.amount))}`,profitNote(),'Details: https://dalawifi.com/#upcoming');
+  return {n:L.length,od:od.length,text:parts.join('\n')};
+}
+const waNum=p=>String(p||'').replace(/[^0-9]/g,'').replace(/^0/,'254');
+function remindCard(){
+  const r=reminderText(),c=S.settings.contacts||[],enc=encodeURIComponent(r.text);
+  return `<div class="card"><div class="h2row"><h2>Send reminders</h2><div class="row"><button class="btn sm" data-act="editContacts">Phone numbers</button></div></div>
+    <div class="note">${r.n?`<b>${r.n} payment${r.n>1?'s':''}</b> ${r.od?`(<b class="neg">${r.od} overdue</b>) `:''}are overdue or due in the next ${num(S.settings.remindDays)||3} days.`:'Nothing is overdue or due soon.'} Tap a name to send this message on WhatsApp or SMS. It opens on your phone ready to send.</div>
+    <pre class="small" style="white-space:pre-wrap;background:var(--bg);padding:10px;border-radius:8px;margin:0 0 10px">${esc(r.text)}</pre>
+    <div class="row">${c.map(([n,p])=>`<a class="btn primary" target="_blank" rel="noopener" href="https://wa.me/${waNum(p)}?text=${enc}">WhatsApp ${esc(n)}</a><a class="btn" href="sms:${esc(p)}?body=${enc}">SMS ${esc(n)}</a>`).join('')}
+      <button class="btn" data-act="copyReminder">Copy message</button></div>
+  </div>`;
+}
+
 /* ---------- upcoming payments: every bill and amount still to pay, soonest first ---------- */
-P.upcoming=()=>{
+function upcomingList(){
   const t=today(),L=[];
   S.sites.forEach(s=>{
     if(s.wifiLastPaid){const due=wifiDue(s),left=diffDays(t,due);L.push({date:due,left,what:'WiFi subscription',who:s.name,detail:(s.wifiProvider||'')+(s.wifiAccount?' · acc '+s.wifiAccount:''),amount:num(s.wifiAmount),go:'bills'});}
@@ -1135,9 +1161,14 @@ P.upcoming=()=>{
   const m=t.slice(0,7),[f]=monthRange(m),techPaid=sum(costsIn(f,t).filter(x=>x.category==='Tech salary'),x=>x.amount),techLeft=Math.max(0,num(S.settings.techSalary)-techPaid);
   if(techLeft)L.push({date:monthRange(m)[1],left:diffDays(t,monthRange(m)[1]),what:'Tech salary (rest of this month)',who:S.settings.techName||'Technician',detail:'',amount:techLeft,go:'staff'});
   L.sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999'));
+  return L;
+}
+P.upcoming=()=>{
+  const t=today(),L=upcomingList();
   const badge=x=>x.left===null?'<span class="badge b-info">No date</span>':x.left<0?`<span class="badge b-bad">Overdue ${-x.left}d</span>`:x.left===0?'<span class="badge b-warn">Today</span>':x.left<=7?`<span class="badge b-warn">In ${x.left}d</span>`:`<span class="badge b-ok">In ${x.left}d</span>`;
   const within=n=>sum(L.filter(x=>x.left!==null&&x.left<=n),x=>x.amount);
   return `
+  ${remindCard()}
   <div class="card"><div class="h2row"><h2>Upcoming payments</h2><button class="btn noprint" data-act="printPage">Print</button></div>
     <div class="note">Every bill the business still has to pay, soonest first. WiFi dates come from the last payment plus the cycle days. Token dates are an estimate from the last purchase. Pay a bill on <a href="#bills" data-go="bills">Tokens &amp; WiFi</a> and it moves to its next date.</div>
     <div class="kpis"><div class="kpi"><div class="l">Overdue or due today</div><div class="v ${within(0)?'neg':''}">${fmt(within(0))}</div></div><div class="kpi"><div class="l">Due in the next 7 days</div><div class="v">${fmt(within(7))}</div></div><div class="kpi"><div class="l">Due in the next 30 days</div><div class="v">${fmt(within(30))}</div></div></div>
@@ -1390,6 +1421,11 @@ const ACT={
     rows.push([]);rows.push(['Ownership now',...n.map(x=>x+' '+(R.share[x]*100).toFixed(2)+'% ('+Math.round(R.cap[x])+')')]);
     download(`directors-statement-${today()}.csv`,rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');},
   printPage(){window.print();},
+  editContacts(){const c=S.settings.contacts||[],F=[];for(let i=0;i<4;i++)F.push({k:'n'+i,label:'Name '+(i+1)+(i>2?' (optional)':'')},{k:'p'+i,label:'Phone '+(i+1),type:'tel'});
+    F.push({k:'days',label:'Remind how many days before a payment is due',type:'number'});
+    const v={days:num(S.settings.remindDays)||3};c.forEach(([n,p],i)=>{v['n'+i]=n;v['p'+i]=p;});
+    openForm('Reminder phone numbers',F,v,o=>{S.settings.contacts=[0,1,2,3].map(i=>[String(o['n'+i]||'').trim(),String(o['p'+i]||'').trim()]).filter(x=>x[0]&&x[1]);S.settings.remindDays=num(o.days)||3;toast('Numbers saved');});},
+  async copyReminder(){const t=reminderText().text;try{await navigator.clipboard.writeText(t);toast('Message copied');}catch(e){toast('Could not copy here');}},
   async ispTest(k){const c=ispCfg(k);if(!c.token){toast('Paste the Access Token first');return;}
     UI.ispOut=UI.ispOut||{};const show=t=>{UI.ispOut[k]=t;const o=$('#ispOut-'+k);if(o){o.hidden=false;o.textContent=t;}};show('Testing… please wait');
     const tries=[['dashboard',''],['reports/income-overview','period=daily'],['reports','']];let txt='';
@@ -1503,6 +1539,6 @@ connectOnline();
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791574108';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791575025';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

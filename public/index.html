@@ -203,6 +203,7 @@ function mergeState(cur,inc){
 }
 function migrate(s){
   const d=defaultState();
+  if(s.settings&&s.settings.isp)delete s.settings.isp;
   for(const k in d) if(s[k]===undefined) s[k]=d[k];
   s.settings={...d.settings,...s.settings};
   if(!s.employees.length)s.employees=[{id:'tech',name:s.settings.techName||'Technician',role:'Technician',phone:''},{id:'subtech',name:s.settings.subtechName||'Sub-tech',role:'Sub-tech',phone:''}];
@@ -220,8 +221,6 @@ if(!S.employees.length)S=migrate(S);
 // never applied over it. The ".dirty" flag marks edits not yet confirmed online, so they survive a reload.
 let saveSeq=0;
 function save(){
-  try{const q={items:upcomingList().filter(x=>x.date&&x.amount>0).map(x=>({date:x.date,what:x.what,who:x.who,amount:Math.round(x.amount)}))};
-    if(JSON.stringify(q)!==JSON.stringify(S.remindQueue))S.remindQueue=q;}catch(e){}
   saveSeq++;
   try{localStorage.setItem(KEY,JSON.stringify(S));if(ONLINE||REMOTE)localStorage.setItem(KEY+'.dirty','1');}
   catch(e){if(!ONLINE)toast('Could not save in this browser. Use Backup to keep your data.');}
@@ -1139,17 +1138,6 @@ function reminderText(){
 }
 const waNum=p=>String(p||'').replace(/[^0-9]/g,'').replace(/^0/,'254');
 
-function smsBlock(){
-  const online=API_URL==='/api',sp=UI.smsPrev;
-  if(online&&!UI.smsAsked){UI.smsAsked=1;remote('smsPreview',PIN).then(r=>{UI.smsPrev=r;if(UI.page==='upcoming')render();}).catch(e=>{UI.smsPrev={err:String(e.message||e)};});}
-  const on=S.settings.autoSms!==false,last=sp&&sp.last;
-  return `<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px"><b>Automatic SMS every morning (8:00)</b> ${on?'<span class="badge b-ok">On</span>':'<span class="badge b-info">Off</span>'}
-    <p class="small muted" style="margin:4px 0 8px">Each morning the website sends one short SMS to everyone above, but only on days something is overdue or due. It needs an Africa's Talking account (see the setup steps in the chat).</p>
-    ${sp&&sp.count!==undefined?`<div class="small" style="background:var(--bg);padding:8px;border-radius:8px;margin-bottom:8px">Tomorrow's SMS: ${esc(sp.count?sp.text:'nothing due, no SMS will be sent')}</div>`:''}
-    ${last?`<div class="small muted" style="margin-bottom:8px">Last SMS ${esc(new Date(last.at).toLocaleString('en-GB'))}${last.test?' (test)':''}: ${last.ok?'<span class="pos">sent</span>':'<span class="neg">failed</span>'} · ${esc(last.detail||'')}</div>`:''}
-    <div class="row"><button class="btn" data-act="toggleSms">${on?'Turn off':'Turn on'}</button><button class="btn" data-act="smsTest"${online?'':' disabled'}>Send a test SMS now</button></div>
-    <div id="smsOut" class="small" style="margin-top:6px">${esc(UI.smsOut||'')}</div></div>`;
-}
 function remindCard(){
   const r=reminderText(),c=S.settings.contacts||[],enc=encodeURIComponent(r.text);
   return `<div class="card"><div class="h2row"><h2>Send reminders</h2><div class="row"><button class="btn sm" data-act="editContacts">Phone numbers</button></div></div>
@@ -1157,7 +1145,6 @@ function remindCard(){
     <pre class="small" style="white-space:pre-wrap;background:var(--bg);padding:10px;border-radius:8px;margin:0 0 10px">${esc(r.text)}</pre>
     <div class="row">${c.map(([n,p])=>`<a class="btn primary" target="_blank" rel="noopener" href="https://wa.me/${waNum(p)}?text=${enc}">WhatsApp ${esc(n)}</a><a class="btn" href="sms:${esc(p)}?body=${enc}">SMS ${esc(n)}</a>`).join('')}
       <button class="btn" data-act="copyReminder">Copy message</button></div>
-    ${smsBlock()}
   </div>`;
 }
 
@@ -1192,28 +1179,6 @@ P.upcoming=()=>{
     </tbody></table></div>
   </div>`;
 };
-
-/* ---------- link to the ISPLedger billing dashboards ---------- */
-const ISP_SITES=[['dala','Dala dashboard','https://dalawifi.ispledger.com'],['genzi','Genzi dashboard','https://geziiiwifi.ispledger.com']];
-const ispCfg=k=>{const d=ISP_SITES.find(x=>x[0]===k);const c=((S.settings.isp||{})[k])||{};return {url:c.url||d[2],token:c.token||''};};
-function ispCard(){
-  const online=API_URL==='/api';
-  return `<div class="card"><h2 style="margin-bottom:6px">Link billing dashboards (ISPLedger)</h2>
-    <p class="small muted" style="margin-top:0">Paste the <b>Access Token</b> from each dashboard (Settings → General Settings → API Key) so earnings can come in automatically. The token works like a password, so only paste it here.</p>
-    ${online?'':'<div class="note">Open the website at <b>dalawifi.com</b> to use this.</div>'}
-    ${ISP_SITES.map(([k,label])=>{const c=ispCfg(k);return `<div style="border-top:1px solid var(--line);padding-top:10px;margin-top:10px"><b>${label}</b>
-      <label class="fld"><span>Dashboard address</span><input value="${esc(c.url)}" data-chg="ispUrl" data-id="${k}"></label>
-      <label class="fld"><span>Access Token ${c.token?'<span class="badge b-ok">saved</span>':''}</span><input type="password" autocomplete="off" placeholder="${c.token?'•••••• (saved, paste a new one to change)':'Paste the Access Token here'}" data-chg="ispTok" data-id="${k}"></label>
-      <div class="row"><button class="btn" data-act="ispTest" data-id="${k}"${online?'':' disabled'}>Test connection</button></div>
-      <pre id="ispOut-${k}" class="small" style="white-space:pre-wrap;word-break:break-all;max-height:260px;overflow:auto;background:var(--bg);padding:8px;border-radius:8px;margin:8px 0 0"${(UI.ispOut||{})[k]?'':' hidden'}>${esc((UI.ispOut||{})[k]||'')}</pre></div>`;}).join('')}
-  </div>`;
-}
-function ispSummary(res){
-  let j=null;try{j=JSON.parse(res.text);}catch(e){}
-  if(!j)return `HTTP ${res.status}. Not JSON. Start of reply:\n`+res.text.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').slice(0,400);
-  const keys=o=>o&&typeof o==='object'?Object.keys(o).slice(0,40).join(', '):String(o);
-  return `HTTP ${res.status} · success: ${j.success} · message: ${j.message||''}\nTop keys: ${keys(j)}\nResult keys: ${keys(j.result)}\nStart: ${JSON.stringify(j).slice(0,700)}`;
-}
 
 const CHECK_DONE=['Yes','Partly','No'];
 function empStats(emp,from,to){
@@ -1274,7 +1239,6 @@ P.settings=()=>{
   const st=S.settings;
   const counts=`${Object.keys(S.earnings).length} earning days, ${S.expenses.length} costs, ${S.subtech.length} sub-tech days, ${S.debts.length} debts, ${S.store.length+S.toBuy.length} material items`;
   return `
-  ${ispCard()}
   <div class="card"><h2 style="margin-bottom:6px">Backup your data</h2>
     <div class="note">${ONLINE?'Your data is saved <b>online with this link</b>, so it is the same on any phone or computer that opens it. Download a backup now and then as an extra copy.':'Your data is saved in <b>this browser on this device</b>. Download a backup at least once a week, and use it to move your data to another phone or computer.'} Last backup: <b>${S.lastBackup?fmtD(S.lastBackup):'never'}</b>.</div>
     <div class="row"><button class="btn primary" data-act="exportJSON">⬇ Download backup</button><button class="btn" data-act="importJSON">⬆ Restore from backup</button><button class="btn" data-act="exportCSV">Earnings CSV (Excel)</button></div>
@@ -1436,46 +1400,7 @@ const ACT={
     rows.push([]);rows.push(['Ownership now',...n.map(x=>x+' '+(R.share[x]*100).toFixed(2)+'% ('+Math.round(R.cap[x])+')')]);
     download(`directors-statement-${today()}.csv`,rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');},
   printPage(){window.print();},
-  toggleSms(){S.settings.autoSms=S.settings.autoSms===false;save();render();toast(S.settings.autoSms?'Automatic SMS on':'Automatic SMS off');},
-  async smsTest(){const o=t=>{UI.smsOut=t;const e=$('#smsOut');if(e)e.textContent=t;};o('Sending…');
-    try{const r=await remote('smsTest',PIN);o(r.ok?'Sent: '+r.detail:'Not sent: '+r.detail);}
-    catch(e){const m=String(e.message||e);o(m==='sms_not_set_up'?'Not set up yet: the Africa\'s Talking username and API key still need to be added in Cloudflare.':'Error: '+m);}
-    UI.smsAsked=0;},
-  editContacts(){const c=S.settings.contacts||[],F=[];for(let i=0;i<4;i++)F.push({k:'n'+i,label:'Name '+(i+1)+(i>2?' (optional)':'')},{k:'p'+i,label:'Phone '+(i+1),type:'tel'});
-    F.push({k:'days',label:'Remind how many days before a payment is due',type:'number'});
-    const v={days:num(S.settings.remindDays)||3};c.forEach(([n,p],i)=>{v['n'+i]=n;v['p'+i]=p;});
-    openForm('Reminder phone numbers',F,v,o=>{S.settings.contacts=[0,1,2,3].map(i=>[String(o['n'+i]||'').trim(),String(o['p'+i]||'').trim()]).filter(x=>x[0]&&x[1]);S.settings.remindDays=num(o.days)||3;toast('Numbers saved');});},
-  async copyReminder(){const t=reminderText().text;try{await navigator.clipboard.writeText(t);toast('Message copied');}catch(e){toast('Could not copy here');}},
-  async ispTest(k){const c=ispCfg(k);if(!c.token){toast('Paste the Access Token first');return;}
-    UI.ispOut=UI.ispOut||{};const show=t=>{UI.ispOut[k]=t;const o=$('#ispOut-'+k);if(o){o.hidden=false;o.textContent=t;}};show('Testing… please wait');
-    const tries=[['dashboard',''],['reports/income-overview','period=daily'],['reports','']];let txt='';
-    for(const [r,q] of tries){try{const res=await remote('ispFetch',PIN,c.url,c.token,r,q);txt+=`== ${r} ${q}\n`+ispSummary(res)+'\n\n';}catch(e){txt+=`== ${r}\nError: ${e.message||e}\n\n`;}show(txt);}
-  },
-  editShares(){const ps=S.settings.partners;openForm('Profit shares (%)',ps.map(p=>({k:p,label:p,type:'number',hint:'Leave all at 0 to split equally'})),Object.fromEntries(ps.map(p=>[p,num(S.settings.partnerShares[p])])),o=>{S.settings.partnerShares=o;toast('Shares saved');});},
-  addEmp(){openForm('Add employee',empFields,{},o=>{S.employees.push({id:uid(),...o});});},
-  editEmp(id){const e=byId(S.employees,id),old=e.name;openForm('Edit employee',empFields,e,o=>{Object.assign(e,o);if(o.name!==old){S.issues.forEach(i=>{if(i.assignedTo===old)i.assignedTo=o.name;});S.subtech.forEach(w=>{if(w.name===old)w.name=o.name;});}});},
-  async delEmp(id){if(S.checks.some(c=>c.emp===id)&&!await ask('This employee has daily checks. Delete anyway?','Continue'))return;del(S.employees,id,'employee');},
-  addCheck(id){openForm('Daily check',checkFields(),{emp:id||S.employees[0]?.id},o=>{S.checks.push({id:uid(),...o});toast('Check saved');});},
-  editCheck(id){const c=byId(S.checks,id);openForm('Edit daily check',checkFields(),c,o=>{Object.assign(c,o);});},
-  delCheck(id){del(S.checks,id,'daily check');},
-  addBank(ty){openForm(ty==='in'?'Bank deposit':'Bank withdrawal',bankFields(),{type:ty==='in'?'in':'out'},o=>{S.bankTx.push({id:uid(),...o});});},
-  editBank(id){const x=byId(S.bankTx,id);openForm('Edit bank record',bankFields(),x,o=>{Object.assign(x,o);});},
-  delBank(id){del(S.bankTx,id,'bank record');},
-  addLump(){openForm('Add monthly income total',lumpFields(),{},o=>{S.lumpIncome.push({id:uid(),...o});});},
-  editLump(id){const x=byId(S.lumpIncome,id);openForm('Edit monthly income total',lumpFields(),x,o=>{Object.assign(x,o);});},
-  delLump(id){del(S.lumpIncome,id,'income total');},
-  addAsset(){openForm('Add equipment',assetFields(),{},o=>{S.assets.push({id:uid(),...o});});},
-  editAsset(id){const x=byId(S.assets,id);openForm('Edit equipment',assetFields(),x,o=>{Object.assign(x,o);});},
-  delAsset(id){del(S.assets,id,'equipment item');},
-  addIssue(){openForm('Report site issue',issueFields(),{},o=>{S.issues.push({id:uid(),...o,fixedOn:o.status==='Fixed'?o.date:''});});},
-  editIssue(id){const i=byId(S.issues,id);openForm('Edit issue',issueFields(),i,o=>{if(o.status==='Fixed'&&i.status!=='Fixed')o.fixedOn=today();Object.assign(i,o);});},
-  fixIssue(id){const i=byId(S.issues,id);openForm('Mark as fixed',[{k:'action',label:'What was done',type:'textarea'},fDate('fixedOn','Fixed on')],{...i,fixedOn:i.fixedOn||today()},o=>{Object.assign(i,o,{status:'Fixed'});});},
-  delIssue(id){del(S.issues,id,'issue');},
-  async exportJSON(){
-    const prev=S.lastBackup;S.lastBackup=today();
-    if(await download(`dala-genzi-backup-${today()}.json`,JSON.stringify(S,null,1),'application/json')){save();toast('Backup downloaded. Keep it safe (e.g. email it to yourself).');render();}
-    else S.lastBackup=prev;
-  },
+
   importJSON(){$('#importFile').click();},
   exportCSV(){
     const dates=Object.keys(S.earnings).sort();
@@ -1503,7 +1428,6 @@ const CHG={
   costPayer(el){UI.costPayer=el.value;render();},
   partRange(el){UI.partRange=el.value;render();},
   ownRange(el){UI.ownRange=el.value;render();},
-  ispUrl(el){const k=el.dataset.id;S.settings.isp={...(S.settings.isp||{})};S.settings.isp[k]={...ispCfg(k),url:el.value.trim()};save();toast('Saved');},
   ispTok(el){const k=el.dataset.id,v=el.value.trim();if(!v)return;S.settings.isp={...(S.settings.isp||{})};S.settings.isp[k]={...ispCfg(k),token:v};save();render();toast('Access Token saved');},
   bankRange(el){UI.bankRange=el.value;render();},
   teamRange(el){UI.teamRange=el.value;render();},
@@ -1559,6 +1483,6 @@ connectOnline();
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791575234';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791576189';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

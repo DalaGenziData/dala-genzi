@@ -1,5 +1,5 @@
-// Cloudflare Worker: serves the website files, the /api data service and the daily SMS reminders.
-import { onRequestPost, onRequestGet, dailyReminders } from './functions/api.js';
+// Cloudflare Worker: serves the website files and the /api data service.
+import { onRequestPost, onRequestGet } from './functions/api.js';
 
 export default {
   async fetch(request, env) {
@@ -8,8 +8,5 @@ export default {
       return request.method === 'POST' ? onRequestPost({ request, env }) : onRequestGet({ env });
     }
     return env.ASSETS.fetch(request);
-  },
-  async scheduled(event, env, ctx) {
-    ctx.waitUntil(dailyReminders(env));
   },
 };

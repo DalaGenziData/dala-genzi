@@ -2,6 +2,10 @@
   "name": "dala-genzi",
   "main": "worker.js",
   "compatibility_date": "2025-09-01",
+  "routes": [
+    { "pattern": "dalawifi.com", "custom_domain": true },
+    { "pattern": "www.dalawifi.com", "custom_domain": true }
+  ],
   "assets": { "directory": "./public", "binding": "ASSETS" },
   "d1_databases": [
     { "binding": "DB", "database_name": "dala-genzi-data", "database_id": "ce3776e9-c0ae-49e8-bbba-21c03baea236" }

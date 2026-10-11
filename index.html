@@ -195,7 +195,7 @@ function defaultState(){
   const earnings={};
   SEED_DATES.forEach((d,i)=>{earnings[d]={};for(const k in SEED_VALUES)earnings[d][k]=SEED_VALUES[k][i];});
   return {version:1,
-    settings:{business:'Dala & Genzi WiFi',subtechRate:500,subtechName:'Sub-tech',techName:'Technician',techSalary:0,tokenWarnDays:30,wifiWarnDays:5,partners:['FIDEL','DOROTHY','MAURICE'],partnerShares:{},lastPayer:'',own:{},contacts:[['FIDELIS','+254740396568'],['DOROTHY','+254114920486'],['MAURICE','+254723025729']],remindDays:3,codes:{FIDELIS:'0740396568',FIDEL:'0740396568',DOROTHY:'0114920486',MAURICE:'0723025729'}},
+    settings:{business:'Dala & Genzi WiFi',subtechRate:500,subtechName:'Sub-tech',techName:'Technician',techSalary:0,tokenWarnDays:30,wifiWarnDays:5,partners:['FIDEL','DOROTHY','MAURICE'],partnerShares:{},lastPayer:'',own:{},contacts:[['FIDELIS','+254740396568'],['DOROTHY','+254114920486'],['MAURICE','+254723025729']],remindDays:3,bankAuto:{start:'2026-10-12',costBank:'equity'},codes:{FIDELIS:'0740396568',FIDEL:'0740396568',DOROTHY:'0114920486',MAURICE:'0723025729'}},
     sites:SITES_SEED.map(s=>({...s,tokenMeter:'',powerName:'',powerPhone:'',tokenLastPaid:'',tokenLastAmount:0,wifiProvider:'',wifiAccount:'',wifiLastPaid:'',wifiAmount:0,wifiCycleDays:30,notes:''})),
     earnings,expenses:[],subtech:[],store:[],toBuy:[],matLog:[],debts:[],issues:[],assets:[],targets:{},partnerTx:[],equityTx:[],tickets:[],crew:[],techDays:[],techReq:[],techSpend:[],techReports:[],activity:[],lumpIncome:[],bankTx:[],employees:[],checks:[],lastBackup:''};
 }
@@ -1139,7 +1139,20 @@ function partnerLedger(from,to){
 const BANKS=[['coop','Account One · Co-operative Bank','Dala'],['equity','Account Two · Equity Bank','Genzi']];
 // Balance of a bank at the end of a day: the starting balance FIDEL sets, plus deposits, minus withdrawals from that date on.
 const bankOpen=id=>((S.settings.bankOpen||{})[id])||{date:'',amount:0};
-function bankBal(id,upTo){const o=bankOpen(id);return num(o.amount)+sum(S.bankTx.filter(x=>x.bank===id&&(!o.date||x.date>=o.date)&&x.date<=upTo),x=>(x.type==='in'?1:-1)*num(x.amount));}
+// FIDEL, 11 Oct 2026: from 12 Oct each day's earnings go into the site group's bank (Dala → One, Genzi → Two)
+// and every cost is paid from Genzi's Account Two. Recorded deposits and withdrawals still count on top.
+const bankAuto=()=>S.settings.bankAuto||{};
+function bankDay(id,d){
+  const a=bankAuto(),g=(BANKS.find(b=>b[0]===id)||[])[2],auto=a.start&&d>=a.start;
+  const tin=sum(S.bankTx.filter(x=>x.bank===id&&x.date===d&&x.type==='in'),x=>num(x.amount)),tout=sum(S.bankTx.filter(x=>x.bank===id&&x.date===d&&x.type!=='in'),x=>num(x.amount));
+  const earn=auto?groupEarn(d,g):0,cost=auto&&a.costBank===id?sum(costsIn(d,d),x=>num(x.amount)):0;
+  return {tin,tout,earn,cost,net:tin+earn-tout-cost};
+}
+function bankBal(id,upTo){
+  const o=bankOpen(id),a=bankAuto();let b=num(o.amount)+sum(S.bankTx.filter(x=>x.bank===id&&(!o.date||x.date>=o.date)&&x.date<=upTo),x=>(x.type==='in'?1:-1)*num(x.amount));
+  if(a.start){let d=o.date&&o.date>a.start?o.date:a.start;for(let n=0;d<=upTo&&n<4000;n++,d=addDays(d,1)){const x=bankDay(id,d);b+=x.earn-x.cost;}}
+  return b;
+}
 const groupEarn=(d,g)=>sum(S.sites.filter(x=>x.group===g),x=>num((S.earnings[d]||{})[x.id]));
 const bankName=id=>(BANKS.find(b=>b[0]===id)||[id,id])[1];
 P.bank=()=>{
@@ -1148,13 +1161,12 @@ P.bank=()=>{
   const days=[];for(let d=td,n=0;n<31;n++,d=addDays(d,-1))days.push(d);
   const first=BANKS.map(b=>bankOpen(b[0]).date).filter(Boolean).sort()[0]||'';
   const rows=days.filter(d=>!first||d>=first);
-  const dayIO=(id,d,ty)=>sum(S.bankTx.filter(x=>x.bank===id&&x.date===d&&x.type===ty),x=>num(x.amount));
+  const dayIO=(id,d,ty)=>{const x=bankDay(id,d);return ty==='in'?x.tin+x.earn:x.tout+x.cost;};
   return `
   <div class="card"><div class="h2row"><h2>Bank balances today</h2><div class="row"><button class="btn primary" data-act="addBank" data-id="in">+ Deposit</button><button class="btn" data-act="addBank" data-id="out">+ Withdrawal</button><button class="btn" data-act="bankStart">Starting balance</button></div></div>
-    <div class="note"><b>Account One</b> (Co-operative Bank) holds <b>Dala</b> money and <b>Account Two</b> (Equity Bank) holds <b>Genzi</b> money. The balance is the starting balance plus every deposit minus every withdrawal. Use <b>Bank earnings</b> to deposit a day's Dala or Genzi earnings in one tap.</div>
+    <div class="note"><b>Account One</b> (Co-operative Bank) holds <b>Dala</b> money and <b>Account Two</b> (Equity Bank) holds <b>Genzi</b> money. From <b>${fmtDs(bankAuto().start||today())}</b> each day's Dala earnings are added to Account One and Genzi earnings to Account Two automatically, and every cost (tokens, WiFi, fuel, materials, wages…) is taken from <b>Account Two</b>. Record a deposit or withdrawal only for money that is not earnings or a cost, for example owners putting money in or taking profit out.</div>
     <div class="kpis">${BANKS.map(([id,n,g])=>{const o=bankOpen(id);return `<div class="kpi"><div class="l">${esc(n)} (${g})</div><div class="v ${bankBal(id,td)<0?'neg':''}">${fmt(bankBal(id,td))}</div><div class="s">${o.date?'from '+fmt(num(o.amount))+' on '+fmtDs(o.date):'<a href="#" data-act="bankStart">Set the starting balance</a>'}</div></div>`;}).join('')}
       <div class="kpi"><div class="l">Both accounts</div><div class="v">${fmt(sum(BANKS,b=>bankBal(b[0],td)))}</div></div></div>
-    <div class="row"><button class="btn sm good" data-act="bankEarn" data-id="coop">Bank Dala earnings → One</button><button class="btn sm good" data-act="bankEarn" data-id="equity">Bank Genzi earnings → Two</button></div>
   </div>
   <div class="card"><h2 style="margin-bottom:10px">Balance day by day (last 31 days)</h2>
     ${rows.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th>${BANKS.map(([id,n,g])=>`<th class="n">${g} in</th><th class="n">${g} out</th><th class="n">${esc(n.split(' · ')[0])}</th>`).join('')}<th class="n">Total</th></tr></thead><tbody>
@@ -2016,6 +2028,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791740046';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791740841';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

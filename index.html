@@ -553,11 +553,9 @@ function fieldHtml(f,v){
 }
 function openForm(title,fields,vals,onSave){
   const dlg=$('#dlg');
-  const who=fields.some(f=>f.type==='password'||f.k==='me')?'':`<div class="small muted" style="margin:-4px 0 10px">${stampLine(vals)||(vals&&vals.id?'<div class="small muted">Added before codes were recorded</div>':'')}<div>Saving as <b>${esc(meName()||'nobody chosen')}</b>${myCode()?' ('+esc(myCode())+')':''} · <a href="#" data-pickme>${meName()?'change':'choose who you are'}</a></div></div>`;
-  dlg.innerHTML=`<form class="mform"><h3>${esc(title)}</h3>${who}${fields.map(f=>fieldHtml(f,vals[f.k])).join('')}<div class="mact"><button type="button" class="btn" data-x>Cancel</button><button class="btn primary" type="submit">Save</button></div></form>`;
+  dlg.innerHTML=`<form class="mform"><h3>${esc(title)}</h3>${fields.map(f=>fieldHtml(f,vals[f.k])).join('')}<div class="mact"><button type="button" class="btn" data-x>Cancel</button><button class="btn primary" type="submit">Save</button></div></form>`;
   const form=dlg.querySelector('form');
   dlg.querySelector('[data-x]').onclick=()=>dlg.close();
-  {const pm=dlg.querySelector('[data-pickme]');if(pm)pm.onclick=e=>{e.preventDefault();dlg.close();pickMe();};}
   form.onsubmit=e=>{
     e.preventDefault();
     const out={};
@@ -894,9 +892,9 @@ P.costs=()=>{
       <select data-chg="costCat"><option value="">All categories</option>${EXP_CATS.map(c=>`<option${c===UI.costCat?' selected':''}>${c}</option>`).join('')}</select>
       <select data-chg="costSite"><option value="">All sites</option>${siteOpts().map(([v,l])=>`<option value="${v}"${v===UI.costSite?' selected':''}>${esc(l)}</option>`).join('')}</select>
       <select data-chg="costPayer"><option value="">Paid by anyone</option>${payerOpts().map(v=>`<option${v===UI.costPayer?' selected':''}>${esc(v)}</option>`).join('')}</select></div></div>
-    ${list.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Category</th><th>Site</th><th>Paid by</th><th>Description</th><th class="n">Amount</th><th></th></tr></thead><tbody>
-    ${list.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.category)}</td><td>${esc(siteName(x.site))}</td><td>${payerTag(x.paidBy)}</td><td class="wrap">${esc(x.desc)}${stampLine(x)}</td><td class="n">${fmt(num(x.amount))}</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editExp" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delExp" data-id="${x.id}">✕</button></div></td></tr>`).join('')}
-    </tbody><tfoot><tr><td colspan="5">Total shown</td><td class="n">${fmt(sum(list,x=>x.amount))}</td><td></td></tr></tfoot></table></div>`:'<div class="empty">No cost entries for this filter.</div>'}
+    ${list.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Category</th><th>Site</th><th>Paid by</th><th>Description</th><th class="n">Amount</th><th>Code</th><th></th></tr></thead><tbody>
+    ${list.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.category)}</td><td>${esc(siteName(x.site))}</td><td>${payerTag(x.paidBy)}</td><td class="wrap">${esc(x.desc)}</td><td class="n">${fmt(num(x.amount))}</td><td class="small">${esc(codeOf(x))}</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editExp" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delExp" data-id="${x.id}">✕</button></div></td></tr>`).join('')}
+    </tbody><tfoot><tr><td colspan="5">Total shown</td><td class="n">${fmt(sum(list,x=>x.amount))}</td><td></td><td></td></tr></tfoot></table></div>`:'<div class="empty">No cost entries for this filter.</div>'}
     <p class="small muted">Sub-tech wages are entered as work days on the Staff &amp; Wages page and are counted in the totals above.</p>
   </div>`;
 };
@@ -1351,7 +1349,9 @@ function stampApply(m){
     S[k].forEach(x=>{if(!x||typeof x!=='object'||x.id===undefined)return;const j=old.get(x.id);
       if(j===undefined)Object.assign(x,{addedBy:who,addedCode:code,addedAt:at});else if(j!==JSON.stringify(x))Object.assign(x,{editedBy:who,editedCode:code,editedAt:at});});}
 }
-const stampLine=x=>x&&(x.addedBy||x.editedBy)?`<div class="small muted">${x.addedBy?'Added by '+esc(x.addedBy)+(x.addedCode?' ('+esc(x.addedCode)+')':''):''}${x.editedBy?(x.addedBy?' · ':'')+'Edited by '+esc(x.editedBy)+(x.editedCode?' ('+esc(x.editedCode)+')':''):''}</div>`:'';
+// codes only (FIDEL knows whose code is whose): the code that added the record, then the code of the last edit if different
+const codeOf=x=>{if(!x)return '';const a=x.addedCode||'',e=x.editedCode||'';return a&&e&&e!==a?a+' / '+e:(a||e);};
+const stampLine=x=>codeOf(x)?`<div class="small muted">Code ${esc(codeOf(x))}</div>`:'';
 function logAct(text,extra){
   S.activity=S.activity||[];
   S.activity.push({id:uid(),at:new Date().toISOString(),who:meName()||'Someone',code:myCode(),text,...(extra||{})});
@@ -1363,8 +1363,8 @@ P.activity=()=>{
   const restored=new Set((S.activity||[]).filter(a=>a.undoOf).map(a=>a.undoOf));
   return `<div class="card"><h2 style="margin-bottom:6px">Activity history</h2>
     <p class="small muted" style="margin-top:0">Every save and delete, newest first, with who did it. Deleted entries can be brought back with <b>Undo</b>. You are using this phone as <b>${esc(meName()||'not set')}</b> · <a href="#" data-act="pickMe">change</a></p>
-    ${L.length?`<div class="tbl-wrap"><table><thead><tr><th>When</th><th>Who</th><th>What happened</th><th></th></tr></thead><tbody>
-    ${L.map(a=>`<tr><td class="small">${esc(new Date(a.at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}))}</td><td><b>${esc(a.who)}</b>${a.code?`<div class="small muted">${esc(a.code)}</div>`:''}</td><td class="wrap">${esc(a.text)}</td><td>${a.item&&!restored.has(a.id)?`<button class="btn sm" data-act="undoDel" data-id="${a.id}">Undo</button>`:a.item?'<span class="badge b-ok">Restored</span>':''}</td></tr>`).join('')}
+    ${L.length?`<div class="tbl-wrap"><table><thead><tr><th>When</th><th>Code</th><th>What happened</th><th></th></tr></thead><tbody>
+    ${L.map(a=>`<tr><td class="small">${esc(new Date(a.at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}))}</td><td><b>${esc(a.code||a.who)}</b></td><td class="wrap">${esc(a.text)}</td><td>${a.item&&!restored.has(a.id)?`<button class="btn sm" data-act="undoDel" data-id="${a.id}">Undo</button>`:a.item?'<span class="badge b-ok">Restored</span>':''}</td></tr>`).join('')}
     </tbody></table></div>`:'<div class="empty">Nothing recorded yet. Changes made from now on will show here.</div>'}
   </div>`;
 };
@@ -2037,6 +2037,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791741247';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791741979';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

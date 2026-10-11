@@ -1109,15 +1109,34 @@ function partnerLedger(from,to){
   S.partnerTx.filter(x=>inR(x.date)).forEach(x=>L.push({date:x.date,who:x.person,kind:x.type==='in'?'Put money in':'Took money out',dir:x.type==='in'?1:-1,amount:num(x.amount),note:x.note||'',id:x.id}));
   return L.sort((a,b)=>b.date.localeCompare(a.date));
 }
-const BANKS=[['coop','Cooperative Bank','Dala'],['equity','Equity Bank','Genzi']];
+const BANKS=[['coop','Account One · Co-operative Bank','Dala'],['equity','Account Two · Equity Bank','Genzi']];
+// Balance of a bank at the end of a day: the starting balance FIDEL sets, plus deposits, minus withdrawals from that date on.
+const bankOpen=id=>((S.settings.bankOpen||{})[id])||{date:'',amount:0};
+function bankBal(id,upTo){const o=bankOpen(id);return num(o.amount)+sum(S.bankTx.filter(x=>x.bank===id&&(!o.date||x.date>=o.date)&&x.date<=upTo),x=>(x.type==='in'?1:-1)*num(x.amount));}
+const groupEarn=(d,g)=>sum(S.sites.filter(x=>x.group===g),x=>num((S.earnings[d]||{})[x.id]));
 const bankName=id=>(BANKS.find(b=>b[0]===id)||[id,id])[1];
 P.bank=()=>{
   const [f,t]=rangeOf(UI.bankRange),L=S.bankTx.filter(x=>x.date>=f&&x.date<=t).sort((a,b)=>b.date.localeCompare(a.date));
-  const tot=(b,ty)=>sum(L.filter(x=>x.bank===b&&x.type===ty),x=>num(x.amount));
+  const tot=(b,ty)=>sum(L.filter(x=>x.bank===b&&x.type===ty),x=>num(x.amount)),td=today();
+  const days=[];for(let d=td,n=0;n<31;n++,d=addDays(d,-1))days.push(d);
+  const first=BANKS.map(b=>bankOpen(b[0]).date).filter(Boolean).sort()[0]||'';
+  const rows=days.filter(d=>!first||d>=first);
+  const dayIO=(id,d,ty)=>sum(S.bankTx.filter(x=>x.bank===id&&x.date===d&&x.type===ty),x=>num(x.amount));
   return `
-  <div class="card"><div class="h2row"><h2>Bank</h2><div class="row"><select data-chg="bankRange">${RANGE_OPTS.map(([v,l])=>`<option value="${v}"${v===UI.bankRange?' selected':''}>${l}</option>`).join('')}</select><button class="btn primary" data-act="addBank" data-id="out">+ Withdrawal</button><button class="btn" data-act="addBank" data-id="in">+ Deposit</button></div></div>
-    <div class="note">Cooperative Bank holds <b>Dala</b> money and Equity Bank holds <b>Genzi</b> money. Record each withdrawal here and what it was for. A withdrawal is not a cost by itself: the things you pay with it (tokens, WiFi, fuel…) are recorded as costs, and those are what reduce profit.</div>
-    <div class="kpis">${BANKS.map(([id,n,g])=>`<div class="kpi"><div class="l">${n} (${g})</div><div class="v">${fmt(tot(id,'out'))}</div><div class="s">withdrawn · deposited ${fmt(tot(id,'in'))}</div></div>`).join('')}</div>
+  <div class="card"><div class="h2row"><h2>Bank balances today</h2><div class="row"><button class="btn primary" data-act="addBank" data-id="in">+ Deposit</button><button class="btn" data-act="addBank" data-id="out">+ Withdrawal</button><button class="btn" data-act="bankStart">Starting balance</button></div></div>
+    <div class="note"><b>Account One</b> (Co-operative Bank) holds <b>Dala</b> money and <b>Account Two</b> (Equity Bank) holds <b>Genzi</b> money. The balance is the starting balance plus every deposit minus every withdrawal. Use <b>Bank earnings</b> to deposit a day's Dala or Genzi earnings in one tap.</div>
+    <div class="kpis">${BANKS.map(([id,n,g])=>{const o=bankOpen(id);return `<div class="kpi"><div class="l">${esc(n)} (${g})</div><div class="v ${bankBal(id,td)<0?'neg':''}">${fmt(bankBal(id,td))}</div><div class="s">${o.date?'from '+fmt(num(o.amount))+' on '+fmtDs(o.date):'<a href="#" data-act="bankStart">Set the starting balance</a>'}</div></div>`;}).join('')}
+      <div class="kpi"><div class="l">Both accounts</div><div class="v">${fmt(sum(BANKS,b=>bankBal(b[0],td)))}</div></div></div>
+    <div class="row"><button class="btn sm good" data-act="bankEarn" data-id="coop">Bank Dala earnings → One</button><button class="btn sm good" data-act="bankEarn" data-id="equity">Bank Genzi earnings → Two</button></div>
+  </div>
+  <div class="card"><h2 style="margin-bottom:10px">Balance day by day (last 31 days)</h2>
+    ${rows.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th>${BANKS.map(([id,n,g])=>`<th class="n">${g} in</th><th class="n">${g} out</th><th class="n">${esc(n.split(' · ')[0])}</th>`).join('')}<th class="n">Total</th></tr></thead><tbody>
+    ${rows.map(d=>`<tr><td>${fmtD(d)}</td>${BANKS.map(([id])=>{const i=dayIO(id,d,'in'),o=dayIO(id,d,'out');return `<td class="n small">${i?fmt(i):''}</td><td class="n small">${o?fmt(o):''}</td><td class="n"><b>${fmt(bankBal(id,d))}</b></td>`;}).join('')}<td class="n"><b>${fmt(sum(BANKS,b=>bankBal(b[0],d)))}</b></td></tr>`).join('')}
+    </tbody></table></div>`:'<div class="empty">Set the starting balance of each account to see the daily balance.</div>'}
+  </div>
+  <div class="card"><div class="h2row"><h2>Deposits and withdrawals</h2><select data-chg="bankRange">${RANGE_OPTS.map(([v,l])=>`<option value="${v}"${v===UI.bankRange?' selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="kpis" style="margin-bottom:0">${BANKS.map(([id,n,g])=>`<div class="kpi"><div class="l">${esc(n)}</div><div class="v">${fmt(tot(id,'in'))}</div><div class="s">deposited · withdrawn ${fmt(tot(id,'out'))}</div></div>`).join('')}</div>
+    <p class="small muted">A withdrawal is not a cost by itself: the things you pay with it (tokens, WiFi, fuel…) are recorded as costs, and those are what reduce profit.</p>
   </div>
   <div class="card"><h2 style="margin-bottom:10px">Bank records</h2>
     ${L.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Bank</th><th>Type</th><th class="n">Amount</th><th>By</th><th>What for</th><th></th></tr></thead><tbody>${L.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(bankName(x.bank))}</td><td>${x.type==='in'?'<span class="badge b-ok">Deposit</span>':'<span class="badge b-warn">Withdrawal</span>'}</td><td class="n">${fmt(x.amount)}</td><td>${esc(x.by||'')}</td><td class="wrap small">${esc(x.note||'')}</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editBank" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delBank" data-id="${x.id}">✕</button></div></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No bank records for this period.</div>'}
@@ -1691,6 +1710,11 @@ const empNames=()=>S.employees.map(e=>e.name);
 const issueFields=()=>[fDate(),{k:'site',label:'Site',type:'select',options:siteOpts(),def:'dala1'},{k:'problem',label:'Problem',type:'textarea',req:true},{k:'action',label:'Action taken',type:'textarea'},{k:'assignedTo',label:'Assigned to',type:'select',options:[['','Not assigned'],...empNames()]},{k:'status',label:'Status',type:'select',options:['Open','Fixed'],def:'Open'}];
 
 const ACT={
+  bankStart(){const o=S.settings.bankOpen||{};openForm('Starting balance',[fDate('date','Balance counted on'),...BANKS.map(([id,n])=>({k:id,label:n+' balance that day (Ksh)',type:'number',def:num((o[id]||{}).amount)}))],{date:(o.coop||{}).date||today()},v=>{
+    S.settings.bankOpen={};BANKS.forEach(([id])=>S.settings.bankOpen[id]={date:v.date,amount:num(v[id])});toast('Starting balance saved');});},
+  bankEarn(id){const g=(BANKS.find(b=>b[0]===id)||[])[2],d=addDays(today(),-1);
+    openForm(`Bank ${g} earnings into ${bankName(id).split(' · ')[0]}`,[fDate(),{k:'amount',label:`Amount deposited (Ksh)`,type:'number',req:true,hint:`${g} earnings yesterday: ${fmt(groupEarn(d,g))}, today so far: ${fmt(groupEarn(today(),g))}`},{k:'by',label:'Done by',type:'select',options:S.settings.partners,def:S.settings.partners[0]},{k:'note',label:'Note'}],{date:today(),amount:groupEarn(d,g)||'',note:g+' earnings'},o=>{
+    S.bankTx.push({id:uid(),date:o.date,bank:id,type:'in',amount:num(o.amount),by:o.by,note:o.note});});},
   editSub(ref){const [id,i]=ref.split(':'),s=site(id),u=s.subs[+i];openForm(`${s.name}: ${u.name}`,[{k:'name',label:'Name',def:'Sub power '+(+i+1)},{k:'meter',label:'Token (meter) number'},{k:'powerName',label:'Power house owner (name)'},{k:'phone',label:'Power house phone',type:'tel'},{k:'amount',label:'Usual token amount (Ksh)',type:'number'}],u,o=>{Object.assign(u,o);});},
   paySub(ref){const [id,i]=ref.split(':'),s=site(id),u=s.subs[+i];openForm(`Pay token: ${s.name}, ${u.name}`,[fDate(),{k:'amount',label:'Amount (Ksh)',type:'number',req:true,def:u.amount||u.lastAmount||''},fPaid(),{k:'desc',label:'Note',def:u.name+(u.meter?' · Token '+u.meter:'')}],{},o=>{
     if(!u.lastPaid||o.date>=u.lastPaid){u.lastPaid=o.date;u.lastAmount=o.amount;}
@@ -1952,6 +1976,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791738624';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791738728';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

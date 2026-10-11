@@ -180,13 +180,13 @@ const INV_CAT='Equipment & investment';
 const EXP_CATS=['Motorbike fuel','Tech salary','Electricity tokens','Wifi subscription','Materials','Repairs & maintenance','Transport','Airtime / SMS','Rent',INV_CAT,'Other'];
 const isInv=x=>x.category===INV_CAT;
 const SUBTECH_CAT='Sub-tech wages';
-const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['analysis','Analysis'],['report','Monthly Report'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup']];
+const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['analysis','Analysis'],['report','Monthly Report'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup'],['crew','Sub-tech Days']];
 
 // Main menu: each main page holds related subpages, shown as tabs under the menu.
-const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','sitecosts','mat']],['Employees',['staff','team']],['Profit & Loss',['pl','analysis','report','debts','bank']],['Owners',['directors','partners']],['Settings',['settings','activity','search']]];
-const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',analysis:'Analysis',report:'Monthly Report',sitecosts:'Costs per Site',search:'Search',activity:'Activity History'};
+const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','sitecosts','mat']],['Employees',['staff','crew','team']],['Profit & Loss',['pl','analysis','report','debts','bank']],['Owners',['directors','partners']],['Settings',['settings','activity','search']]];
+const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',analysis:'Analysis',report:'Monthly Report',sitecosts:'Costs per Site',search:'Search',activity:'Activity History',crew:'Sub-tech Days'};
 // The technician sees only the technical pages; staff see everything except the Owners pages.
-const TECH_GROUPS=[['Customer Care',['tickets','issues']],['Materials',['mat']],['Settings',['settings']]];
+const TECH_GROUPS=[['Customer Care',['tickets','issues']],['Sub-techs',['crew']],['Materials',['mat']],['Settings',['settings']]];
 const navGroups=()=>isTech()?TECH_GROUPS:isOwner()?GROUPS:GROUPS.filter(g=>g[0]!=='Owners');
 const groupOf=pg=>navGroups().find(g=>g[1].includes(pg))||navGroups()[0];
 
@@ -197,7 +197,7 @@ function defaultState(){
   return {version:1,
     settings:{business:'Dala & Genzi WiFi',subtechRate:500,subtechName:'Sub-tech',techName:'Technician',techSalary:0,tokenWarnDays:30,wifiWarnDays:5,partners:['FIDEL','DOROTHY','MAURICE'],partnerShares:{},lastPayer:'',own:{},contacts:[['FIDELIS','+254740396568'],['DOROTHY','+254114920486'],['MAURICE','+254723025729']],remindDays:3},
     sites:SITES_SEED.map(s=>({...s,tokenMeter:'',powerName:'',powerPhone:'',tokenLastPaid:'',tokenLastAmount:0,wifiProvider:'',wifiAccount:'',wifiLastPaid:'',wifiAmount:0,wifiCycleDays:30,notes:''})),
-    earnings,expenses:[],subtech:[],store:[],toBuy:[],matLog:[],debts:[],issues:[],assets:[],targets:{},partnerTx:[],equityTx:[],tickets:[],activity:[],lumpIncome:[],bankTx:[],employees:[],checks:[],lastBackup:''};
+    earnings,expenses:[],subtech:[],store:[],toBuy:[],matLog:[],debts:[],issues:[],assets:[],targets:{},partnerTx:[],equityTx:[],tickets:[],crew:[],techDays:[],activity:[],lumpIncome:[],bankTx:[],employees:[],checks:[],lastBackup:''};
 }
 // Combine a backup into the current data without losing anything: union by id, the backup wins on the same entry.
 function mergeState(cur,inc){
@@ -237,7 +237,7 @@ function save(){
   scheduleSync();
 }
 /* ---------- online storage: when opened from the shared link, data lives in the artifact's database ---------- */
-const SPLIT=['expenses','subtech','matLog','checks','issues','partnerTx','bankTx','tickets'];
+const SPLIT=['expenses','subtech','matLog','checks','issues','partnerTx','bankTx','tickets','techDays'];
 // Google hosting: the page runs inside Apps Script (google.script.run), or on another host that calls the
 // Apps Script web app at API_URL. Either way the data lives in the owner's Google Sheet.
 const GOOGLE_API='https://script.google.com/macros/s/AKfycbya2gpt059ZbFsh2IMXrWqeFObhJIfrISVSZo4AjQYWV-QeJBCswzU_MsMi1vK3Frx4/exec';
@@ -326,7 +326,7 @@ const isOwner=()=>ROLE==='owner'||!ROLES_OK.includes(ROLE);
 const isTech=()=>ROLE==='tech';
 const ROLES_OK=['owner','staff','tech'];
 // what a technician's phone may send back (the server checks the same rule)
-const TECH_WRITE=/^state\/((store|toBuy)|(matLog|issues|tickets)@[^/]+)$/;
+const TECH_WRITE=/^state\/((store|toBuy|crew)|(matLog|issues|tickets|techDays)@[^/]+)$/;
 // ask the server whose PIN this is: sets the name used in the history and hides owner pages from staff
 function setRole(w){
   const was=ROLE;ROLE=w.role||'owner';
@@ -422,6 +422,7 @@ function monthsWithData(){
   S.expenses.forEach(e=>set.add(e.date.slice(0,7)));
   (S.lumpIncome||[]).forEach(e=>set.add(String(e.date).slice(0,7)));
   S.subtech.forEach(e=>set.add(e.date.slice(0,7)));
+  (S.techDays||[]).forEach(e=>set.add(String(e.date).slice(0,7)));
   return [...set].sort().reverse();
 }
 const monthSelect=(chg,val)=>`<select data-chg="${chg}">${monthsWithData().map(m=>`<option value="${m}"${m===val?' selected':''}>${monthLabel(m)}</option>`).join('')}</select>`;
@@ -557,7 +558,7 @@ function openForm(title,fields,vals,onSave){
     for(const f of fields){const el=form.elements[f.k];out[f.k]=f.type==='checkbox'?el.checked:(f.type==='number'?num(el.value):el.value.trim());}
     const t0=Date.now();
     if(out.paidBy)S.settings.lastPayer=out.paidBy;
-    if(onSave(out)!==false){try{logAct(title+(out.amount?': '+fmt(num(out.amount)):'')+(out.site?' · '+siteName(out.site):'')+(out.desc?' · '+out.desc:out.note?' · '+out.note:''));}catch(e){}save();dlg.close();render();toast((toast.t0>=t0?toast.last:'Saved')+' · '+profitNote());}
+    if(onSave(out)!==false){try{logAct(title+(out.amount?': '+fmt(num(out.amount)):'')+(out.site?' · '+siteName(out.site):'')+(out.desc?' · '+out.desc:out.note?' · '+out.note:''));}catch(e){}save();dlg.close();render();toast((toast.t0>=t0?toast.last:'Saved')+(isTech()?'':' · '+profitNote()));}
   };
   dlg.showModal();
 }
@@ -911,6 +912,34 @@ P.staff=()=>{
     ${tech.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Note</th><th class="n">Amount</th></tr></thead><tbody>${tech.map(x=>`<tr><td>${fmtD(x.date)}</td><td class="wrap">${esc(x.desc)}</td><td class="n">${fmt(num(x.amount))}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No salary payments recorded yet.</div>'}
   </div>`;
 };
+
+/* ---------- sub-tech days: the head technician records who worked, when and for how long; owners turn them into pay ---------- */
+const crewFields=[{k:'name',label:'Full name',req:true},{k:'phone',label:'Phone number',type:'tel',req:true},{k:'idNo',label:'ID number'},{k:'notes',label:'Notes (where he lives, skills…)',type:'textarea'}];
+const dayFields=()=>[fDate(),{k:'name',label:'Sub-tech',type:'select',options:S.crew.map(c=>c.name),req:true},{k:'hours',label:'Hours worked',type:'number',def:8,req:true},{k:'site',label:'Site worked on',type:'select',options:siteOpts(),def:'general'},{k:'task',label:'Work done',type:'textarea'}];
+P.crew=()=>{
+  const m=UI.crewMonth||today().slice(0,7),[f,t]=monthRange(m);
+  const days=S.techDays.filter(d=>d.date>=f&&d.date<=t).sort((a,b)=>b.date.localeCompare(a.date)||String(a.name).localeCompare(b.name));
+  const waiting=S.techDays.filter(d=>!d.payId);
+  const per={};days.forEach(d=>{const x=per[d.name]=per[d.name]||{days:new Set(),hours:0};x.days.add(d.date);x.hours+=num(d.hours);});
+  const phone=n=>(S.crew.find(c=>c.name===n)||{}).phone||'';
+  return `
+  <div class="card"><div class="h2row"><h2>Sub-techs</h2><button class="btn primary" data-act="addCrew">+ Add sub-tech</button></div>
+    ${S.crew.length?`<div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>ID number</th><th>Notes</th><th></th></tr></thead><tbody>
+    ${S.crew.map(c=>`<tr><td><b>${esc(c.name)}</b></td><td>${c.phone?`<a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>`:''}</td><td>${esc(c.idNo||'')}</td><td class="wrap small">${esc(c.notes||'')}</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editCrew" data-id="${c.id}">Edit</button><button class="btn sm danger" data-act="delCrew" data-id="${c.id}">✕</button></div></td></tr>`).join('')}
+    </tbody></table></div>`:'<div class="empty">Add each sub-tech once, with his phone number. Then log the days he works.</div>'}
+  </div>
+  <div class="card"><div class="h2row"><h2>Days worked</h2><div class="row">${monthSelect('crewMonth',m)}<button class="btn primary" data-act="addDay"${S.crew.length?'':' disabled'}>+ Log a day</button></div></div>
+    ${isTech()?'<p class="small muted" style="margin-top:0">Log every day a sub-tech works with you. The owners see it here and pay him.</p>':waiting.length?`<div class="note">${waiting.length} day${waiting.length>1?'s':''} logged by the technician ${waiting.length>1?'are':'is'} not yet in the pay list. Tap <b>Add to pay</b> on each, or <button class="btn sm good" data-act="payAllDays">Add all ${waiting.length} to pay</button>. Paying is then done under Staff &amp; Wages.</div>`:''}
+    ${Object.keys(per).length?`<div class="kpis">${Object.entries(per).map(([n,x])=>`<div class="kpi"><div class="l">${esc(n)}</div><div class="v">${x.days.size} day${x.days.size===1?'':'s'}</div><div class="s">${Math.round(x.hours*10)/10} hours in ${monthLabel(m)}</div></div>`).join('')}</div>`:''}
+    ${days.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Sub-tech</th><th class="n">Hours</th><th>Site</th><th>Work done</th><th>Logged by</th><th>Pay</th><th></th></tr></thead><tbody>
+    ${days.map(d=>`<tr><td>${fmtD(d.date)}</td><td><b>${esc(d.name)}</b>${phone(d.name)?`<div class="small muted">${esc(phone(d.name))}</div>`:''}</td><td class="n">${num(d.hours)}</td><td>${esc(siteName(d.site))}</td><td class="wrap small">${esc(d.task||'')}</td><td class="small">${esc(d.by||'')}</td>
+      <td>${d.payId?'<span class="badge b-ok">In pay list</span>':isTech()?'<span class="badge b-warn">Waiting for owner</span>':`<button class="btn sm good" data-act="payDay" data-id="${d.id}">Add to pay</button>`}</td>
+      <td><div class="row" style="flex-wrap:nowrap">${d.payId&&isTech()?'':`<button class="btn sm" data-act="editDay" data-id="${d.id}">Edit</button><button class="btn sm danger" data-act="delDay" data-id="${d.id}">✕</button>`}</div></td></tr>`).join('')}
+    </tbody></table></div>`:'<div class="empty">No days logged for this month.</div>'}
+  </div>`;
+};
+// owners: turn logged days into sub-tech pay (the Staff & Wages list), one record per day
+function dayToPay(d,amount){const w={id:uid(),date:d.date,name:d.name,site:d.site||'general',task:(d.task?d.task+' · ':'')+num(d.hours)+'h',amount:num(amount),paid:false,paidOn:''};S.subtech.push(w);d.payId=w.id;}
 
 P.debts=()=>{
   const owed=S.debts.filter(d=>d.type==='owedToUs'),we=S.debts.filter(d=>d.type==='weOwe');
@@ -1613,6 +1642,16 @@ const empNames=()=>S.employees.map(e=>e.name);
 const issueFields=()=>[fDate(),{k:'site',label:'Site',type:'select',options:siteOpts(),def:'dala1'},{k:'problem',label:'Problem',type:'textarea',req:true},{k:'action',label:'Action taken',type:'textarea'},{k:'assignedTo',label:'Assigned to',type:'select',options:[['','Not assigned'],...empNames()]},{k:'status',label:'Status',type:'select',options:['Open','Fixed'],def:'Open'}];
 
 const ACT={
+  addCrew(){openForm('Add sub-tech',crewFields,{},o=>{if(S.crew.some(c=>c.name.toLowerCase()===o.name.trim().toLowerCase())){toast('That name is already in the list');return false;}S.crew.push({id:uid(),...o,name:o.name.trim()});});},
+  editCrew(id){const c=byId(S.crew,id),old=c.name;openForm('Edit sub-tech',crewFields,c,o=>{Object.assign(c,o);if(o.name!==old)S.techDays.forEach(d=>{if(d.name===old)d.name=o.name;});});},
+  delCrew(id){del(S.crew,id,'sub-tech');},
+  addDay(){openForm('Log a day worked',dayFields(),{},o=>{if(num(o.hours)<=0||num(o.hours)>24){toast('Hours must be between 1 and 24');return false;}
+    if(S.techDays.some(d=>d.date===o.date&&d.name===o.name)){toast(o.name+' already has a day logged on that date. Edit it instead.');return false;}
+    S.techDays.push({id:uid(),...o,by:meName()});toast('Day logged');});},
+  editDay(id){const d=byId(S.techDays,id);openForm('Edit day worked',dayFields(),d,o=>{Object.assign(d,o);});},
+  delDay(id){del(S.techDays,id,'logged day');},
+  payDay(id){const d=byId(S.techDays,id);openForm(`Add to pay: ${d.name}, ${fmtDs(d.date)} (${num(d.hours)} hours)`,[{k:'amount',label:'Pay for this day (Ksh)',type:'number',def:num(S.settings.subtechRate),req:true}],{},o=>{dayToPay(d,o.amount);toast('Added. Pay it under Staff & Wages.');});},
+  payAllDays(){const l=S.techDays.filter(d=>!d.payId);openForm(`Add ${l.length} days to pay`,[{k:'amount',label:'Pay per day (Ksh)',type:'number',def:num(S.settings.subtechRate),req:true}],{},o=>{l.forEach(d=>dayToPay(d,o.amount));toast('Added. Pay them under Staff & Wages.');});},
   addUser(){userForm('');},
   editUser(n){userForm(n);},
   delUser(n){if(!confirm('Remove '+n+'? Their PIN will stop working.'))return;remote('setUser',PIN,n,'','').then(r=>{UI.usList=r;logAct('Removed the personal PIN of '+n);save();render();}).catch(()=>toast('Could not remove. Check your internet.'));},
@@ -1795,6 +1834,7 @@ const CHG={
   teamRange(el){UI.teamRange=el.value;render();},
   partners(el){const l=el.value.split(',').map(x=>x.trim()).filter(Boolean);if(l.length){S.settings.partners=l;save();toast('Saved');}},
   staffMonth(el){UI.staffMonth=el.value;render();},
+  crewMonth(el){UI.crewMonth=el.value;render();},
   plMonth(el){UI.plMonth=el.value;render();},
   issueFilter(el){UI.issueFilter=el.value;render();},
   tgtMonth(el){UI.tgtMonth=el.value;render();},
@@ -1850,6 +1890,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791737661';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791738008';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

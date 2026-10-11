@@ -186,7 +186,7 @@ const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Perfor
 const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','sitecosts','mat']],['Employees',['staff','crew','desk','team']],['Profit & Loss',['pl','analysis','report','debts','bank']],['Owners',['directors','partners']],['Settings',['settings','activity','search']]];
 const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',analysis:'Analysis',report:'Monthly Report',sitecosts:'Costs per Site',search:'Search',activity:'Activity History',crew:'Sub-tech Days',desk:'Requests & Refunds'};
 // The technician sees only the technical pages; staff see everything except the Owners pages.
-const TECH_GROUPS=[['Customer Care',['tickets','issues']],['Sub-techs',['crew']],['Requests & Refunds',['desk']],['Materials',['mat']],['Settings',['settings']]];
+const TECH_GROUPS=[['Customer Care',['tickets','issues']],['Tokens & WiFi',['bills']],['Sub-techs',['crew']],['Requests & Refunds',['desk']],['Materials',['mat']],['Settings',['settings']]];
 const navGroups=()=>isTech()?TECH_GROUPS:isOwner()?GROUPS:GROUPS.filter(g=>g[0]!=='Owners');
 const groupOf=pg=>navGroups().find(g=>g[1].includes(pg))||navGroups()[0];
 
@@ -195,7 +195,7 @@ function defaultState(){
   const earnings={};
   SEED_DATES.forEach((d,i)=>{earnings[d]={};for(const k in SEED_VALUES)earnings[d][k]=SEED_VALUES[k][i];});
   return {version:1,
-    settings:{business:'Dala & Genzi WiFi',subtechRate:500,subtechName:'Sub-tech',techName:'Technician',techSalary:0,tokenWarnDays:30,wifiWarnDays:5,partners:['FIDEL','DOROTHY','MAURICE'],partnerShares:{},lastPayer:'',own:{},contacts:[['FIDELIS','+254740396568'],['DOROTHY','+254114920486'],['MAURICE','+254723025729']],remindDays:3},
+    settings:{business:'Dala & Genzi WiFi',subtechRate:500,subtechName:'Sub-tech',techName:'Technician',techSalary:0,tokenWarnDays:30,wifiWarnDays:5,partners:['FIDEL','DOROTHY','MAURICE'],partnerShares:{},lastPayer:'',own:{},contacts:[['FIDELIS','+254740396568'],['DOROTHY','+254114920486'],['MAURICE','+254723025729']],remindDays:3,codes:{FIDELIS:'0740396568',FIDEL:'0740396568',DOROTHY:'0114920486',MAURICE:'0723025729'}},
     sites:SITES_SEED.map(s=>({...s,tokenMeter:'',powerName:'',powerPhone:'',tokenLastPaid:'',tokenLastAmount:0,wifiProvider:'',wifiAccount:'',wifiLastPaid:'',wifiAmount:0,wifiCycleDays:30,notes:''})),
     earnings,expenses:[],subtech:[],store:[],toBuy:[],matLog:[],debts:[],issues:[],assets:[],targets:{},partnerTx:[],equityTx:[],tickets:[],crew:[],techDays:[],techReq:[],techSpend:[],activity:[],lumpIncome:[],bankTx:[],employees:[],checks:[],lastBackup:''};
 }
@@ -218,6 +218,9 @@ function migrate(s){
   if(s.settings&&s.settings.isp)delete s.settings.isp;
   for(const k in d) if(s[k]===undefined) s[k]=d[k];
   s.settings={...d.settings,...s.settings};
+  s.settings.codes={...d.settings.codes,...(s.settings.codes||{})};
+  // every site has two sub powers, each with its own token meter and power house
+  (s.sites||[]).forEach(x=>{x.subs=Array.isArray(x.subs)?x.subs:[];while(x.subs.length<2)x.subs.push({name:'Sub power '+(x.subs.length+1),meter:'',powerName:'',phone:'',amount:0,lastPaid:'',lastAmount:0});});
   if(!s.employees.length)s.employees=[{id:'tech',name:s.settings.techName||'Technician',role:'Technician',phone:''},{id:'subtech',name:s.settings.subtechName||'Sub-tech',role:'Sub-tech',phone:''}];
   return s;
 }
@@ -326,7 +329,7 @@ const isOwner=()=>ROLE==='owner'||!ROLES_OK.includes(ROLE);
 const isTech=()=>ROLE==='tech';
 const ROLES_OK=['owner','staff','tech'];
 // what a technician's phone may send back (the server checks the same rule)
-const TECH_WRITE=/^state\/((store|toBuy|crew)|(matLog|issues|tickets|techDays|techReq|techSpend)@[^/]+)$/;
+const TECH_WRITE=/^state\/((store|toBuy|crew|sites)|(matLog|issues|tickets|techDays|techReq|techSpend)@[^/]+)$/;
 // ask the server whose PIN this is: sets the name used in the history and hides owner pages from staff
 function setRole(w){
   const was=ROLE;ROLE=w.role||'owner';
@@ -556,9 +559,9 @@ function openForm(title,fields,vals,onSave){
     e.preventDefault();
     const out={};
     for(const f of fields){const el=form.elements[f.k];out[f.k]=f.type==='checkbox'?el.checked:(f.type==='number'?num(el.value):el.value.trim());}
-    const t0=Date.now();
+    const t0=Date.now(),snap=stampSnap();
     if(out.paidBy)S.settings.lastPayer=out.paidBy;
-    if(onSave(out)!==false){try{logAct(title+(out.amount?': '+fmt(num(out.amount)):'')+(out.site?' · '+siteName(out.site):'')+(out.desc?' · '+out.desc:out.note?' · '+out.note:''));}catch(e){}save();dlg.close();render();toast((toast.t0>=t0?toast.last:'Saved')+(isTech()?'':' · '+profitNote()));}
+    if(onSave(out)!==false){try{stampApply(snap);}catch(e){}try{logAct(title+(out.amount?': '+fmt(num(out.amount)):'')+(out.site?' · '+siteName(out.site):'')+(out.desc?' · '+out.desc:out.note?' · '+out.note:''));}catch(e){}save();dlg.close();render();toast((toast.t0>=t0?toast.last:'Saved')+(isTech()?'':' · '+profitNote()));}
   };
   dlg.showModal();
 }
@@ -812,17 +815,20 @@ P.bills=()=>{
   <div class="scards">${S.sites.map(s=>{const k=tokenStatus(s),w=wifiStatus(s);return `
     <div class="scard"><div class="h2row" style="margin:0"><h3 style="margin:0">${esc(s.name)}</h3>${groupBadge(s)}</div>
       <div class="sec">Electricity token</div>
-      <dl><dt>Meter no.</dt><dd>${esc(s.tokenMeter||'—')}</dd><dt>Power house</dt><dd>${esc(s.powerName||'—')}${s.powerPhone?` · <a href="tel:${esc(String(s.powerPhone).replace(/[^0-9+]/g,''))}">${esc(s.powerPhone)}</a>`:''}</dd><dt>Last paid</dt><dd>${fmtD(s.tokenLastPaid)}</dd><dt>Token paid this month</dt><dd><b>${fmt(mTok(s.id,'Electricity tokens'))}</b></dd><dt>Last amount</dt><dd>${s.tokenLastAmount?fmt(s.tokenLastAmount):'—'}</dd><dt>Status</dt><dd><span class="badge ${k.cls}">${k.txt}</span></dd></dl>
+      <dl><dt>Meter no.</dt><dd>${esc(s.tokenMeter||'—')}</dd><dt>Power house</dt><dd>${esc(s.powerName||'—')}${s.powerPhone?` · <a href="tel:${esc(String(s.powerPhone).replace(/[^0-9+]/g,''))}">${esc(s.powerPhone)}</a>`:''}</dd><dt>Last paid</dt><dd>${fmtD(s.tokenLastPaid)}</dd>${isTech()?'':`<dt>Token paid this month</dt><dd><b>${fmt(mTok(s.id,'Electricity tokens'))}</b></dd>`}<dt>Last amount</dt><dd>${s.tokenLastAmount?fmt(s.tokenLastAmount):'—'}</dd><dt>Status</dt><dd><span class="badge ${k.cls}">${k.txt}</span></dd></dl>
+      ${(s.subs||[]).map((u,i)=>`<div class="sec">${esc(u.name||'Sub power '+(i+1))}</div>
+      <dl><dt>Token no.</dt><dd>${esc(u.meter||'—')}</dd><dt>Power house</dt><dd>${esc(u.powerName||'—')}${u.phone?` · <a href="tel:${esc(String(u.phone).replace(/[^0-9+]/g,''))}">${esc(u.phone)}</a>`:''}</dd><dt>Token amount</dt><dd>${u.amount?fmt(num(u.amount)):'—'}</dd><dt>Last paid</dt><dd>${u.lastPaid?fmtD(u.lastPaid)+(u.lastAmount?' · '+fmt(num(u.lastAmount)):''):'—'}</dd></dl>
+      <div class="row" style="margin-bottom:6px"><button class="btn sm primary" data-act="paySub" data-id="${s.id}:${i}">Pay token</button><button class="btn sm" data-act="editSub" data-id="${s.id}:${i}">Edit</button></div>`).join('')}
       <div class="sec">WiFi subscription</div>
-      <dl><dt>Provider</dt><dd>${esc(s.wifiProvider||'—')}</dd><dt>Account no.</dt><dd>${esc(s.wifiAccount||'—')}</dd><dt>Last paid</dt><dd>${fmtD(s.wifiLastPaid)}</dd><dt>Next due</dt><dd>${fmtD(wifiDue(s))}</dd><dt>WiFi paid this month</dt><dd><b>${fmt(mTok(s.id,'Wifi subscription'))}</b></dd><dt>Status</dt><dd><span class="badge ${w.cls}">${w.txt}</span></dd></dl>
-      <div class="sec">This month at this site</div>
-      <dl><dt>Earnings</dt><dd>${fmt(me.bySite[s.id].total)}</dd><dt>Site costs</dt><dd>${fmt(msc[s.id]||0)}</dd><dt>Shared costs</dt><dd>${fmt(mGen)}</dd><dt>${me.bySite[s.id].total-(msc[s.id]||0)-mGen<0?'Loss':'Profit'}</dt><dd><b>${pnl(me.bySite[s.id].total-(msc[s.id]||0)-mGen)}</b></dd><dt>Monthly bills</dt><dd>${fmt(num(s.wifiAmount)*30/(num(s.wifiCycleDays)||30)+num(s.tokenLastAmount))}</dd></dl>
-      ${s.notes?`<p class="small muted">${esc(s.notes)}</p>`:''}
+      <dl><dt>Provider</dt><dd>${esc(s.wifiProvider||'—')}</dd><dt>Account no.</dt><dd>${esc(s.wifiAccount||'—')}</dd><dt>Last paid</dt><dd>${fmtD(s.wifiLastPaid)}</dd><dt>Next due</dt><dd>${fmtD(wifiDue(s))}</dd>${isTech()?'':`<dt>WiFi paid this month</dt><dd><b>${fmt(mTok(s.id,'Wifi subscription'))}</b></dd>`}<dt>Status</dt><dd><span class="badge ${w.cls}">${w.txt}</span></dd></dl>
+      ${isTech()?'':`<div class="sec">This month at this site</div>
+      <dl><dt>Earnings</dt><dd>${fmt(me.bySite[s.id].total)}</dd><dt>Site costs</dt><dd>${fmt(msc[s.id]||0)}</dd><dt>Shared costs</dt><dd>${fmt(mGen)}</dd><dt>${me.bySite[s.id].total-(msc[s.id]||0)-mGen<0?'Loss':'Profit'}</dt><dd><b>${pnl(me.bySite[s.id].total-(msc[s.id]||0)-mGen)}</b></dd><dt>Monthly bills</dt><dd>${fmt(num(s.wifiAmount)*30/(num(s.wifiCycleDays)||30)+num(s.tokenLastAmount))}</dd></dl>`}
+      ${s.notes?`<p class="small muted">${esc(s.notes)}</p>`:''}${stampLine(s)}
       <div class="row"><button class="btn sm primary" data-act="payToken" data-id="${s.id}">Pay token</button><button class="btn sm primary" data-act="payWifi" data-id="${s.id}">Pay WiFi</button><button class="btn sm" data-act="editSite" data-id="${s.id}">Edit details</button></div>
     </div>`;}).join('')}</div>
-  <div class="card" style="margin-top:16px"><h2 style="margin-bottom:10px">Token and WiFi payment history</h2>
+  ${isTech()?'':`<div class="card" style="margin-top:16px"><h2 style="margin-bottom:10px">Token and WiFi payment history</h2>
     ${hist.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Site</th><th>Type</th><th>Paid by</th><th>Note</th><th class="n">Amount</th></tr></thead><tbody>${hist.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(siteName(x.site))}</td><td>${esc(x.category)}</td><td>${payerTag(x.paidBy)}</td><td class="wrap">${esc(x.desc)}</td><td class="n">${fmt(x.amount)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No payments recorded yet.</div>'}
-  </div>`;
+  </div>`}`;
 };
 
 P.mat=()=>{
@@ -884,7 +890,7 @@ P.costs=()=>{
       <select data-chg="costSite"><option value="">All sites</option>${siteOpts().map(([v,l])=>`<option value="${v}"${v===UI.costSite?' selected':''}>${esc(l)}</option>`).join('')}</select>
       <select data-chg="costPayer"><option value="">Paid by anyone</option>${payerOpts().map(v=>`<option${v===UI.costPayer?' selected':''}>${esc(v)}</option>`).join('')}</select></div></div>
     ${list.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Category</th><th>Site</th><th>Paid by</th><th>Description</th><th class="n">Amount</th><th></th></tr></thead><tbody>
-    ${list.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.category)}</td><td>${esc(siteName(x.site))}</td><td>${payerTag(x.paidBy)}</td><td class="wrap">${esc(x.desc)}</td><td class="n">${fmt(num(x.amount))}</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editExp" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delExp" data-id="${x.id}">✕</button></div></td></tr>`).join('')}
+    ${list.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.category)}</td><td>${esc(siteName(x.site))}</td><td>${payerTag(x.paidBy)}</td><td class="wrap">${esc(x.desc)}${stampLine(x)}</td><td class="n">${fmt(num(x.amount))}</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editExp" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delExp" data-id="${x.id}">✕</button></div></td></tr>`).join('')}
     </tbody><tfoot><tr><td colspan="5">Total shown</td><td class="n">${fmt(sum(list,x=>x.amount))}</td><td></td></tr></tfoot></table></div>`:'<div class="empty">No cost entries for this filter.</div>'}
     <p class="small muted">Sub-tech wages are entered as work days on the Staff &amp; Wages page and are counted in the totals above.</p>
   </div>`;
@@ -951,7 +957,7 @@ P.desk=()=>{
   return `
   <div class="card"><div class="h2row"><h2>${isTech()?'Requests to the owners':'Requests from the technician'}</h2>${isTech()?'<button class="btn primary" data-act="addReq">+ New request</button>':''}</div>
     ${req.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Request</th><th>Site</th><th>Urgency</th><th>Status</th><th>Owners' reply</th><th></th></tr></thead><tbody>
-    ${req.map(r=>`<tr><td>${fmtD(r.date)}</td><td class="wrap"><b>${esc(r.what)}</b>${r.by?`<div class="small muted">by ${esc(r.by)}</div>`:''}</td><td>${esc(siteName(r.site))}</td><td><span class="badge ${uc[r.urgency]||'b-info'}">${esc(r.urgency||'')}</span></td>
+    ${req.map(r=>`<tr><td>${fmtD(r.date)}</td><td class="wrap"><b>${esc(r.what)}</b>${stampLine(r)}</td><td>${esc(siteName(r.site))}</td><td><span class="badge ${uc[r.urgency]||'b-info'}">${esc(r.urgency||'')}</span></td>
       <td><span class="badge ${r.status==='Done'?'b-ok':r.status==='Seen'?'b-info':'b-warn'}">${esc(r.status||'Open')}</span></td><td class="wrap small">${esc(r.reply||'')}</td>
       <td><div class="row" style="flex-wrap:nowrap">${isTech()?(r.status==='Done'?'':`<button class="btn sm" data-act="editReq" data-id="${r.id}">Edit</button>`):`<button class="btn sm good" data-act="answerReq" data-id="${r.id}">Reply</button>`}<button class="btn sm danger" data-act="delReq" data-id="${r.id}">✕</button></div></td></tr>`).join('')}
     </tbody></table></div>`:`<div class="empty">${isTech()?'Nothing asked yet. Add anything you need: materials, transport, a decision, a payment to a supplier…':'No requests from the technician.'}</div>`}
@@ -961,7 +967,7 @@ P.desk=()=>{
       <div class="kpi"><div class="l">Refunded so far</div><div class="v">${fmt(sum(sp.filter(x=>x.paid),x=>num(x.amount)))}</div></div></div>
     ${!isTech()&&owed.length>1?`<div class="row" style="margin-bottom:10px"><button class="btn good" data-act="refundAll">Refund all ${owed.length}: ${fmt(sum(owed,x=>num(x.amount)))}</button></div>`:''}
     ${sp.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>What for</th><th>Site</th><th class="n">Amount</th><th>Note</th><th>Refund</th><th></th></tr></thead><tbody>
-    ${sp.map(x=>`<tr><td>${fmtD(x.date)}</td><td class="wrap"><b>${esc(x.what)}</b>${x.by?`<div class="small muted">by ${esc(x.by)}</div>`:''}</td><td>${esc(siteName(x.site))}</td><td class="n">${fmt(num(x.amount))}</td><td class="wrap small">${esc(x.note||'')}</td>
+    ${sp.map(x=>`<tr><td>${fmtD(x.date)}</td><td class="wrap"><b>${esc(x.what)}</b>${stampLine(x)}</td><td>${esc(siteName(x.site))}</td><td class="n">${fmt(num(x.amount))}</td><td class="wrap small">${esc(x.note||'')}</td>
       <td>${x.paid?`<span class="badge b-ok">Refunded ${esc(fmtDs(x.paidOn||''))}</span>`:isTech()?'<span class="badge b-warn">Waiting</span>':`<button class="btn sm good" data-act="refund" data-id="${x.id}">Refund</button>`}</td>
       <td><div class="row" style="flex-wrap:nowrap">${x.paid?'':`<button class="btn sm" data-act="editSpend" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delSpend" data-id="${x.id}">✕</button>`}</div></td></tr>`).join('')}
     </tbody></table></div>`:`<div class="empty">${isTech()?'When you pay for something yourself, add it here so the owners can refund you.':'Nothing spent by the technician yet.'}</div>`}
@@ -1275,9 +1281,19 @@ function pickMe(){const names=[...new Set([...(S.settings.partners||[]),...S.emp
   openForm('Who is using this phone?',[{k:'me',label:'Your name',type:'select',options:[...names,'Other']},{k:'other',label:'If Other, type your name'}],{me:meName()||names[0]},o=>{const n=(o.me==='Other'?o.other:o.me)||'';try{localStorage.setItem('isp.me',n.trim());}catch(e){}renderHead();toast('Hello '+n);return false;});}
 
 /* ---------- activity history and undo ---------- */
+// each person's code (FIDEL's choice: their phone numbers), stamped on every record they add or change
+const myCode=()=>{const n=String(meName()||'').trim().toUpperCase(),c=S.settings.codes||{};return c[n]||c[n.split(' ')[0]]||'';};
+function stampSnap(){const m={};for(const k in S){if(k==='activity'||!Array.isArray(S[k]))continue;m[k]=new Map(S[k].filter(x=>x&&typeof x==='object'&&x.id!==undefined).map(x=>[x.id,JSON.stringify(x)]));}return m;}
+function stampApply(m){
+  const who=meName()||'Someone',code=myCode(),at=new Date().toISOString();
+  for(const k in S){if(k==='activity'||!Array.isArray(S[k]))continue;const old=m[k]||new Map();
+    S[k].forEach(x=>{if(!x||typeof x!=='object'||x.id===undefined)return;const j=old.get(x.id);
+      if(j===undefined)Object.assign(x,{addedBy:who,addedCode:code,addedAt:at});else if(j!==JSON.stringify(x))Object.assign(x,{editedBy:who,editedCode:code,editedAt:at});});}
+}
+const stampLine=x=>x&&(x.addedBy||x.editedBy)?`<div class="small muted">${x.addedBy?'Added by '+esc(x.addedBy)+(x.addedCode?' ('+esc(x.addedCode)+')':''):''}${x.editedBy?(x.addedBy?' · ':'')+'Edited by '+esc(x.editedBy)+(x.editedCode?' ('+esc(x.editedCode)+')':''):''}</div>`:'';
 function logAct(text,extra){
   S.activity=S.activity||[];
-  S.activity.push({id:uid(),at:new Date().toISOString(),who:meName()||'Someone',text,...(extra||{})});
+  S.activity.push({id:uid(),at:new Date().toISOString(),who:meName()||'Someone',code:myCode(),text,...(extra||{})});
   if(S.activity.length>500)S.activity=S.activity.sort((a,b)=>a.at.localeCompare(b.at)).slice(-500);
 }
 function itemLabel(x){return [x.category,x.what,x.name,x.person,x.customer,x.problem&&String(x.problem).slice(0,40),x.site&&siteName(x.site),x.amount!==undefined?fmt(num(x.amount)):x.cost!==undefined?fmt(num(x.cost)):''].filter(Boolean).join(' · ');}
@@ -1287,7 +1303,7 @@ P.activity=()=>{
   return `<div class="card"><h2 style="margin-bottom:6px">Activity history</h2>
     <p class="small muted" style="margin-top:0">Every save and delete, newest first, with who did it. Deleted entries can be brought back with <b>Undo</b>. You are using this phone as <b>${esc(meName()||'not set')}</b> · <a href="#" data-act="pickMe">change</a></p>
     ${L.length?`<div class="tbl-wrap"><table><thead><tr><th>When</th><th>Who</th><th>What happened</th><th></th></tr></thead><tbody>
-    ${L.map(a=>`<tr><td class="small">${esc(new Date(a.at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}))}</td><td><b>${esc(a.who)}</b></td><td class="wrap">${esc(a.text)}</td><td>${a.item&&!restored.has(a.id)?`<button class="btn sm" data-act="undoDel" data-id="${a.id}">Undo</button>`:a.item?'<span class="badge b-ok">Restored</span>':''}</td></tr>`).join('')}
+    ${L.map(a=>`<tr><td class="small">${esc(new Date(a.at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}))}</td><td><b>${esc(a.who)}</b>${a.code?`<div class="small muted">${esc(a.code)}</div>`:''}</td><td class="wrap">${esc(a.text)}</td><td>${a.item&&!restored.has(a.id)?`<button class="btn sm" data-act="undoDel" data-id="${a.id}">Undo</button>`:a.item?'<span class="badge b-ok">Restored</span>':''}</td></tr>`).join('')}
     </tbody></table></div>`:'<div class="empty">Nothing recorded yet. Changes made from now on will show here.</div>'}
   </div>`;
 };
@@ -1654,7 +1670,7 @@ function reconcileBills(){
   return ch;
 }
 function addExpense(o){
-  if(isTech()){if(num(o.amount)>0)remote('techAddCost',PIN,{...o,amount:num(o.amount)}).then(()=>toast('Cost sent to the owners')).catch(()=>toast('Could not send the cost. Tell the owners: '+fmt(num(o.amount))));return;}
+  if(isTech()){if(num(o.amount)>0)remote('techAddCost',PIN,{...o,amount:num(o.amount),addedCode:myCode()}).then(()=>toast('Cost sent to the owners')).catch(()=>toast('Could not send the cost. Tell the owners: '+fmt(num(o.amount))));return;}
   S.expenses.push({id:uid(),date:o.date,category:o.category,site:o.site,amount:num(o.amount),desc:o.desc||'',paidBy:o.paidBy||''});}
 function addToStore(name,qty,unit,unitCost){
   let it=S.store.find(m=>m.name.toLowerCase()===name.toLowerCase());
@@ -1675,6 +1691,10 @@ const empNames=()=>S.employees.map(e=>e.name);
 const issueFields=()=>[fDate(),{k:'site',label:'Site',type:'select',options:siteOpts(),def:'dala1'},{k:'problem',label:'Problem',type:'textarea',req:true},{k:'action',label:'Action taken',type:'textarea'},{k:'assignedTo',label:'Assigned to',type:'select',options:[['','Not assigned'],...empNames()]},{k:'status',label:'Status',type:'select',options:['Open','Fixed'],def:'Open'}];
 
 const ACT={
+  editSub(ref){const [id,i]=ref.split(':'),s=site(id),u=s.subs[+i];openForm(`${s.name}: ${u.name}`,[{k:'name',label:'Name',def:'Sub power '+(+i+1)},{k:'meter',label:'Token (meter) number'},{k:'powerName',label:'Power house owner (name)'},{k:'phone',label:'Power house phone',type:'tel'},{k:'amount',label:'Usual token amount (Ksh)',type:'number'}],u,o=>{Object.assign(u,o);});},
+  paySub(ref){const [id,i]=ref.split(':'),s=site(id),u=s.subs[+i];openForm(`Pay token: ${s.name}, ${u.name}`,[fDate(),{k:'amount',label:'Amount (Ksh)',type:'number',req:true,def:u.amount||u.lastAmount||''},fPaid(),{k:'desc',label:'Note',def:u.name+(u.meter?' · Token '+u.meter:'')}],{},o=>{
+    if(!u.lastPaid||o.date>=u.lastPaid){u.lastPaid=o.date;u.lastAmount=o.amount;}
+    addExpense({date:o.date,category:'Electricity tokens',site:id,amount:o.amount,desc:o.desc,paidBy:o.paidBy});toast('Token payment saved and counted in costs');});},
   addReq(){openForm('New request to the owners',reqFields(),{},o=>{S.techReq.push({id:uid(),...o,status:'Open',by:meName()});toast('Request sent to the owners');});},
   editReq(id){const r=byId(S.techReq,id);openForm('Edit request',reqFields(),r,o=>{Object.assign(r,o);});},
   answerReq(id){const r=byId(S.techReq,id);openForm('Reply to the technician',[{k:'status',label:'Status',type:'select',options:['Open','Seen','Done']},{k:'reply',label:'Your reply (he sees this)',type:'textarea'}],{...r,status:r.status==='Open'?'Seen':r.status},o=>{Object.assign(r,o);});},
@@ -1723,7 +1743,7 @@ const ACT={
   earnShift(n){UI.earnDate=addDays(UI.earnDate||today(),Number(n));UI.earnMonth=UI.earnDate.slice(0,7);render();},
   editSite(id){const s=site(id);openForm(`${s.name} details`,[
     {k:'tokenMeter',label:'Token meter number'},{k:'powerName',label:'Power house owner (name)'},{k:'powerPhone',label:'Power house owner phone',type:'tel'},{k:'tokenLastPaid',label:'Token last paid',type:'date'},{k:'tokenLastAmount',label:'Last token amount (Ksh)',type:'number'},
-    {k:'wifiProvider',label:'WiFi / internet provider'},{k:'wifiAccount',label:'WiFi account number'},{k:'wifiLastPaid',label:'WiFi subscription last paid',type:'date'},{k:'wifiAmount',label:'WiFi subscription amount (Ksh)',type:'number'},{k:'wifiCycleDays',label:'Subscription lasts (days)',type:'number',hint:'Usually 30'},{k:'notes',label:'Notes',type:'textarea'}],s,o=>{Object.assign(s,o);reconcileBills();toast('Saved');});},
+    {k:'wifiProvider',label:'WiFi / internet provider'},{k:'wifiAccount',label:'WiFi account number'},{k:'wifiLastPaid',label:'WiFi subscription last paid',type:'date'},{k:'wifiAmount',label:'WiFi subscription amount (Ksh)',type:'number'},{k:'wifiCycleDays',label:'Subscription lasts (days)',type:'number',hint:'Usually 30'},{k:'notes',label:'Notes',type:'textarea'}],s,o=>{Object.assign(s,o);if(!isTech())reconcileBills();toast('Saved');});},
   payToken(id){const s=site(id);openForm(`Pay token: ${s.name}`,[fDate(),{k:'amount',label:'Amount (Ksh)',type:'number',req:true,def:s.tokenLastAmount||''},fPaid(),{k:'desc',label:'Note',def:s.tokenMeter?'Meter '+s.tokenMeter:''}],{},o=>{
     if(!s.tokenLastPaid||o.date>=s.tokenLastPaid){s.tokenLastPaid=o.date;s.tokenLastAmount=o.amount;s.tokCounted=o.date;}
     addExpense({date:o.date,category:'Electricity tokens',site:id,amount:o.amount,desc:o.desc,paidBy:o.paidBy});toast('Token payment saved and counted in costs');});},
@@ -1932,6 +1952,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791738173';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791738624';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

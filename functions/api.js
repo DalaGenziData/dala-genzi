@@ -40,12 +40,11 @@ async function checkPin(db, pin) {
 const ROLES = ['owner', 'staff', 'tech'];
 
 // The technician ('tech') only ever receives and changes the technical records. Money data never leaves the server.
-const TECH_WRITE = /^state\/((store|toBuy|crew)|(matLog|issues|tickets|techDays|techReq|techSpend)@[^/]+)$/;
+const TECH_WRITE = /^state\/((store|toBuy|crew|sites)|(matLog|issues|tickets|techDays|techReq|techSpend)@[^/]+)$/;
 // Read-only for the technician, cut down to the fields the tech pages need.
 const TECH_READ = {
-  'state/sites': v => (v || []).map(s => ({ id: s.id, name: s.name, group: s.group, router: s.router })),
   'state/employees': v => (v || []).map(e => ({ id: e.id, name: e.name, role: e.role, phone: e.phone })),
-  'state/settings': v => ({ business: (v || {}).business, techName: (v || {}).techName, subtechName: (v || {}).subtechName }),
+  'state/settings': v => { v = v || {}; return { business: v.business, techName: v.techName, subtechName: v.subtechName, codes: v.codes, tokenWarnDays: v.tokenWarnDays, wifiWarnDays: v.wifiWarnDays }; },
 };
 function techDocs(docs) {
   const out = {};
@@ -89,12 +88,12 @@ const FNS = {
   },
   // The technician records what a material cost without seeing the costs list: the server adds it to the owners' costs.
   async techAddCost(db, pin, o) {
-    await checkPin(db, pin);
+    const me = await checkPin(db, pin);
     o = o || {};
     const date = /^\d{4}-\d{2}-\d{2}$/.test(o.date) ? o.date : new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
     const amount = Number(o.amount);
     if (!(amount > 0)) throw new Error('bad_amount');
-    const item = { id: 'tc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), date, category: 'Materials', site: String(o.site || 'general').slice(0, 40), amount, desc: String(o.desc || '').slice(0, 200), paidBy: String(o.paidBy || '').slice(0, 60) };
+    const item = { id: 'tc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), date, category: ['Materials', 'Electricity tokens', 'Wifi subscription'].includes(o.category) ? o.category : 'Materials', site: String(o.site || 'general').slice(0, 40), amount, desc: String(o.desc || '').slice(0, 200), paidBy: String(o.paidBy || '').slice(0, 60), addedBy: me.name || 'Technician', addedCode: String(o.addedCode || '').slice(0, 20), addedAt: new Date().toISOString() };
     const path = 'state/expenses@' + date.slice(0, 4), r = await db.prepare('SELECT data FROM docs WHERE path = ?').bind(path).first();
     const doc = r ? JSON.parse(r.data) : { v: [] };
     (doc.v = doc.v || []).push(item);
@@ -129,7 +128,15 @@ const FNS = {
   },
   async saveDocs(db, pin, sets, dels) {
     const me = await checkPin(db, pin);
-    if (me.role === 'tech' && [...Object.keys(sets || {}), ...(dels || [])].some(p => !TECH_WRITE.test(p))) throw new Error('not_allowed');
+    if (me.role === 'tech' && ([...Object.keys(sets || {}), ...(dels || [])].some(p => !TECH_WRITE.test(p)) || (dels || []).includes('state/sites'))) throw new Error('not_allowed');
+    if (me.role === 'tech' && sets && sets['state/sites']) {
+      // the technician's copy of a site is laid over the saved one, so nothing he never had can be lost
+      const r = await db.prepare('SELECT data FROM docs WHERE path = ?').bind('state/sites').first();
+      const cur = r ? (JSON.parse(r.data).v || []) : [], inc = JSON.parse(sets['state/sites']).v || [];
+      const byId = new Map(cur.map(x => [x.id, x]));
+      inc.forEach(x => { if (x && x.id !== undefined) byId.set(x.id, { ...(byId.get(x.id) || {}), ...x }); });
+      sets = { ...sets, 'state/sites': JSON.stringify({ v: [...byId.values()] }) };
+    }
     const now = Date.now(), st = String(now), q = [];
     for (const p of Object.keys(sets || {})) {
       q.push(db.prepare('INSERT INTO docs (path, data, updated) VALUES (?, ?, ?) ON CONFLICT(path) DO UPDATE SET data = excluded.data, updated = excluded.updated').bind(p, String(sets[p]), now));

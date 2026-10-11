@@ -343,6 +343,7 @@ async function connectRemote(){
   setNet('saving');
   try{
     if(API_URL==='/api')setRole(await remote('whoami',PIN));
+    if(!meName())setTimeout(()=>{if(!$('#dlg').open)pickMe();},800);
     const r=await remote('loadAll',PIN);
     ONLINE=true;lastStamp=r.stamp;
     const f=fakeSnaps(r.docs);lastSnaps.state=f.st;lastSnaps.earn=f.ea;lastSnaps.seq=saveSeq;
@@ -552,9 +553,11 @@ function fieldHtml(f,v){
 }
 function openForm(title,fields,vals,onSave){
   const dlg=$('#dlg');
-  dlg.innerHTML=`<form class="mform"><h3>${esc(title)}</h3>${fields.map(f=>fieldHtml(f,vals[f.k])).join('')}<div class="mact"><button type="button" class="btn" data-x>Cancel</button><button class="btn primary" type="submit">Save</button></div></form>`;
+  const who=fields.some(f=>f.type==='password'||f.k==='me')?'':`<div class="small muted" style="margin:-4px 0 10px">${stampLine(vals)||(vals&&vals.id?'<div class="small muted">Added before codes were recorded</div>':'')}<div>Saving as <b>${esc(meName()||'nobody chosen')}</b>${myCode()?' ('+esc(myCode())+')':''} · <a href="#" data-pickme>${meName()?'change':'choose who you are'}</a></div></div>`;
+  dlg.innerHTML=`<form class="mform"><h3>${esc(title)}</h3>${who}${fields.map(f=>fieldHtml(f,vals[f.k])).join('')}<div class="mact"><button type="button" class="btn" data-x>Cancel</button><button class="btn primary" type="submit">Save</button></div></form>`;
   const form=dlg.querySelector('form');
   dlg.querySelector('[data-x]').onclick=()=>dlg.close();
+  {const pm=dlg.querySelector('[data-pickme]');if(pm)pm.onclick=e=>{e.preventDefault();dlg.close();pickMe();};}
   form.onsubmit=e=>{
     e.preventDefault();
     const out={};
@@ -1335,7 +1338,7 @@ P.upcoming=()=>{
 
 /* ---------- who is using this phone (for the activity history) ---------- */
 const meName=()=>{try{return localStorage.getItem('isp.me')||'';}catch(e){return '';}};
-function pickMe(){const names=[...new Set([...(S.settings.partners||[]),...S.employees.map(e=>e.name)].filter(Boolean))];
+function pickMe(){const names=[...new Set([...(S.settings.partners||[]),'MAURICE',...S.employees.map(e=>e.name)].filter(Boolean).map(n=>String(n).toUpperCase()))];
   openForm('Who is using this phone?',[{k:'me',label:'Your name',type:'select',options:[...names,'Other']},{k:'other',label:'If Other, type your name'}],{me:meName()||names[0]},o=>{const n=(o.me==='Other'?o.other:o.me)||'';try{localStorage.setItem('isp.me',n.trim());}catch(e){}renderHead();toast('Hello '+n);return false;});}
 
 /* ---------- activity history and undo ---------- */
@@ -2014,7 +2017,7 @@ window.addEventListener('hashchange',()=>{const p=location.hash.slice(1);if(PAGE
 function goto(p){UI.page=p;if(location.hash!=='#'+p){try{history.pushState(null,'','#'+p);}catch(e){}}render();scrollTo(0,0);}
 function renderHead(){
   $('#bizName').textContent=S.settings.business||'Dala & Genzi WiFi';
-  {const m=$('#meName');if(m)m.textContent=meName()?'You: '+meName():'Who are you?';}
+  {const m=$('#meName');if(m)m.textContent=meName()?'You: '+meName()+(myCode()?' · '+myCode():''):'Who are you?';}
   document.title=(S.settings.business||'Dala & Genzi WiFi')+' Manager';
   if(!navGroups().some(g=>g[1].includes(UI.page)))UI.page=navGroups()[0][1][0];
   $('#fab').style.display=isTech()?'none':'';document.querySelectorAll('.hbtn').forEach(b=>b.style.display=isTech()?'none':'');
@@ -2034,6 +2037,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791741153';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791741247';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

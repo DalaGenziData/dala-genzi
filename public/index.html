@@ -195,7 +195,7 @@ function defaultState(){
   const earnings={};
   SEED_DATES.forEach((d,i)=>{earnings[d]={};for(const k in SEED_VALUES)earnings[d][k]=SEED_VALUES[k][i];});
   return {version:1,
-    settings:{business:'Dala & Genzi WiFi',subtechRate:500,subtechName:'Sub-tech',techName:'Technician',techSalary:0,tokenWarnDays:30,wifiWarnDays:5,partners:['FIDEL','DOROTHY','MAURICE'],partnerShares:{},lastPayer:'',own:{},contacts:[['FIDELIS','+254740396568'],['DOROTHY','+254114920486'],['MAURICE','+254723025729']],remindDays:3,bankAuto:{start:'2026-10-12',costBank:'equity'},codes:{FIDELIS:'0740396568',FIDEL:'0740396568',DOROTHY:'0114920486',MAURICE:'0723025729'}},
+    settings:{business:'Dala & Genzi WiFi',subtechRate:500,subtechName:'Sub-tech',techName:'Technician',techSalary:0,tokenWarnDays:30,wifiWarnDays:5,partners:['FIDEL','DOROTHY'],partnerShares:{},lastPayer:'',own:{},contacts:[['FIDELIS','+254740396568'],['DOROTHY','+254114920486'],['MAURICE','+254723025729']],remindDays:3,bankAuto:{start:'2026-10-12',costBank:'equity'},codes:{FIDELIS:'0740396568',FIDEL:'0740396568',DOROTHY:'0114920486',MAURICE:'0723025729'}},
     sites:SITES_SEED.map(s=>({...s,tokenMeter:'',powerName:'',powerPhone:'',tokenLastPaid:'',tokenLastAmount:0,wifiProvider:'',wifiAccount:'',wifiLastPaid:'',wifiAmount:0,wifiCycleDays:30,notes:''})),
     earnings,expenses:[],subtech:[],store:[],toBuy:[],matLog:[],debts:[],issues:[],assets:[],targets:{},partnerTx:[],equityTx:[],tickets:[],crew:[],techDays:[],techReq:[],techSpend:[],techReports:[],activity:[],lumpIncome:[],bankTx:[],employees:[],checks:[],lastBackup:''};
 }
@@ -1704,6 +1704,12 @@ function reconcileBills(){
   const done=S.settings.pendingDone=S.settings.pendingDone||[];
   // FIDEL, 11 Oct 2026: the store items added that day were paid for in earlier months, so their cost is taken
   // off Running Costs once (the items stay in the store). Only after the online copy is loaded, so it sticks.
+  // FIDEL, 11 Oct 2026: only FIDELIS and DOROTHY are partners; MAURICE is the head technician.
+  if(ONLINE&&!done.includes('nopartner-maurice')){
+    S.settings.partners=(S.settings.partners||[]).filter(n=>String(n).trim().toUpperCase()!=='MAURICE');
+    if(S.settings.partnerShares)delete S.settings.partnerShares.MAURICE;
+    done.push('nopartner-maurice');ch=true;
+  }
   if(ONLINE&&!done.includes('nocost-20261011')){
     const NAMES=['router xpon','atb','pachcode','media converter','outdoor cable','indoor cable','microtik rb 951'];
     const hit=e=>e.date==='2026-10-11'&&e.category==='Materials'&&NAMES.some(n=>new RegExp('^[\\d.]+ \\S+ '+n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'$','i').test(String(e.desc||'').trim()));
@@ -2028,6 +2034,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791740841';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791741153';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

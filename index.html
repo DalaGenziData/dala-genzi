@@ -951,7 +951,7 @@ P.crew=()=>{
     ${days.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Sub-tech</th><th class="n">Hours</th><th>Site</th><th>Work done</th><th>Logged by</th><th>Pay</th><th></th></tr></thead><tbody>
     ${days.map(d=>`<tr><td>${fmtD(d.date)}</td><td><b>${esc(d.name)}</b>${phone(d.name)?`<div class="small muted">${esc(phone(d.name))}</div>`:''}</td><td class="n">${num(d.hours)}</td><td>${esc(siteName(d.site))}</td><td class="wrap small">${esc(d.task||'')}</td><td class="small">${esc(d.by||'')}</td>
       <td>${d.payId?'<span class="badge b-ok">In pay list</span>':isTech()?'<span class="badge b-warn">Waiting for owner</span>':`<button class="btn sm good" data-act="payDay" data-id="${d.id}">Add to pay</button>`}</td>
-      <td><div class="row" style="flex-wrap:nowrap">${d.payId&&isTech()?'':`<button class="btn sm" data-act="editDay" data-id="${d.id}">Edit</button><button class="btn sm danger" data-act="delDay" data-id="${d.id}">✕</button>`}</div></td></tr>`).join('')}
+      <td><div class="row" style="flex-wrap:nowrap">${d.payId&&isTech()?'':`<button class="btn sm" data-act="editTDay" data-id="${d.id}">Edit</button><button class="btn sm danger" data-act="delTDay" data-id="${d.id}">✕</button>`}</div></td></tr>`).join('')}
     </tbody></table></div>`:'<div class="empty">No days logged for this month.</div>'}
   </div>`;
 };
@@ -1831,8 +1831,8 @@ const ACT={
   addDay(){openForm('Log a day worked',dayFields(),{},o=>{if(num(o.hours)<=0||num(o.hours)>24){toast('Hours must be between 1 and 24');return false;}
     if(S.techDays.some(d=>d.date===o.date&&d.name===o.name)){toast(o.name+' already has a day logged on that date. Edit it instead.');return false;}
     S.techDays.push({id:uid(),...o,by:meName()});toast('Day logged');});},
-  editDay(id){const d=byId(S.techDays,id);openForm('Edit day worked',dayFields(),d,o=>{Object.assign(d,o);});},
-  delDay(id){del(S.techDays,id,'logged day');},
+  editTDay(id){const d=byId(S.techDays,id);openForm('Edit day worked',dayFields(),d,o=>{Object.assign(d,o);});},
+  delTDay(id){del(S.techDays,id,'logged day');},
   payDay(id){const d=byId(S.techDays,id);openForm(`Add to pay: ${d.name}, ${fmtDs(d.date)} (${num(d.hours)} hours)`,[{k:'amount',label:'Pay for this day (Ksh)',type:'number',def:num(S.settings.subtechRate),req:true}],{},o=>{dayToPay(d,o.amount);toast('Added. Pay it under Staff & Wages.');});},
   payAllDays(){const l=S.techDays.filter(d=>!d.payId);openForm(`Add ${l.length} days to pay`,[{k:'amount',label:'Pay per day (Ksh)',type:'number',def:num(S.settings.subtechRate),req:true}],{},o=>{l.forEach(d=>dayToPay(d,o.amount));toast('Added. Pay them under Staff & Wages.');});},
   addUser(){userForm('');},
@@ -2073,6 +2073,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791742683';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791743368';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

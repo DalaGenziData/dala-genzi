@@ -180,13 +180,13 @@ const INV_CAT='Equipment & investment';
 const EXP_CATS=['Motorbike fuel','Tech salary','Electricity tokens','Wifi subscription','Materials','Repairs & maintenance','Transport','Airtime / SMS','Rent',INV_CAT,'Other'];
 const isInv=x=>x.category===INV_CAT;
 const SUBTECH_CAT='Sub-tech wages';
-const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['analysis','Analysis'],['report','Monthly Report'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup'],['crew','Sub-tech Days']];
+const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['analysis','Analysis'],['report','Monthly Report'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup'],['crew','Sub-tech Days'],['desk','Tech Requests & Refunds']];
 
 // Main menu: each main page holds related subpages, shown as tabs under the menu.
-const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','sitecosts','mat']],['Employees',['staff','crew','team']],['Profit & Loss',['pl','analysis','report','debts','bank']],['Owners',['directors','partners']],['Settings',['settings','activity','search']]];
-const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',analysis:'Analysis',report:'Monthly Report',sitecosts:'Costs per Site',search:'Search',activity:'Activity History',crew:'Sub-tech Days'};
+const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','sitecosts','mat']],['Employees',['staff','crew','desk','team']],['Profit & Loss',['pl','analysis','report','debts','bank']],['Owners',['directors','partners']],['Settings',['settings','activity','search']]];
+const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',analysis:'Analysis',report:'Monthly Report',sitecosts:'Costs per Site',search:'Search',activity:'Activity History',crew:'Sub-tech Days',desk:'Requests & Refunds'};
 // The technician sees only the technical pages; staff see everything except the Owners pages.
-const TECH_GROUPS=[['Customer Care',['tickets','issues']],['Sub-techs',['crew']],['Materials',['mat']],['Settings',['settings']]];
+const TECH_GROUPS=[['Customer Care',['tickets','issues']],['Sub-techs',['crew']],['Requests & Refunds',['desk']],['Materials',['mat']],['Settings',['settings']]];
 const navGroups=()=>isTech()?TECH_GROUPS:isOwner()?GROUPS:GROUPS.filter(g=>g[0]!=='Owners');
 const groupOf=pg=>navGroups().find(g=>g[1].includes(pg))||navGroups()[0];
 
@@ -197,7 +197,7 @@ function defaultState(){
   return {version:1,
     settings:{business:'Dala & Genzi WiFi',subtechRate:500,subtechName:'Sub-tech',techName:'Technician',techSalary:0,tokenWarnDays:30,wifiWarnDays:5,partners:['FIDEL','DOROTHY','MAURICE'],partnerShares:{},lastPayer:'',own:{},contacts:[['FIDELIS','+254740396568'],['DOROTHY','+254114920486'],['MAURICE','+254723025729']],remindDays:3},
     sites:SITES_SEED.map(s=>({...s,tokenMeter:'',powerName:'',powerPhone:'',tokenLastPaid:'',tokenLastAmount:0,wifiProvider:'',wifiAccount:'',wifiLastPaid:'',wifiAmount:0,wifiCycleDays:30,notes:''})),
-    earnings,expenses:[],subtech:[],store:[],toBuy:[],matLog:[],debts:[],issues:[],assets:[],targets:{},partnerTx:[],equityTx:[],tickets:[],crew:[],techDays:[],activity:[],lumpIncome:[],bankTx:[],employees:[],checks:[],lastBackup:''};
+    earnings,expenses:[],subtech:[],store:[],toBuy:[],matLog:[],debts:[],issues:[],assets:[],targets:{},partnerTx:[],equityTx:[],tickets:[],crew:[],techDays:[],techReq:[],techSpend:[],activity:[],lumpIncome:[],bankTx:[],employees:[],checks:[],lastBackup:''};
 }
 // Combine a backup into the current data without losing anything: union by id, the backup wins on the same entry.
 function mergeState(cur,inc){
@@ -237,7 +237,7 @@ function save(){
   scheduleSync();
 }
 /* ---------- online storage: when opened from the shared link, data lives in the artifact's database ---------- */
-const SPLIT=['expenses','subtech','matLog','checks','issues','partnerTx','bankTx','tickets','techDays'];
+const SPLIT=['expenses','subtech','matLog','checks','issues','partnerTx','bankTx','tickets','techDays','techReq','techSpend'];
 // Google hosting: the page runs inside Apps Script (google.script.run), or on another host that calls the
 // Apps Script web app at API_URL. Either way the data lives in the owner's Google Sheet.
 const GOOGLE_API='https://script.google.com/macros/s/AKfycbya2gpt059ZbFsh2IMXrWqeFObhJIfrISVSZo4AjQYWV-QeJBCswzU_MsMi1vK3Frx4/exec';
@@ -326,7 +326,7 @@ const isOwner=()=>ROLE==='owner'||!ROLES_OK.includes(ROLE);
 const isTech=()=>ROLE==='tech';
 const ROLES_OK=['owner','staff','tech'];
 // what a technician's phone may send back (the server checks the same rule)
-const TECH_WRITE=/^state\/((store|toBuy|crew)|(matLog|issues|tickets|techDays)@[^/]+)$/;
+const TECH_WRITE=/^state\/((store|toBuy|crew)|(matLog|issues|tickets|techDays|techReq|techSpend)@[^/]+)$/;
 // ask the server whose PIN this is: sets the name used in the history and hides owner pages from staff
 function setRole(w){
   const was=ROLE;ROLE=w.role||'owner';
@@ -691,6 +691,9 @@ function alerts(){
   });
   const noW=S.sites.filter(s=>!s.wifiLastPaid).length,noT=S.sites.filter(s=>!s.tokenLastPaid).length;
   if(noW||noT)a.push({cls:'b-info',tag:'Setup',html:`${noW} sites have no WiFi payment date and ${noT} have no token date. <a href="#bills" data-go="bills">Fill them in</a>`});
+  {const r=(S.techReq||[]).filter(x=>x.status!=='Done').length,o=(S.techSpend||[]).filter(x=>!x.paid);
+   if(r)a.push({cls:'b-info',tag:'Technician',html:`${r} request${r>1?'s':''} from the technician waiting. <a href="#desk" data-go="desk">Open</a>`});
+   if(o.length)a.push({cls:'b-warn',tag:'Refund',html:`Refund the technician ${fmt(sum(o,x=>num(x.amount)))} he spent from his own money. <a href="#desk" data-go="desk">Open</a>`});}
   S.store.filter(m=>num(m.minQty)>0&&num(m.qty)<=num(m.minQty)).forEach(m=>a.push({cls:'b-warn',tag:'Stock',html:`Low stock: ${esc(m.name)} (${num(m.qty)} ${esc(m.unit||'')} left)`}));
   const hi=S.toBuy.filter(b=>b.priority==='High').length;
   if(hi)a.push({cls:'b-warn',tag:'To buy',html:`${hi} high-priority item${hi>1?'s':''} on the shopping list`});
@@ -938,6 +941,36 @@ P.crew=()=>{
     </tbody></table></div>`:'<div class="empty">No days logged for this month.</div>'}
   </div>`;
 };
+/* ---------- technician requests and money he spent from his own pocket ---------- */
+const reqFields=()=>[fDate(),{k:'what',label:'What do you need us to do?',type:'textarea',req:true},{k:'site',label:'Site',type:'select',options:siteOpts(),def:'general'},{k:'urgency',label:'How urgent?',type:'select',options:['Urgent','This week','When possible'],def:'This week'}];
+const spendFields=()=>[fDate(),{k:'what',label:'What did you pay for?',req:true},{k:'amount',label:'Amount spent (Ksh)',type:'number',req:true},{k:'site',label:'Site',type:'select',options:siteOpts(),def:'general'},{k:'note',label:'Paid to / M-Pesa code / note'}];
+P.desk=()=>{
+  const req=[...S.techReq].sort((a,b)=>(a.status==='Done')-(b.status==='Done')||b.date.localeCompare(a.date));
+  const sp=[...S.techSpend].sort((a,b)=>(!!a.paid)-(!!b.paid)||b.date.localeCompare(a.date));
+  const owed=sp.filter(x=>!x.paid),uc={Urgent:'b-bad','This week':'b-warn'};
+  return `
+  <div class="card"><div class="h2row"><h2>${isTech()?'Requests to the owners':'Requests from the technician'}</h2>${isTech()?'<button class="btn primary" data-act="addReq">+ New request</button>':''}</div>
+    ${req.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Request</th><th>Site</th><th>Urgency</th><th>Status</th><th>Owners' reply</th><th></th></tr></thead><tbody>
+    ${req.map(r=>`<tr><td>${fmtD(r.date)}</td><td class="wrap"><b>${esc(r.what)}</b>${r.by?`<div class="small muted">by ${esc(r.by)}</div>`:''}</td><td>${esc(siteName(r.site))}</td><td><span class="badge ${uc[r.urgency]||'b-info'}">${esc(r.urgency||'')}</span></td>
+      <td><span class="badge ${r.status==='Done'?'b-ok':r.status==='Seen'?'b-info':'b-warn'}">${esc(r.status||'Open')}</span></td><td class="wrap small">${esc(r.reply||'')}</td>
+      <td><div class="row" style="flex-wrap:nowrap">${isTech()?(r.status==='Done'?'':`<button class="btn sm" data-act="editReq" data-id="${r.id}">Edit</button>`):`<button class="btn sm good" data-act="answerReq" data-id="${r.id}">Reply</button>`}<button class="btn sm danger" data-act="delReq" data-id="${r.id}">✕</button></div></td></tr>`).join('')}
+    </tbody></table></div>`:`<div class="empty">${isTech()?'Nothing asked yet. Add anything you need: materials, transport, a decision, a payment to a supplier…':'No requests from the technician.'}</div>`}
+  </div>
+  <div class="card"><div class="h2row"><h2>${isTech()?'Money I spent (to be refunded)':'Money the technician spent (refunds)'}</h2>${isTech()?'<button class="btn primary" data-act="addSpend">+ I spent money</button>':''}</div>
+    <div class="kpis"><div class="kpi"><div class="l">Waiting for refund</div><div class="v ${owed.length?'neg':''}">${fmt(sum(owed,x=>num(x.amount)))}</div><div class="s">${owed.length} item${owed.length===1?'':'s'}</div></div>
+      <div class="kpi"><div class="l">Refunded so far</div><div class="v">${fmt(sum(sp.filter(x=>x.paid),x=>num(x.amount)))}</div></div></div>
+    ${!isTech()&&owed.length>1?`<div class="row" style="margin-bottom:10px"><button class="btn good" data-act="refundAll">Refund all ${owed.length}: ${fmt(sum(owed,x=>num(x.amount)))}</button></div>`:''}
+    ${sp.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>What for</th><th>Site</th><th class="n">Amount</th><th>Note</th><th>Refund</th><th></th></tr></thead><tbody>
+    ${sp.map(x=>`<tr><td>${fmtD(x.date)}</td><td class="wrap"><b>${esc(x.what)}</b>${x.by?`<div class="small muted">by ${esc(x.by)}</div>`:''}</td><td>${esc(siteName(x.site))}</td><td class="n">${fmt(num(x.amount))}</td><td class="wrap small">${esc(x.note||'')}</td>
+      <td>${x.paid?`<span class="badge b-ok">Refunded ${esc(fmtDs(x.paidOn||''))}</span>`:isTech()?'<span class="badge b-warn">Waiting</span>':`<button class="btn sm good" data-act="refund" data-id="${x.id}">Refund</button>`}</td>
+      <td><div class="row" style="flex-wrap:nowrap">${x.paid?'':`<button class="btn sm" data-act="editSpend" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delSpend" data-id="${x.id}">✕</button>`}</div></td></tr>`).join('')}
+    </tbody></table></div>`:`<div class="empty">${isTech()?'When you pay for something yourself, add it here so the owners can refund you.':'Nothing spent by the technician yet.'}</div>`}
+    ${isTech()?'':'<p class="small muted">Tapping <b>Refund</b> marks it as paid back and records the cost under Running Costs on the day it was spent.</p>'}
+  </div>`;
+};
+function refundOne(x,o){addExpense({date:x.date,category:o.category,site:x.site||'general',amount:num(x.amount),desc:'Refund to technician: '+x.what+(x.by?' ('+x.by+')':''),paidBy:o.paidBy});Object.assign(x,{paid:true,paidOn:o.paidOn,paidBy:o.paidBy});}
+const refundFields=()=>[fDate('paidOn','Refunded on'),fPaid('Refunded by'),{k:'category',label:'Count it as',type:'select',options:EXP_CATS,def:'Repairs & maintenance'}];
+
 // owners: turn logged days into sub-tech pay (the Staff & Wages list), one record per day
 function dayToPay(d,amount){const w={id:uid(),date:d.date,name:d.name,site:d.site||'general',task:(d.task?d.task+' · ':'')+num(d.hours)+'h',amount:num(amount),paid:false,paidOn:''};S.subtech.push(w);d.payId=w.id;}
 
@@ -1642,6 +1675,15 @@ const empNames=()=>S.employees.map(e=>e.name);
 const issueFields=()=>[fDate(),{k:'site',label:'Site',type:'select',options:siteOpts(),def:'dala1'},{k:'problem',label:'Problem',type:'textarea',req:true},{k:'action',label:'Action taken',type:'textarea'},{k:'assignedTo',label:'Assigned to',type:'select',options:[['','Not assigned'],...empNames()]},{k:'status',label:'Status',type:'select',options:['Open','Fixed'],def:'Open'}];
 
 const ACT={
+  addReq(){openForm('New request to the owners',reqFields(),{},o=>{S.techReq.push({id:uid(),...o,status:'Open',by:meName()});toast('Request sent to the owners');});},
+  editReq(id){const r=byId(S.techReq,id);openForm('Edit request',reqFields(),r,o=>{Object.assign(r,o);});},
+  answerReq(id){const r=byId(S.techReq,id);openForm('Reply to the technician',[{k:'status',label:'Status',type:'select',options:['Open','Seen','Done']},{k:'reply',label:'Your reply (he sees this)',type:'textarea'}],{...r,status:r.status==='Open'?'Seen':r.status},o=>{Object.assign(r,o);});},
+  delReq(id){del(S.techReq,id,'request');},
+  addSpend(){openForm('Money I spent',spendFields(),{},o=>{if(num(o.amount)<=0){toast('Enter the amount spent');return false;}S.techSpend.push({id:uid(),...o,amount:num(o.amount),by:meName(),paid:false});toast('Saved. The owners will refund you.');});},
+  editSpend(id){const x=byId(S.techSpend,id);openForm('Edit money spent',spendFields(),x,o=>{Object.assign(x,o,{amount:num(o.amount)});});},
+  delSpend(id){del(S.techSpend,id,'money spent');},
+  refund(id){const x=byId(S.techSpend,id);openForm(`Refund ${fmt(num(x.amount))}: ${x.what}`,refundFields(),{},o=>{refundOne(x,o);toast('Refunded');});},
+  refundAll(){const l=S.techSpend.filter(x=>!x.paid);openForm(`Refund ${l.length} items: ${fmt(sum(l,x=>num(x.amount)))}`,refundFields(),{},o=>{l.forEach(x=>refundOne(x,o));toast('Refunded');});},
   addCrew(){openForm('Add sub-tech',crewFields,{},o=>{if(S.crew.some(c=>c.name.toLowerCase()===o.name.trim().toLowerCase())){toast('That name is already in the list');return false;}S.crew.push({id:uid(),...o,name:o.name.trim()});});},
   editCrew(id){const c=byId(S.crew,id),old=c.name;openForm('Edit sub-tech',crewFields,c,o=>{Object.assign(c,o);if(o.name!==old)S.techDays.forEach(d=>{if(d.name===old)d.name=o.name;});});},
   delCrew(id){del(S.crew,id,'sub-tech');},
@@ -1890,6 +1932,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791738008';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791738173';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

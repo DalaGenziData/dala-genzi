@@ -1566,6 +1566,14 @@ const PENDING=[];
 function reconcileBills(){
   let ch=false;
   const done=S.settings.pendingDone=S.settings.pendingDone||[];
+  // FIDEL, 11 Oct 2026: the store items added that day were paid for in earlier months, so their cost is taken
+  // off Running Costs once (the items stay in the store). Only after the online copy is loaded, so it sticks.
+  if(ONLINE&&!done.includes('nocost-20261011')){
+    const NAMES=['router xpon','atb','pachcode','media converter','outdoor cable','indoor cable','microtik rb 951'];
+    const hit=e=>e.date==='2026-10-11'&&e.category==='Materials'&&NAMES.some(n=>new RegExp('^[\\d.]+ \\S+ '+n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'$','i').test(String(e.desc||'').trim()));
+    S.expenses.filter(hit).forEach(e=>{S.expenses.splice(S.expenses.indexOf(e),1);logAct('Took off a cost already paid in earlier months: '+e.desc+' ('+fmt(num(e.amount))+')',{key:'expenses',item:e});});
+    done.push('nocost-20261011');ch=true;
+  }
   for(const x of PENDING){
     if(done.includes(x.id))continue;
     if(!S.expenses.some(e=>e.id===x.id||(e.site===x.site&&e.category===x.category&&num(e.amount)===num(x.amount)&&String(e.date).slice(0,7)===x.date.slice(0,7))))S.expenses.push({...x});
@@ -1641,9 +1649,10 @@ const ACT={
   payWifi(id){const s=site(id);openForm(`Pay WiFi: ${s.name}`,[fDate(),{k:'amount',label:'Amount (Ksh)',type:'number',req:true,def:s.wifiAmount||''},{k:'cycle',label:'Subscription lasts (days)',type:'number',def:s.wifiCycleDays||30},fPaid(),{k:'desc',label:'Note',def:s.wifiAccount?'Acc '+s.wifiAccount:''}],{},o=>{
     if(!s.wifiLastPaid||o.date>=s.wifiLastPaid){s.wifiLastPaid=o.date;s.wifiAmount=o.amount;s.wifiCycleDays=o.cycle||30;s.wifiCounted=o.date;}
     addExpense({date:o.date,category:'Wifi subscription',site:id,amount:o.amount,desc:o.desc,paidBy:o.paidBy});toast('WiFi payment saved and counted in costs');});},
-  addStore(){openForm('Add item to store',[...storeFields,fDate(),fPaid()],{},o=>{
-    const {date,paidBy,...item}=o;S.store.push({id:uid(),...item});S.matLog.push({id:uid(),date,name:o.name,qty:o.qty,type:'In',site:'',note:'Added to store'});
-    const cost=num(o.qty)*num(o.unitCost);if(cost)addExpense({date,category:'Materials',site:'general',amount:cost,desc:`${o.qty} ${o.unit} ${o.name}`,paidBy});});},
+  addStore(){openForm('Add item to store',[...storeFields,fDate(),{k:'newCost',label:'Was this bought now?',type:'select',options:['Yes, count the cost as money spent','No, already paid before'],def:'Yes, count the cost as money spent'},fPaid()],{},o=>{
+    const {date,paidBy,newCost,...item}=o;
+    S.store.push({id:uid(),...item});S.matLog.push({id:uid(),date,name:o.name,qty:o.qty,type:'In',site:'',note:'Added to store'});
+    const cost=String(o.newCost||'').startsWith('No')?0:num(o.qty)*num(o.unitCost);if(cost)addExpense({date,category:'Materials',site:'general',amount:cost,desc:`${o.qty} ${o.unit} ${o.name}`,paidBy});});},
   editStore(id){const m=byId(S.store,id);openForm('Edit store item',storeFields,m,o=>{Object.assign(m,o);});},
   delStore(id){del(S.store,id,'store item');},
   stockIn(id){const m=byId(S.store,id);openForm(`Add stock: ${m.name}`,[fDate(),{k:'qty',label:'Quantity added',type:'number',req:true},{k:'cost',label:'Total cost paid (Ksh)',type:'number',hint:'Leave 0 if not bought now'},fPaid()],{},o=>{
@@ -1841,6 +1850,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791737104';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791737661';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

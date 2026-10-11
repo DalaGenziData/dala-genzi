@@ -46,6 +46,18 @@ const TECH_READ = {
   'state/employees': v => (v || []).map(e => ({ id: e.id, name: e.name, role: e.role, phone: e.phone })),
   'state/settings': v => { v = v || {}; return { business: v.business, techName: v.techName, subtechName: v.subtechName, codes: v.codes, tokenWarnDays: v.tokenWarnDays, wifiWarnDays: v.wifiWarnDays }; },
 };
+// Staff see the business pages but not the owners' own money: directors' capital, partner money in/out, shares.
+const STAFF_HIDE = /^state\/(equityTx(@[^/]+)?|partnerTx(@[^/]+)?)$/;
+const OWNER_SETTINGS = ['own', 'partnerShares'];
+function staffDocs(docs) {
+  const out = {};
+  for (const p in docs) {
+    if (STAFF_HIDE.test(p)) continue;
+    if (p === 'state/settings') { try { const d = JSON.parse(docs[p]); OWNER_SETTINGS.forEach(k => { if (d.v) delete d.v[k]; }); out[p] = JSON.stringify(d); } catch (e) {} continue; }
+    out[p] = docs[p];
+  }
+  return out;
+}
 function techDocs(docs) {
   const out = {};
   for (const p in docs) {
@@ -124,11 +136,22 @@ const FNS = {
     const { results } = await db.prepare('SELECT path, data FROM docs').all();
     const docs = {};
     for (const r of results) docs[r.path] = r.data;
-    return { docs: me.role === 'tech' ? techDocs(docs) : docs, stamp: await stamp(db) };
+    return { docs: me.role === 'tech' ? techDocs(docs) : me.role === 'staff' ? staffDocs(docs) : docs, stamp: await stamp(db) };
   },
   async saveDocs(db, pin, sets, dels) {
     const me = await checkPin(db, pin);
     if (me.role === 'tech' && ([...Object.keys(sets || {}), ...(dels || [])].some(p => !TECH_WRITE.test(p)) || (dels || []).includes('state/sites'))) throw new Error('not_allowed');
+    if (me.role === 'staff') {
+      if ([...Object.keys(sets || {}), ...(dels || [])].some(p => STAFF_HIDE.test(p)) || (dels || []).includes('state/settings')) throw new Error('not_allowed');
+      if (sets && sets['state/settings']) {
+        // staff never had the owners' settings, so keep the saved ones
+        const r = await db.prepare('SELECT data FROM docs WHERE path = ?').bind('state/settings').first();
+        const cur = r ? (JSON.parse(r.data).v || {}) : {}, inc = JSON.parse(sets['state/settings']);
+        inc.v = inc.v || {};
+        OWNER_SETTINGS.forEach(k => { if (cur[k] !== undefined) inc.v[k] = cur[k]; else delete inc.v[k]; });
+        sets = { ...sets, 'state/settings': JSON.stringify(inc) };
+      }
+    }
     if (me.role === 'tech' && sets && sets['state/sites']) {
       // the technician's copy of a site is laid over the saved one, so nothing he never had can be lost
       const r = await db.prepare('SELECT data FROM docs WHERE path = ?').bind('state/sites').first();

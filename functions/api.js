@@ -40,7 +40,7 @@ async function checkPin(db, pin) {
 const ROLES = ['owner', 'staff', 'tech'];
 
 // The technician ('tech') only ever receives and changes the technical records. Money data never leaves the server.
-const TECH_WRITE = /^state\/((store|toBuy|crew|sites)|(matLog|issues|tickets|techDays|techReq|techSpend)@[^/]+)$/;
+const TECH_WRITE = /^state\/((store|toBuy|crew|sites)|(matLog|issues|tickets|techDays|techReq|techSpend|techReports)@[^/]+)$/;
 // Read-only for the technician, cut down to the fields the tech pages need.
 const TECH_READ = {
   'state/employees': v => (v || []).map(e => ({ id: e.id, name: e.name, role: e.role, phone: e.phone })),

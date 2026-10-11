@@ -180,13 +180,13 @@ const INV_CAT='Equipment & investment';
 const EXP_CATS=['Motorbike fuel','Tech salary','Electricity tokens','Wifi subscription','Materials','Repairs & maintenance','Transport','Airtime / SMS','Rent',INV_CAT,'Other'];
 const isInv=x=>x.category===INV_CAT;
 const SUBTECH_CAT='Sub-tech wages';
-const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['analysis','Analysis'],['report','Monthly Report'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup'],['crew','Sub-tech Days'],['desk','Tech Requests & Refunds']];
+const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['analysis','Analysis'],['report','Monthly Report'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup'],['crew','Sub-tech Days'],['desk','Tech Requests & Refunds'],['reports','Technician Reports']];
 
 // Main menu: each main page holds related subpages, shown as tabs under the menu.
-const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','sitecosts','mat']],['Employees',['staff','crew','desk','team']],['Profit & Loss',['pl','analysis','report','debts','bank']],['Owners',['directors','partners']],['Settings',['settings','activity','search']]];
-const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',analysis:'Analysis',report:'Monthly Report',sitecosts:'Costs per Site',search:'Search',activity:'Activity History',crew:'Sub-tech Days',desk:'Requests & Refunds'};
+const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','sitecosts','mat']],['Employees',['staff','crew','desk','reports','team']],['Profit & Loss',['pl','analysis','report','debts','bank']],['Owners',['directors','partners']],['Settings',['settings','activity','search']]];
+const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',analysis:'Analysis',report:'Monthly Report',sitecosts:'Costs per Site',search:'Search',activity:'Activity History',crew:'Sub-tech Days',desk:'Requests & Refunds',reports:'Tech Reports'};
 // The technician sees only the technical pages; staff see everything except the Owners pages.
-const TECH_GROUPS=[['Customer Care',['tickets','issues']],['Tokens & WiFi',['bills']],['Sub-techs',['crew']],['Requests & Refunds',['desk']],['Materials',['mat']],['Settings',['settings']]];
+const TECH_GROUPS=[['Customer Care',['tickets','issues']],['Tokens & WiFi',['bills']],['Sub-techs',['crew']],['Requests & Refunds',['desk']],['Reports',['reports']],['Materials',['mat']],['Settings',['settings']]];
 const navGroups=()=>isTech()?TECH_GROUPS:isOwner()?GROUPS:GROUPS.filter(g=>g[0]!=='Owners');
 const groupOf=pg=>navGroups().find(g=>g[1].includes(pg))||navGroups()[0];
 
@@ -197,7 +197,7 @@ function defaultState(){
   return {version:1,
     settings:{business:'Dala & Genzi WiFi',subtechRate:500,subtechName:'Sub-tech',techName:'Technician',techSalary:0,tokenWarnDays:30,wifiWarnDays:5,partners:['FIDEL','DOROTHY','MAURICE'],partnerShares:{},lastPayer:'',own:{},contacts:[['FIDELIS','+254740396568'],['DOROTHY','+254114920486'],['MAURICE','+254723025729']],remindDays:3,codes:{FIDELIS:'0740396568',FIDEL:'0740396568',DOROTHY:'0114920486',MAURICE:'0723025729'}},
     sites:SITES_SEED.map(s=>({...s,tokenMeter:'',powerName:'',powerPhone:'',tokenLastPaid:'',tokenLastAmount:0,wifiProvider:'',wifiAccount:'',wifiLastPaid:'',wifiAmount:0,wifiCycleDays:30,notes:''})),
-    earnings,expenses:[],subtech:[],store:[],toBuy:[],matLog:[],debts:[],issues:[],assets:[],targets:{},partnerTx:[],equityTx:[],tickets:[],crew:[],techDays:[],techReq:[],techSpend:[],activity:[],lumpIncome:[],bankTx:[],employees:[],checks:[],lastBackup:''};
+    earnings,expenses:[],subtech:[],store:[],toBuy:[],matLog:[],debts:[],issues:[],assets:[],targets:{},partnerTx:[],equityTx:[],tickets:[],crew:[],techDays:[],techReq:[],techSpend:[],techReports:[],activity:[],lumpIncome:[],bankTx:[],employees:[],checks:[],lastBackup:''};
 }
 // Combine a backup into the current data without losing anything: union by id, the backup wins on the same entry.
 function mergeState(cur,inc){
@@ -240,7 +240,7 @@ function save(){
   scheduleSync();
 }
 /* ---------- online storage: when opened from the shared link, data lives in the artifact's database ---------- */
-const SPLIT=['expenses','subtech','matLog','checks','issues','partnerTx','bankTx','tickets','techDays','techReq','techSpend'];
+const SPLIT=['expenses','subtech','matLog','checks','issues','partnerTx','bankTx','tickets','techDays','techReq','techSpend','techReports'];
 // Google hosting: the page runs inside Apps Script (google.script.run), or on another host that calls the
 // Apps Script web app at API_URL. Either way the data lives in the owner's Google Sheet.
 const GOOGLE_API='https://script.google.com/macros/s/AKfycbya2gpt059ZbFsh2IMXrWqeFObhJIfrISVSZo4AjQYWV-QeJBCswzU_MsMi1vK3Frx4/exec';
@@ -329,7 +329,7 @@ const isOwner=()=>ROLE==='owner'||!ROLES_OK.includes(ROLE);
 const isTech=()=>ROLE==='tech';
 const ROLES_OK=['owner','staff','tech'];
 // what a technician's phone may send back (the server checks the same rule)
-const TECH_WRITE=/^state\/((store|toBuy|crew|sites)|(matLog|issues|tickets|techDays|techReq|techSpend)@[^/]+)$/;
+const TECH_WRITE=/^state\/((store|toBuy|crew|sites)|(matLog|issues|tickets|techDays|techReq|techSpend|techReports)@[^/]+)$/;
 // ask the server whose PIN this is: sets the name used in the history and hides owner pages from staff
 function setRole(w){
   const was=ROLE;ROLE=w.role||'owner';
@@ -695,6 +695,8 @@ function alerts(){
   const noW=S.sites.filter(s=>!s.wifiLastPaid).length,noT=S.sites.filter(s=>!s.tokenLastPaid).length;
   if(noW||noT)a.push({cls:'b-info',tag:'Setup',html:`${noW} sites have no WiFi payment date and ${noT} have no token date. <a href="#bills" data-go="bills">Fill them in</a>`});
   {const r=(S.techReq||[]).filter(x=>x.status!=='Done').length,o=(S.techSpend||[]).filter(x=>!x.paid);
+   const nr=(S.techReports||[]).filter(x=>x.status!=='Read').length;
+   if(nr)a.push({cls:'b-info',tag:'Report',html:`${nr} new report${nr>1?'s':''} from the technician. <a href="#reports" data-go="reports">Read</a>`});
    if(r)a.push({cls:'b-info',tag:'Technician',html:`${r} request${r>1?'s':''} from the technician waiting. <a href="#desk" data-go="desk">Open</a>`});
    if(o.length)a.push({cls:'b-warn',tag:'Refund',html:`Refund the technician ${fmt(sum(o,x=>num(x.amount)))} he spent from his own money. <a href="#desk" data-go="desk">Open</a>`});}
   S.store.filter(m=>num(m.minQty)>0&&num(m.qty)<=num(m.minQty)).forEach(m=>a.push({cls:'b-warn',tag:'Stock',html:`Low stock: ${esc(m.name)} (${num(m.qty)} ${esc(m.unit||'')} left)`}));
@@ -976,6 +978,31 @@ P.desk=()=>{
 };
 function refundOne(x,o){addExpense({date:x.date,category:o.category,site:x.site||'general',amount:num(x.amount),desc:'Refund to technician: '+x.what+(x.by?' ('+x.by+')':''),paidBy:o.paidBy});Object.assign(x,{paid:true,paidOn:o.paidOn,paidBy:o.paidBy});}
 const refundFields=()=>[fDate('paidOn','Refunded on'),fPaid('Refunded by'),{k:'category',label:'Count it as',type:'select',options:EXP_CATS,def:'Repairs & maintenance'}];
+
+/* ---------- technician reports: written report, materials used (taken out of the store) and money spent (sent for refund) ---------- */
+const REP_MAT=5,REP_MON=4;
+function reportFields(){
+  const items=[['','—'],...S.store.map(m=>[m.id,`${m.name} (${num(m.qty)} ${m.unit||''} in store)`])];
+  const f=[fDate(),{k:'site',label:'Site',type:'select',options:siteOpts(),def:'general'},{k:'title',label:'Title',req:true,hint:'For example: Dala 3 outage fixed'},{k:'body',label:'Report',type:'textarea',req:true,hint:'Write everything: what happened, what you did, what is still needed.'}];
+  for(let i=1;i<=REP_MAT;i++)f.push({k:'m'+i,label:'Material used '+i,type:'select',options:items},{k:'q'+i,label:'Quantity used '+i,type:'number'});
+  for(let i=1;i<=REP_MON;i++)f.push({k:'w'+i,label:'Money I spent '+i+': what for'},{k:'a'+i,label:'Amount '+i+' (Ksh)',type:'number'});
+  return f;
+}
+P.reports=()=>{
+  const L=[...S.techReports].sort((a,b)=>b.date.localeCompare(a.date)||String(b.addedAt||'').localeCompare(String(a.addedAt||'')));
+  return `
+  <div class="card"><div class="h2row"><h2>${isTech()?'My reports':'Reports from the technician'}</h2>${isTech()?'<button class="btn primary" data-act="addReport">+ Write a report</button>':''}</div>
+    <p class="small muted" style="margin-top:0">${isTech()?'Write what you did, add the materials you used (they are taken out of the store) and any money you spent (it goes to Requests &amp; Refunds so the owners can refund you). Both partners read it here.':'Every report the technician submits. Materials he lists were taken out of the store, and money he lists is waiting under Requests &amp; Refunds.'}</p>
+  </div>
+  ${L.length?L.map(r=>`<div class="card"><div class="h2row" style="margin-bottom:4px"><h2 style="margin:0">${esc(r.title)}</h2><span class="badge ${r.status==='Read'?'b-ok':'b-warn'}">${r.status==='Read'?'Read'+(r.readBy?' by '+esc(r.readBy):''):'New'}</span></div>
+    <div class="small muted">${fmtD(r.date)} · ${esc(siteName(r.site))}</div>${stampLine(r)}
+    <p style="white-space:pre-wrap">${esc(r.body)}</p>
+    ${(r.materials||[]).length?`<div class="sec">Materials used</div><ul class="small">${r.materials.map(m=>`<li>${num(m.qty)} ${esc(m.unit||'')} ${esc(m.name)}</li>`).join('')}</ul>`:''}
+    ${(r.spent||[]).length?`<div class="sec">Money spent (to refund)</div><ul class="small">${r.spent.map(x=>`<li>${esc(x.what)}: <b>${fmt(num(x.amount))}</b></li>`).join('')}</ul><div class="small">Total ${fmt(sum(r.spent,x=>num(x.amount)))}</div>`:''}
+    ${r.comment?`<div class="note"><b>Owners' comment${r.readBy?' ('+esc(r.readBy)+')':''}:</b> ${esc(r.comment)}</div>`:''}
+    ${isTech()?'':`<div class="row"><button class="btn sm good" data-act="readReport" data-id="${r.id}">${r.status==='Read'?'Change comment':'Mark as read'}</button><button class="btn sm danger" data-act="delReport" data-id="${r.id}">Delete</button></div>`}
+  </div>`).join(''):`<div class="card"><div class="empty">${isTech()?'No reports yet. Tap Write a report.':'No reports yet.'}</div></div>`}`;
+};
 
 // owners: turn logged days into sub-tech pay (the Staff & Wages list), one record per day
 function dayToPay(d,amount){const w={id:uid(),date:d.date,name:d.name,site:d.site||'general',task:(d.task?d.task+' · ':'')+num(d.hours)+'h',amount:num(amount),paid:false,paidOn:''};S.subtech.push(w);d.payId=w.id;}
@@ -1710,6 +1737,19 @@ const empNames=()=>S.employees.map(e=>e.name);
 const issueFields=()=>[fDate(),{k:'site',label:'Site',type:'select',options:siteOpts(),def:'dala1'},{k:'problem',label:'Problem',type:'textarea',req:true},{k:'action',label:'Action taken',type:'textarea'},{k:'assignedTo',label:'Assigned to',type:'select',options:[['','Not assigned'],...empNames()]},{k:'status',label:'Status',type:'select',options:['Open','Fixed'],def:'Open'}];
 
 const ACT={
+  addReport(){openForm('Write a report',reportFields(),{},o=>{
+    const mats=[],spent=[];
+    for(let i=1;i<=REP_MAT;i++){if(!o['m'+i]||num(o['q'+i])<=0)continue;const m=byId(S.store,o['m'+i]);if(!m)continue;
+      const already=sum(mats.filter(x=>x.id===m.id),x=>x.qty);if(num(o['q'+i])+already>num(m.qty)){toast(`Only ${num(m.qty)} ${m.unit||''} ${m.name} in store. Lower the quantity.`);return false;}
+      mats.push({id:m.id,name:m.name,unit:m.unit||'',qty:num(o['q'+i])});}
+    for(let i=1;i<=REP_MON;i++){if(num(o['a'+i])<=0)continue;spent.push({what:o['w'+i]||'Not said',amount:num(o['a'+i])});}
+    const id=uid();
+    mats.forEach(x=>{const m=byId(S.store,x.id);m.qty=num(m.qty)-x.qty;S.matLog.push({id:uid(),date:o.date,name:m.name,qty:x.qty,type:'Out',site:o.site,note:'Report: '+o.title});});
+    spent.forEach(x=>S.techSpend.push({id:uid(),date:o.date,what:x.what,amount:x.amount,site:o.site,note:'From report: '+o.title,by:meName(),paid:false,report:id}));
+    S.techReports.push({id,date:o.date,site:o.site,title:o.title,body:o.body,materials:mats,spent,status:'New',by:meName()});
+    toast('Report submitted');});},
+  readReport(id){const r=byId(S.techReports,id);openForm('Read: '+r.title,[{k:'comment',label:'Comment for the technician (optional)',type:'textarea'}],r,o=>{Object.assign(r,o,{status:'Read',readBy:meName()||'Owner'});});},
+  delReport(id){del(S.techReports,id,'report');},
   bankStart(){const o=S.settings.bankOpen||{};openForm('Starting balance',[fDate('date','Balance counted on'),...BANKS.map(([id,n])=>({k:id,label:n+' balance that day (Ksh)',type:'number',def:num((o[id]||{}).amount)}))],{date:(o.coop||{}).date||today()},v=>{
     S.settings.bankOpen={};BANKS.forEach(([id])=>S.settings.bankOpen[id]={date:v.date,amount:num(v[id])});toast('Starting balance saved');});},
   bankEarn(id){const g=(BANKS.find(b=>b[0]===id)||[])[2],d=addDays(today(),-1);
@@ -1976,6 +2016,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791738728';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791740046';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

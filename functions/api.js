@@ -72,6 +72,17 @@ async function checkOwner(db, pin) {
   return me;
 }
 
+// Private link: when a key is saved, the website only opens for phones that came in through https://dalawifi.com/?k=<key>.
+let gateCache = { at: 0, v: null };
+export async function gateKey(env) {
+  if (!env.DB) return null;
+  if (Date.now() - gateCache.at < 30000) return gateCache.v;
+  await ready(env.DB);
+  gateCache = { at: Date.now(), v: (await getMeta(env.DB, 'gate')) || null };
+  return gateCache.v;
+}
+const newKey = () => [...crypto.getRandomValues(new Uint8Array(12))].map(b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('');
+
 const stamp = async db => (await getMeta(db, 'stamp')) || '0';
 
 const FNS = {
@@ -81,6 +92,19 @@ const FNS = {
   async listUsers(db, pin) {
     await checkOwner(db, pin);
     return (await users(db)).map(u => ({ name: u.name, role: u.role }));
+  },
+  async getGate(db, pin) {
+    await checkOwner(db, pin);
+    return { key: (await getMeta(db, 'gate')) || '' };
+  },
+  // on: true makes a new private link (old links stop working); on: false opens the website to anyone with the address again
+  async setGate(db, pin, on) {
+    await checkOwner(db, pin);
+    const key = on ? newKey() : '';
+    if (key) await db.prepare('INSERT INTO meta (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v').bind('gate', key).run();
+    else await db.prepare('DELETE FROM meta WHERE k = ?').bind('gate').run();
+    gateCache = { at: Date.now(), v: key || null };
+    return { key };
   },
   // set or change one person's PIN; an empty newPin removes the person
   async setUser(db, pin, name, role, newPin) {
@@ -187,7 +211,7 @@ export async function onRequestPost({ request, env }) {
 }
 
 export async function onRequestGet({ env }) {
-  return new Response(env.DB ? 'Dala & Genzi data service is working.' : 'Database not connected yet.', { headers: { 'content-type': 'text/plain' } });
+  return new Response(env.DB ? 'OK' : 'Database not connected yet.', { headers: { 'content-type': 'text/plain' } });
 }
 
 

@@ -1868,6 +1868,15 @@ function reconcileBills(){
     S.expenses.filter(hit).forEach(e=>{S.expenses.splice(S.expenses.indexOf(e),1);logAct('Took off a cost already paid in earlier months: '+e.desc+' ('+fmt(num(e.amount))+')',{key:'expenses',item:e});});
     done.push('nocost-20261011');ch=true;
   }
+  // FIDEL, 12 Oct 2026: 17 routers were used at Kibos today; take them out of the store once.
+  if(ONLINE&&!done.includes('kibos-routers-20261012')){
+    const R=S.store.filter(m=>/router/i.test(m.name)),site=(S.sites.find(x=>/kibos/i.test(x.name))||{}).id||'general';
+    const already=S.matLog.some(l=>l.type==='Out'&&l.date==='2026-10-12'&&num(l.qty)===17&&/router/i.test(l.name));
+    if(already){}
+    else if(R.length===1){const m=R[0];m.qty=num(m.qty)-17;S.matLog.push({id:uid(),date:'2026-10-12',name:m.name,qty:17,type:'Out',site,note:'Used at Kibos'});logAct('Took 17 '+m.name+' out of the store: used at Kibos on 12 Oct');toast('17 '+m.name+' taken out of the store for Kibos. '+num(m.qty)+' left.');}
+    else{logAct('Could not take out the 17 Kibos routers: '+(R.length?'more than one router item in the store':'no router item in the store'));setTimeout(()=>toast('Please take out the 17 Kibos routers yourself: Materials → − Use on the router row.'),1500);}
+    done.push('kibos-routers-20261012');ch=true;
+  }
   for(const x of PENDING){
     if(done.includes(x.id))continue;
     if(!S.expenses.some(e=>e.id===x.id||(e.site===x.site&&e.category===x.category&&num(e.amount)===num(x.amount)&&String(e.date).slice(0,7)===x.date.slice(0,7))))S.expenses.push({...x});
@@ -2265,6 +2274,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791837805';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791838759';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

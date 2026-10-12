@@ -422,6 +422,8 @@ const pct=(a,b)=>b?((a-b)/b*100):null;
 const site=id=>S.sites.find(s=>s.id===id);
 const siteName=id=>id==='general'?'General (all sites)':(site(id)||{name:id||'—'}).name;
 const siteOpts=(general=true)=>[...(general?[['general','General (all sites)']]:[]),...S.sites.map(s=>[s.id,s.name])];
+// a site with any earnings, costs or records must stay, or its history would be lost
+const siteUsed=id=>Object.values(S.earnings).some(r=>r[id]!==undefined)||[S.expenses,S.subtech,S.issues,S.tickets,S.assets,S.techDays,S.techSpend,S.matLog].some(a=>(a||[]).some(x=>x.site===id));
 const groupBadge=s=>`<span class="badge ${s.group==='Genzi'?'b-genzi':'b-dala'}">${esc(s.group)}</span>`;
 const pnl=v=>`<span class="${v<0?'neg':'pos'}">${fmt(v)}</span>`;
 function ask(msg,ok='Yes'){return new Promise(res=>{const d=$('#dlg2');d.innerHTML=`<form class="mform"><p style="margin:0 0 14px">${esc(msg)}</p><div class="mact"><button type="button" class="btn" data-no>Cancel</button><button class="btn primary" type="submit">${esc(ok)}</button></div></form>`;let v=false;d.querySelector('[data-no]').onclick=()=>d.close();d.querySelector('form').onsubmit=e=>{e.preventDefault();v=true;d.close();};d.onclose=()=>res(v);d.showModal();});}
@@ -838,6 +840,7 @@ P.bills=()=>{
   const hist=S.expenses.filter(x=>x.category==='Electricity tokens'||x.category==='Wifi subscription').sort((a,b)=>b.date.localeCompare(a.date)).slice(0,40);
   return `
   <div class="note">Keep each site's token meter number and WiFi account here. Use <b>Pay token</b> or <b>Pay WiFi</b> when you pay: it updates the last paid date and adds the cost to Running Costs automatically.</div>
+  ${isOwner()?'<div class="row" style="margin-bottom:12px"><button class="btn primary" data-act="addSite">+ Add new site</button></div>':''}
   <div class="scards">${S.sites.map(s=>{const k=tokenStatus(s),w=wifiStatus(s);return `
     <div class="scard"><div class="h2row" style="margin:0"><h3 style="margin:0">${esc(s.name)}</h3>${groupBadge(s)}</div>
       <div class="sec">Electricity token</div>
@@ -1781,8 +1784,9 @@ P.settings=()=>{
     </div>
   </div>
   <div class="card"><h2 style="margin-bottom:10px">Partners</h2><label class="fld"><span>Names, separated by commas</span><input value="${esc(S.settings.partners.join(', '))}" data-chg="partners"></label><p class="small muted" style="margin:0">These names appear in every "Paid by" choice. Set profit shares on the Partners page.</p></div>
-  <div class="card"><h2 style="margin-bottom:10px">Site names</h2>
-    <div class="egrid" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr))">${S.sites.map(s=>`<label class="fld"><span>${esc(s.group)}${s.router?' · '+esc(s.router):''}</span><input value="${esc(s.name)}" data-chg="siteName" data-k="${s.id}"></label>`).join('')}</div>
+  <div class="card"><div class="h2row"><h2>Sites</h2>${isOwner()?'<button class="btn primary" data-act="addSite">+ Add new site</button>':''}</div>
+    <div class="egrid" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr))">${S.sites.map(s=>`<label class="fld"><span>${esc(s.group)}${s.router?' · '+esc(s.router):''}${isOwner()&&!siteUsed(s.id)?` · <a href="#" data-act="delSite" data-id="${s.id}">remove</a>`:''}</span><input value="${esc(s.name)}" data-chg="siteName" data-k="${s.id}"></label>`).join('')}</div>
+    <p class="small muted" style="margin:0">Change a name by typing over it. A site can be removed only while it has no earnings or costs recorded.</p>
   </div>
   ${isOwner()?`<div class="card"><h2 style="margin-bottom:6px">Closed months</h2><p class="small muted" style="margin-top:0">Close a month after its figures are checked. Staff and the technician can then no longer add, change or delete anything dated in it, and owners are asked to confirm first.</p>
     <div class="row"><span>${S.settings.lockBefore?`Closed: everything before <b>${monthLabel(S.settings.lockBefore.slice(0,7))}</b>`:'No month is closed.'}</span><button class="btn" data-act="lockMonths">Change</button></div></div>`:''}
@@ -1862,6 +1866,13 @@ const empNames=()=>S.employees.map(e=>e.name);
 const issueFields=()=>[fDate(),{k:'site',label:'Site',type:'select',options:siteOpts(),def:'dala1'},{k:'problem',label:'Problem',type:'textarea',req:true},{k:'action',label:'Action taken',type:'textarea'},{k:'assignedTo',label:'Assigned to',type:'select',options:[['','Not assigned'],...empNames()]},{k:'status',label:'Status',type:'select',options:['Open','Fixed'],def:'Open'}];
 
 const ACT={
+  addSite(){openForm('Add new site',[{k:'name',label:'Site name',req:true,hint:'For example: Dala 7 or Genzi F9'},{k:'group',label:'Group',type:'select',options:['Dala','Genzi'],def:'Dala',hint:'Dala earnings go to Account One, Genzi earnings to Account Two'},{k:'router',label:'Router / hotspot name (optional)'},{k:'tokenMeter',label:'Main token meter number (optional)'},{k:'wifiAccount',label:'WiFi account number (optional)'}],{},o=>{
+    const name=o.name.trim();if(S.sites.some(x=>x.name.toLowerCase()===name.toLowerCase())){toast('A site with that name already exists');return false;}
+    let id=name.toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0,20)||'site',n=2;const base=id;while(S.sites.some(x=>x.id===id)){id=base+n;n++;}
+    const site={id,name,group:o.group,router:o.router,tokenMeter:o.tokenMeter,powerName:'',powerPhone:'',tokenLastPaid:'',tokenLastAmount:0,wifiProvider:'',wifiAccount:o.wifiAccount,wifiLastPaid:'',wifiAmount:0,wifiCycleDays:30,notes:'',addedOn:today(),subs:[0,1].map(i=>({name:'Sub power '+(i+1),meter:'',powerName:'',phone:'',amount:0,lastPaid:'',lastAmount:0}))};
+    let at=-1;S.sites.forEach((x,i)=>{if(x.group===o.group)at=i;});S.sites.splice(at<0?S.sites.length:at+1,0,site);
+    toast(name+' added. It now shows in earnings, tokens & WiFi and every report.');});},
+  async delSite(id){const x=site(id);if(siteUsed(id)){toast('This site has records, so it cannot be removed. Rename it instead.');return;}if(!await ask(`Remove ${x.name}?`,'Remove'))return;S.sites.splice(S.sites.indexOf(x),1);logAct('Removed site '+x.name);save();render();},
   bigText(){const on=!document.documentElement.classList.contains('big');document.documentElement.classList.toggle('big',on);try{localStorage.setItem('isp.big',on?'1':'');}catch(e){}render();},
   lockMonths(){const t=today(),opts=[['','Nothing closed']];for(let i=1;i<=24;i++){const d=parse(t);const m=iso(new Date(d.getFullYear(),d.getMonth()-i+1,1));opts.push([m,'Close up to the end of '+monthLabel(iso(new Date(d.getFullYear(),d.getMonth()-i,1)).slice(0,7))]);}
     openForm('Closed months',[{k:'lockBefore',label:'Close months',type:'select',options:opts}],{lockBefore:S.settings.lockBefore||''},o=>{S.settings.lockBefore=o.lockBefore;toast(o.lockBefore?'Months closed':'All months open');});},
@@ -2201,6 +2212,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791743696';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791800494';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

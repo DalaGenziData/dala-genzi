@@ -1034,7 +1034,16 @@ P.reports=()=>{
 };
 
 /* ---------- router extensions: the technician logs each extension job with its site and number of routers ---------- */
-const extFields=()=>[fDate(),{k:'site',label:'Site',type:'select',options:siteOpts(false),req:true},{k:'routers',label:'Number of routers extended',type:'number',req:true},{k:'note',label:'Where / customer / note',type:'textarea'}];
+const extFields=(withMat=true)=>[fDate(),{k:'site',label:'Site',type:'select',options:siteOpts(false),req:true},{k:'routers',label:'Number of routers extended',type:'number',req:true},{k:'note',label:'Where / customer / note',type:'textarea'},
+  ...(withMat?matFields(3,'Taken from the store. If you pick an item and leave the quantity empty, the number of routers is used.',(S.store.find(m=>/router/i.test(m.name))||{}).id):[])];
+/* materials picked in a form come out of the store; deleting the record puts them back */
+const matFields=(n,hint,def1)=>{const items=[['','—'],...S.store.map(m=>[m.id,`${m.name} (${num(m.qty)} ${m.unit||''} in store)`])],f=[];
+  for(let i=1;i<=n;i++)f.push({k:'m'+i,label:'Material used '+i,type:'select',options:items,...(i===1&&def1?{def:def1}:{}),...(i===1&&hint?{hint}:{})},{k:'q'+i,label:'Quantity used '+i,type:'number'});return f;};
+function pickMats(o,n,fill){const mats=[];for(let i=1;i<=n;i++){const q=num(o['q'+i])||(o['m'+i]&&fill?num(fill):0);if(!o['m'+i]||q<=0)continue;const m=byId(S.store,o['m'+i]);if(!m)continue;
+  const already=sum(mats.filter(x=>x.id===m.id),x=>x.qty);if(q+already>num(m.qty)){toast(`Only ${num(m.qty)} ${m.unit||''} ${m.name} in store. Lower the quantity.`);return null;}
+  mats.push({id:m.id,name:m.name,unit:m.unit||'',qty:q});}return mats;}
+function takeMats(mats,date,site,note){mats.forEach(x=>{const m=byId(S.store,x.id);if(!m)return;m.qty=num(m.qty)-x.qty;S.matLog.push({id:uid(),date,name:m.name,qty:x.qty,type:'Out',site,note});});}
+function backMats(mats,note){(mats||[]).forEach(x=>{const m=byId(S.store,x.id)||S.store.find(y=>y.name===x.name);if(!m)return;m.qty=num(m.qty)+num(x.qty);S.matLog.push({id:uid(),date:today(),name:m.name,qty:num(x.qty),type:'In',site:'',note});});}
 P.ext=()=>{
   const L=[...(S.extLog||[])].sort((a,b)=>b.date.localeCompare(a.date)||String(b.addedAt||'').localeCompare(String(a.addedAt||'')));
   const m=today().slice(0,7),inM=L.filter(x=>x.date.slice(0,7)===m),tot=a=>sum(a,x=>num(x.routers));
@@ -1043,7 +1052,7 @@ P.ext=()=>{
     <p class="small muted" style="margin-top:0">Every time routers are extended, record the site and how many routers.</p>
     <div class="kpis"><div class="kpi"><div class="l">Routers this month</div><div class="v">${tot(inM)}</div></div><div class="kpi"><div class="l">Jobs this month</div><div class="v">${inM.length}</div></div><div class="kpi"><div class="l">Routers in total</div><div class="v">${tot(L)}</div></div></div></div>
   ${per.length?`<div class="card"><h2>Routers per site</h2><div class="tbl-wrap"><table><tr><th>Site</th><th class="n">This month</th><th class="n">Total</th></tr>${per.map(r=>`<tr><td>${esc(r.x.name)}</td><td class="n">${r.mon}</td><td class="n"><b>${r.all}</b></td></tr>`).join('')}</table></div></div>`:''}
-  <div class="card"><h2>All extensions</h2>${L.length?`<div class="tbl-wrap"><table><tr><th>Date</th><th>Site</th><th class="n">Routers</th><th>Note</th><th>Code</th><th></th></tr>${L.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(siteName(x.site))}</td><td class="n"><b>${num(x.routers)}</b></td><td class="small">${esc(x.note||'')}</td><td class="small muted">${esc(codeOf(x))}</td>
+  <div class="card"><h2>All extensions</h2>${L.length?`<div class="tbl-wrap"><table><tr><th>Date</th><th>Site</th><th class="n">Routers</th><th>Note</th><th>Code</th><th></th></tr>${L.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(siteName(x.site))}</td><td class="n"><b>${num(x.routers)}</b></td><td class="small">${esc(x.note||'')}${(x.materials||[]).length?`<div class="muted">Used: ${x.materials.map(m=>num(m.qty)+' '+esc(m.unit||'')+' '+esc(m.name)).join(', ')}</div>`:''}</td><td class="small muted">${esc(codeOf(x))}</td>
     <td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editExt" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delExt" data-id="${x.id}">✕</button></div></td></tr>`).join('')}</table></div>`:'<div class="empty">No extensions recorded yet.</div>'}</div>`;
 };
 
@@ -1117,7 +1126,7 @@ P.thome=()=>{
     ${box('My refunds','desk',ref.length,ref.map(x=>`${esc(x.what)}: ${fmt(num(x.amount))}`),'Nothing waiting to be refunded.')}
     ${box('My requests','desk',req.length,req.map(r=>`${esc(String(r.what).slice(0,60))} <span class="muted">(${esc(r.status||'Open')}${r.reply?': '+esc(r.reply):''})</span>`),'No open request.')}
   </div>
-  <div class="card"><div class="h2row" style="margin-bottom:6px"><h2 style="margin:0">Sub-tech days this week</h2><span class="badge b-info">${wkDays.length}</span></div><div class="row"><button class="btn sm primary" data-act="addDay"${S.crew.length?'':' disabled'}>+ Log a day</button><button class="btn sm primary" data-act="addReport">+ Write a report</button><button class="btn sm" data-act="addSpend">+ I spent money</button><button class="btn sm" data-act="addExt">+ Router extension</button></div></div>`;
+  <div class="card"><div class="h2row" style="margin-bottom:6px"><h2 style="margin:0">Sub-tech days this week</h2><span class="badge b-info">${wkDays.length}</span></div><div class="row"><button class="btn sm primary" data-act="addDay"${S.crew.length?'':' disabled'}>+ Log a day</button><button class="btn sm primary" data-act="addReport">+ Write a report</button><button class="btn sm" data-act="addSpend">+ I spent money</button><button class="btn sm" data-act="addExt">+ Router extension</button><button class="btn sm" data-act="useMat">+ Material used</button></div></div>`;
 };
 
 // owners: turn logged days into sub-tech pay (the Staff & Wages list), one record per day
@@ -1924,7 +1933,7 @@ const ACT={
     S.techReports.push({id,date:o.date,site:o.site,title:o.title,body:o.body,materials:mats,spent,status:'New',by:meName()});
     toast('Report submitted');});},
   readReport(id){const r=byId(S.techReports,id);openForm('Read: '+r.title,[{k:'comment',label:'Comment for the technician (optional)',type:'textarea'}],r,o=>{Object.assign(r,o,{status:'Read',readBy:meName()||'Owner'});});},
-  delReport(id){del(S.techReports,id,'report');},
+  async delReport(id){const x=byId(S.techReports,id);await del(S.techReports,id,'report');if(!byId(S.techReports,id)&&(x.materials||[]).length){backMats(x.materials,'Returned: report deleted');save();render();}},
   bankStart(){const o=S.settings.bankOpen||{};openForm('Starting balance',[fDate('date','Balance counted on'),...BANKS.map(([id,n])=>({k:id,label:n+' balance that day (Ksh)',type:'number',def:num((o[id]||{}).amount)}))],{date:(o.coop||{}).date||today()},v=>{
     S.settings.bankOpen={};BANKS.forEach(([id])=>S.settings.bankOpen[id]={date:v.date,amount:num(v[id])});toast('Starting balance saved');});},
   bankEarn(id){const g=(BANKS.find(b=>b[0]===id)||[])[2],d=addDays(today(),-1);
@@ -1942,9 +1951,13 @@ const ACT={
   async newGate(){if(!confirm('Make a new private link?\n\nThe old link stops working. Everyone, including you, must open the new link once.'))return;await setGate(true);},
   async offGate(){if(!confirm('Turn off the private link? Anyone with the address will see the login page again.'))return;await setGate(false);},
   copyGate(){const t=location.origin+'/?k='+UI.gate;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Link copied. Send it only to people you trust.')).catch(()=>prompt('Copy this link',t));},
-  addExt(){openForm('Record router extension',extFields(),{},o=>{if(num(o.routers)<=0){toast('Enter the number of routers');return false;}S.extLog.push({id:uid(),...o,routers:num(o.routers),by:meName()});toast('Extension saved');});},
-  editExt(id){const x=byId(S.extLog,id);openForm('Edit router extension',extFields(),x,o=>{if(num(o.routers)<=0){toast('Enter the number of routers');return false;}Object.assign(x,o,{routers:num(o.routers)});});},
-  delExt(id){del(S.extLog,id,'extension');},
+  useMat(){if(!S.store.length){toast('The store is empty');return;}openForm('Material used',[fDate(),{k:'site',label:'Used at site',type:'select',options:siteOpts(),def:'general'},...matFields(5),{k:'note',label:'Note'}],{},o=>{
+    const mats=pickMats(o,5);if(!mats)return false;if(!mats.length){toast('Pick a material and the quantity');return false;}takeMats(mats,o.date,o.site,o.note||'');toast('Taken out of the store');});},
+  addExt(){openForm('Record router extension',extFields(),{},o=>{if(num(o.routers)<=0){toast('Enter the number of routers');return false;}
+    const mats=pickMats(o,3,o.routers);if(!mats)return false;const rec={id:uid(),date:o.date,site:o.site,routers:num(o.routers),note:o.note,materials:mats,by:meName()};
+    takeMats(mats,o.date,o.site,'Router extension'+(o.note?': '+o.note:''));S.extLog.push(rec);toast(mats.length?'Extension saved. Materials taken out of the store.':'Extension saved');});},
+  editExt(id){const x=byId(S.extLog,id);openForm('Edit router extension',extFields(false),x,o=>{if(num(o.routers)<=0){toast('Enter the number of routers');return false;}Object.assign(x,o,{routers:num(o.routers)});});},
+  async delExt(id){const x=byId(S.extLog,id);await del(S.extLog,id,'extension');if(!byId(S.extLog,id)&&(x.materials||[]).length){backMats(x.materials,'Returned: extension deleted');save();render();}},
   addSpend(){openForm('Money I spent',spendFields(),{},o=>{if(num(o.amount)<=0){toast('Enter the amount spent');return false;}S.techSpend.push({id:uid(),...o,amount:num(o.amount),by:meName(),paid:false});toast('Saved. The owners will refund you.');});},
   editSpend(id){const x=byId(S.techSpend,id);openForm('Edit money spent',spendFields(),x,o=>{Object.assign(x,o,{amount:num(o.amount)});});},
   delSpend(id){del(S.techSpend,id,'money spent');},
@@ -2073,7 +2086,7 @@ const ACT={
   resolveTicket(id){const t=byId(S.tickets,id);openForm('Resolved by technician',[{k:'fix',label:'What was done',type:'textarea'}],{},o=>{tStep(t,3,{fix:o.fix});toast('Now call the client to confirm');});},
   async confirmTicket(id){const t=byId(S.tickets,id);if(!await ask('Did you call the client and they confirmed the internet works?','Yes, confirmed'))return;tStep(t,4);logAct('Customer issue confirmed: '+(t.customer||t.phone));save();render();toast('Issue closed');},
   async undoDel(id){const a=(S.activity||[]).find(x=>x.id===id);if(!a||!a.item)return;const arr=S[a.key];if(!Array.isArray(arr)){toast('Cannot restore this');return;}
-    if(!arr.some(x=>x.id===a.item.id))arr.push(a.item);logAct('Restored: '+a.text.replace(/^Deleted /,''),{undoOf:a.id});save();render();toast('Restored');},
+    if(!arr.some(x=>x.id===a.item.id)){arr.push(a.item);if((a.key==='extLog'||a.key==='techReports')&&(a.item.materials||[]).length)takeMats(a.item.materials.filter(x=>byId(S.store,x.id)),today(),a.item.site,'Taken again: restored record');}logAct('Restored: '+a.text.replace(/^Deleted /,''),{undoOf:a.id});save();render();toast('Restored');},
   async getBackup(day){try{const r=await remote('getBackup',PIN,day);const sn=fakeSnaps(r.docs);const st=migrate(fromDocs(sn.st,sn.ea));
     download(`dala-genzi-backup-${day}.json`,JSON.stringify(st,null,1),'application/json');}catch(e){toast('Could not get that backup: '+(e.message||e));}},
   editContacts(){const c=S.settings.contacts||[],F=[];for(let i=0;i<4;i++)F.push({k:'n'+i,label:'Name '+(i+1)+(i>2?' (optional)':'')},{k:'p'+i,label:'Phone '+(i+1),type:'tel'});
@@ -2252,6 +2265,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791837407';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791837805';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

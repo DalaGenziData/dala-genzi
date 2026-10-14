@@ -83,6 +83,37 @@ export async function gateKey(env) {
 }
 const newKey = () => [...crypto.getRandomValues(new Uint8Array(12))].map(b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('');
 
+const same = (a, b) => JSON.stringify(a === undefined ? null : a) === JSON.stringify(b === undefined ? null : b);
+// three-way merge of the sites list: cur = saved now, base = what the phone started from, inc = the phone's copy
+function mergeSites(cur, base, inc, mayRemove) {
+  const B = new Map(base.map(x => [x.id, x])), C = new Map(cur.map(x => [x.id, JSON.parse(JSON.stringify(x))])), I = new Set(inc.map(x => x.id));
+  for (const x of inc) {
+    if (!x || x.id === undefined) continue;
+    const b = B.get(x.id), c = C.get(x.id);
+    if (!b) { C.set(x.id, c ? { ...c, ...x } : x); continue; } // new site from this phone
+    if (!c) continue; // removed on another phone meanwhile: do not bring it back
+    for (const k of new Set([...Object.keys(x), ...Object.keys(b)])) {
+      if (k === 'subs') {
+        const xs = x.subs || [], bs = b.subs || [], cs = c.subs = Array.isArray(c.subs) ? c.subs : [];
+        xs.forEach((u, i) => { const bu = bs[i] || {}; cs[i] = cs[i] || {}; for (const f of new Set([...Object.keys(u || {}), ...Object.keys(bu)])) if (!same((u || {})[f], bu[f])) cs[i][f] = (u || {})[f]; });
+      } else if (!same(x[k], b[k])) c[k] = x[k];
+    }
+  }
+  if (mayRemove) for (const b of base) if (!I.has(b.id)) C.delete(b.id);
+  const order = [...inc.map(x => x.id).filter(id => C.has(id)), ...[...C.keys()].filter(id => !I.has(id))];
+  return order.map(id => C.get(id));
+}
+// fill a saved site with the values a phone sends, but never replace a saved value with an empty one
+function fillSite(c, x) {
+  if (!c) return x;
+  const out = { ...c };
+  for (const k in x) {
+    if (k === 'subs') { const cs = (c.subs || []).map(u => ({ ...u })); (x.subs || []).forEach((u, i) => { cs[i] = cs[i] || {}; for (const f in u) if (u[f] !== '' && u[f] !== 0 && u[f] != null) cs[i][f] = u[f]; }); out.subs = cs; }
+    else if (x[k] !== '' && x[k] !== 0 && x[k] != null) out[k] = x[k];
+  }
+  return out;
+}
+
 const stamp = async db => (await getMeta(db, 'stamp')) || '0';
 
 const FNS = {
@@ -176,13 +207,20 @@ const FNS = {
         sets = { ...sets, 'state/settings': JSON.stringify(inc) };
       }
     }
-    if (me.role === 'tech' && sets && sets['state/sites']) {
-      // the technician's copy of a site is laid over the saved one, so nothing he never had can be lost
+    if (sets && sets['state/sites']) {
+      // Sites are edited from several phones. A phone sends its sites together with the copy it started from (base),
+      // and only the fields it really changed are laid over what is saved, so one phone never wipes another's edits.
       const r = await db.prepare('SELECT data FROM docs WHERE path = ?').bind('state/sites').first();
-      const cur = r ? (JSON.parse(r.data).v || []) : [], inc = JSON.parse(sets['state/sites']).v || [];
-      const byId = new Map(cur.map(x => [x.id, x]));
-      inc.forEach(x => { if (x && x.id !== undefined) byId.set(x.id, { ...(byId.get(x.id) || {}), ...x }); });
-      sets = { ...sets, 'state/sites': JSON.stringify({ v: [...byId.values()] }) };
+      const cur = r ? (JSON.parse(r.data).v || []) : [], doc = JSON.parse(sets['state/sites']), inc = doc.v || [];
+      let out;
+      if (Array.isArray(doc.base)) out = mergeSites(cur, doc.base, inc, me.role !== 'tech');
+      else if (me.role === 'tech' || cur.length) {
+        // an older page without a base: only add what is new to the saved copy, never blank out a saved value
+        const byId = new Map(cur.map(x => [x.id, x]));
+        inc.forEach(x => { if (x && x.id !== undefined) byId.set(x.id, fillSite(byId.get(x.id), x)); });
+        out = [...byId.values()];
+      } else out = inc;
+      sets = { ...sets, 'state/sites': JSON.stringify({ v: out }) };
     }
     const now = Date.now(), st = String(now), q = [];
     for (const p of Object.keys(sets || {})) {

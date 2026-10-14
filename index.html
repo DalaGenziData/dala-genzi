@@ -258,6 +258,7 @@ function remote(fn,...args){
 const fakeSnaps=docs=>{const st=[],ea=[];for(const p in docs){const [c,id]=p.split('/');const d={id,data:()=>JSON.parse(docs[p])};(c==='earnings'?ea:st).push(d);}return {st,ea};};
 let DB=null,written={},syncTimer=null,syncing=false,syncAgain=false,needApply=false,readOnly=false;
 const lastSnaps={state:[],earn:[],seq:undefined};
+const keepBase=()=>{try{if(written['state/sites'])localStorage.setItem(KEY+'.base.sites',written['state/sites']);}catch(e){}};
 const isDirty=()=>{try{return localStorage.getItem(KEY+'.dirty')==='1';}catch(e){return false;}};
 function toDocs(st){
   const out={};
@@ -293,8 +294,11 @@ async function runSync(){
       if(isTech()){for(const p in docs)if(!TECH_WRITE.test(p))delete docs[p];dels.splice(0,dels.length,...dels.filter(p=>TECH_WRITE.test(p)));}
       if(ROLE==='staff'){for(const p in docs)if(STAFF_HIDE.test(p))delete docs[p];dels.splice(0,dels.length,...dels.filter(p=>!STAFF_HIDE.test(p)&&p!=='state/settings'));}
       for(const p in docs){const j=JSON.stringify(docs[p]);if(written[p]!==j)sets[p]=j;}
-      if(Object.keys(sets).length||dels.length){await remote('saveDocs',PIN,sets,dels);lastStamp=''; // reload once after saving, to pick up anything a partner saved meanwhile
-      Object.assign(written,sets);dels.forEach(p=>delete written[p]);}
+      if(Object.keys(sets).length||dels.length){
+        // sites go with the copy this phone started from, so the server keeps only the fields really changed here
+        const send={...sets};if(send['state/sites']&&API_URL==='/api'){const b=written['state/sites'];send['state/sites']=JSON.stringify({...JSON.parse(send['state/sites']),...(b?{base:JSON.parse(b).v||[]}:{})});}
+        await remote('saveDocs',PIN,send,dels);lastStamp=''; // reload once after saving, to pick up anything a partner saved meanwhile
+      Object.assign(written,sets);dels.forEach(p=>delete written[p]);keepBase();}
     }else{
       for(const p in docs){const j=JSON.stringify(docs[p]);if(written[p]!==j){await DB.doc(p).set(docs[p]);written[p]=j;}}
       for(const p of Object.keys(written)){if(!docs[p]){await DB.doc(p).delete();delete written[p];}}
@@ -317,7 +321,7 @@ function applyRemote(){
   if(isDirty()){needApply=true;return;} // local edits not confirmed online yet: keep them, they are sent first
   const all=[...lastSnaps.state.map(d=>['state/'+d.id,d]),...lastSnaps.earn.map(d=>['earnings/'+d.id,d])];
   if(!all.length)return;
-  written={};all.forEach(([p,d])=>written[p]=JSON.stringify(d.data()));
+  written={};all.forEach(([p,d])=>written[p]=JSON.stringify(d.data()));keepBase();
   S=migrate(fromDocs(lastSnaps.state,lastSnaps.earn));
   try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
   if(!isTech()&&reconcileBills())setTimeout(save,0);
@@ -358,6 +362,8 @@ async function connectRemote(){
     else if(isDirty()){
       // edits made here that never reached the Google Sheet: add them to the online copy, then send
       written={};for(const p in r.docs)written[p]=JSON.stringify(JSON.parse(r.docs[p]));
+      // the sites this phone last had from the server: only what was changed since then is sent; without it nothing saved is blanked
+      {let b=null;try{b=localStorage.getItem(KEY+'.base.sites');}catch(e){}if(b)written['state/sites']=b;else delete written['state/sites'];}
       S=migrate(mergeState(migrate(fromDocs(f.st,f.ea)),S));
       try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
       scheduleSync();
@@ -1948,7 +1954,7 @@ const ACT={
   bankEarn(id){const g=(BANKS.find(b=>b[0]===id)||[])[2],d=addDays(today(),-1);
     openForm(`Bank ${g} earnings into ${bankName(id).split(' · ')[0]}`,[fDate(),{k:'amount',label:`Amount deposited (Ksh)`,type:'number',req:true,hint:`${g} earnings yesterday: ${fmt(groupEarn(d,g))}, today so far: ${fmt(groupEarn(today(),g))}`},{k:'by',label:'Done by',type:'select',options:S.settings.partners,def:S.settings.partners[0]},{k:'note',label:'Note'}],{date:today(),amount:groupEarn(d,g)||'',note:g+' earnings'},o=>{
     S.bankTx.push({id:uid(),date:o.date,bank:id,type:'in',amount:num(o.amount),by:o.by,note:o.note});});},
-  editSub(ref){const [id,i]=ref.split(':'),s=site(id),u=s.subs[+i];openForm(`${s.name}: ${u.name}`,[{k:'name',label:'Name',def:'Sub power '+(+i+1)},{k:'meter',label:'Token (meter) number'},{k:'powerName',label:'Power house owner (name)'},{k:'phone',label:'Power house phone',type:'tel'},{k:'amount',label:'Usual token amount (Ksh)',type:'number'}],u,o=>{Object.assign(u,o);});},
+  editSub(ref){const [id,i]=ref.split(':'),s=site(id),u=s.subs[+i];openForm(`${s.name}: ${u.name}`,[{k:'name',label:'Name',def:'Sub power '+(+i+1)},{k:'meter',label:'Token (meter) number'},{k:'powerName',label:'Power house owner (name)'},{k:'phone',label:'Power house phone',type:'tel'},{k:'amount',label:'Usual token amount (Ksh)',type:'number'},{k:'lastPaid',label:'Date last paid',type:'date'},{k:'lastAmount',label:'Amount last paid (Ksh)',type:'number'}],u,o=>{Object.assign(u,o,{amount:num(o.amount),lastAmount:num(o.lastAmount)});});},
   paySub(ref){const [id,i]=ref.split(':'),s=site(id),u=s.subs[+i];openForm(`Pay token: ${s.name}, ${u.name}`,[fDate(),{k:'amount',label:'Amount (Ksh)',type:'number',req:true,def:u.amount||u.lastAmount||''},fPaid(),{k:'desc',label:'Note',def:u.name+(u.meter?' · Token '+u.meter:'')}],{},o=>{
     if(!u.lastPaid||o.date>=u.lastPaid){u.lastPaid=o.date;u.lastAmount=o.amount;}
     addExpense({date:o.date,category:'Electricity tokens',site:id,amount:o.amount,desc:o.desc,paidBy:o.paidBy});toast('Token payment saved and counted in costs');});},
@@ -2274,6 +2280,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791838759';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791957482';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

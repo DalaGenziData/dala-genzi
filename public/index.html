@@ -479,15 +479,10 @@ function earnIn(from,to){
 }
 const DEBT_CAT='Debt payments';
 function costsIn(from,to){
-  // A WiFi subscription counts in full in the month it is mostly used: a payment made late last month
-  // (most of its days fall in this month) is deducted from this month's profit.
+  // Every cost counts in the month it was paid (FIDEL, 14 Oct 2026: nothing paid last month is carried into this month).
   const out=[];
   S.expenses.forEach(e=>{
-    let d=e.date;
-    if(e.category==='Wifi subscription'&&d){
-      const st=S.sites.find(x=>x.id===e.site),cyc=Math.max(1,num(st&&st.wifiCycleDays)||30),mid=addDays(d,Math.floor(cyc/2));
-      if(mid.slice(0,7)!==d.slice(0,7))d=mid.slice(0,7)+'-01';
-    }
+    const d=e.date;
     if(d>=from&&d<=to)out.push({...e,date:d,paidOn:e.date,amount:num(e.amount),src:'exp'});
   });
   S.subtech.filter(w=>w.date>=from&&w.date<=to).forEach(w=>out.push({id:w.id,date:w.date,category:SUBTECH_CAT,site:w.site,amount:num(w.amount),desc:(w.name||'Sub-tech')+': '+(w.task||'work day'),src:'sub'}));
@@ -1915,8 +1910,7 @@ function reconcileBills(){
   if(ONLINE&&!done.includes('dala1-wifi-202610b')){
     const d1=S.sites.find(x=>/^dala\s*0?1$/i.test(String(x.name).trim()));
     if(d1){
-      const inOct=new Set(costsIn('2026-10-01','2026-10-31').filter(e=>e.src==='exp').map(e=>e.id));
-      const L=S.expenses.filter(e=>e.site===d1.id&&e.category==='Wifi subscription'&&inOct.has(e.id));
+      const L=S.expenses.filter(e=>e.site===d1.id&&e.category==='Wifi subscription'&&String(e.date)>='2026-09-16'&&String(e.date)<='2026-10-31');
       if(L.length&&sum(L,e=>num(e.amount))!==12499){
         const rank=e=>(String(e.date).slice(0,7)==='2026-10'?0:2)+(num(e.amount)===12499?0:1);
         const keep=[...L].sort((a,b)=>rank(a)-rank(b)||a.date.localeCompare(b.date))[0];
@@ -2337,6 +2331,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791977260';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791977864';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

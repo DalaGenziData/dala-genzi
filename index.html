@@ -1857,6 +1857,8 @@ function expFields(cat){return [fDate(),{k:'category',label:'Category',type:'sel
 // Payments FIDEL asked Claude to enter. Each is added once for the whole business (remembered in settings.pendingDone,
 // so deleting it later is respected) and skipped if the same payment is already recorded.
 const PENDING=[];
+// keep the sites list grouped: a site that changes group goes after the last site of its new group
+function moveToGroup(x){const i=S.sites.indexOf(x);if(i<0)return;S.sites.splice(i,1);let j=-1;S.sites.forEach((y,k)=>{if(y.group===x.group)j=k;});S.sites.splice(j<0?S.sites.length:j+1,0,x);}
 function reconcileBills(){
   let ch=false;
   const done=S.settings.pendingDone=S.settings.pendingDone||[];
@@ -1875,6 +1877,11 @@ function reconcileBills(){
     done.push('nocost-20261011');ch=true;
   }
   // FIDEL, 12 Oct 2026: 17 routers were used at Kibos today; take them out of the store once.
+  // FIDEL, 14 Oct 2026: Genzi F8 belongs to the Genzi group (it was added under Dala).
+  if(ONLINE&&!done.includes('f8-genzi')){
+    S.sites.filter(x=>/genzi\s*f\s*8\b|^f\s*8$/i.test(String(x.name).trim())&&x.group!=='Genzi').forEach(x=>{x.group='Genzi';moveToGroup(x);logAct('Moved '+x.name+' to the Genzi group');});
+    done.push('f8-genzi');ch=true;
+  }
   if(ONLINE&&!done.includes('kibos-routers-20261012')){
     const R=S.store.filter(m=>/router/i.test(m.name)),site=(S.sites.find(x=>/kibos/i.test(x.name))||{}).id||'general';
     const already=S.matLog.some(l=>l.type==='Out'&&l.date==='2026-10-12'&&num(l.qty)===17&&/router/i.test(l.name));
@@ -2018,9 +2025,10 @@ const ACT={
   async delDay(){const d=UI.earnDate||today();if(!lockOk(d))return;if(await ask(`Delete all earnings for ${fmtD(d)}?`,'Delete')){delete S.earnings[d];save();render();}},
   editDay(id){UI.earnDate=id;render();scrollTo({top:0,behavior:'smooth'});},
   earnShift(n){UI.earnDate=addDays(UI.earnDate||today(),Number(n));UI.earnMonth=UI.earnDate.slice(0,7);render();},
-  editSite(id){const s=site(id);openForm(`${s.name} details`,[
+  editSite(id){const s=site(id),g0=s.group;openForm(`${s.name} details`,[
+    ...(isOwner()?[{k:'group',label:'Group',type:'select',options:['Dala','Genzi'],hint:'Dala earnings go to Account One, Genzi earnings to Account Two.'}]:[]),
     {k:'tokenMeter',label:'Token meter number'},{k:'powerName',label:'Power house owner (name)'},{k:'powerPhone',label:'Power house owner phone',type:'tel'},{k:'tokenLastPaid',label:'Token last paid',type:'date'},{k:'tokenLastAmount',label:'Last token amount (Ksh)',type:'number'},
-    {k:'wifiProvider',label:'WiFi / internet provider'},{k:'wifiAccount',label:'WiFi account number'},{k:'wifiLastPaid',label:'WiFi subscription last paid',type:'date'},{k:'wifiAmount',label:'WiFi subscription amount (Ksh)',type:'number'},{k:'wifiCycleDays',label:'Subscription lasts (days)',type:'number',hint:'Usually 30'},{k:'notes',label:'Notes',type:'textarea'}],s,o=>{Object.assign(s,o);if(!isTech())reconcileBills();toast('Saved');});},
+    {k:'wifiProvider',label:'WiFi / internet provider'},{k:'wifiAccount',label:'WiFi account number'},{k:'wifiLastPaid',label:'WiFi subscription last paid',type:'date'},{k:'wifiAmount',label:'WiFi subscription amount (Ksh)',type:'number'},{k:'wifiCycleDays',label:'Subscription lasts (days)',type:'number',hint:'Usually 30'},{k:'notes',label:'Notes',type:'textarea'}],s,o=>{Object.assign(s,o);if(s.group!==g0)moveToGroup(s);if(!isTech())reconcileBills();toast('Saved');});},
   payToken(id){const s=site(id);openForm(`Pay token: ${s.name}`,[fDate(),{k:'amount',label:'Amount (Ksh)',type:'number',req:true,def:s.tokenLastAmount||''},fPaid(),{k:'desc',label:'Note',def:s.tokenMeter?'Meter '+s.tokenMeter:''}],{},o=>{
     if(!s.tokenLastPaid||o.date>=s.tokenLastPaid){s.tokenLastPaid=o.date;s.tokenLastAmount=o.amount;s.tokCounted=o.date;}
     addExpense({date:o.date,category:'Electricity tokens',site:id,amount:o.amount,desc:o.desc,paidBy:o.paidBy});toast('Token payment saved and counted in costs');});},
@@ -2280,6 +2288,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791957482';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791965229';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

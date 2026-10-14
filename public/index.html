@@ -180,7 +180,7 @@ const SITES_SEED=[
 // No figures are built into the page: anyone can read a page's code, so all money data stays in the online database.
 const SEED_DATES=[],SEED_VALUES={};
 const INV_CAT='Equipment & investment';
-const EXP_CATS=['Motorbike fuel','Tech salary','Electricity tokens','Wifi subscription','Materials','Repairs & maintenance','Transport','Airtime / SMS','Rent',INV_CAT,'Other'];
+const EXP_CATS=['Motorbike fuel','Tech salary','Electricity tokens','Wifi subscription','Materials','Repairs & maintenance','Transport','Airtime / SMS','Lunch','Rent',INV_CAT,'Other'];
 const isInv=x=>x.category===INV_CAT;
 const SUBTECH_CAT='Sub-tech wages';
 const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['analysis','Analysis'],['report','Monthly Report'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup'],['crew','Sub-tech Days'],['desk','Tech Requests & Refunds'],['reports','Technician Reports'],['weekly','Weekly Costs'],['gaps','Data Check'],['thome','Home'],['ext','Router Extensions']];
@@ -517,7 +517,7 @@ function tokenStatus(s){
 function costByDate(from,to){const m={};costsIn(from,to).forEach(x=>m[x.date]=(m[x.date]||0)+x.amount);return m;}
 function dayCalc(d){const e=S.earnings[d]?sum(Object.values(S.earnings[d])):0,c=sum(costsIn(d,d),x=>x.amount);return {e,c,p:e-c};}
 function monthStats(m){const [f,t]=monthRange(m),e=earnIn(f,t),c=sum(costsIn(f,t),x=>x.amount);return {e:e.total,c,p:e.total-c,days:e.days};}
-const VAR_CATS=['Motorbike fuel',SUBTECH_CAT,'Transport','Airtime / SMS'];
+const VAR_CATS=['Motorbike fuel',SUBTECH_CAT,'Transport','Airtime / SMS','Lunch'];
 // Expected month-end figures: earnings at the current daily average, costs so far plus
 // bills still to come (unpaid tech salary, WiFi subscriptions falling due) and day-to-day costs at the current rate.
 function projection(m){
@@ -916,6 +916,7 @@ P.costs=()=>{
     <div class="row noprint" style="margin-bottom:12px"><span class="small muted">Quick add:</span>
       <button class="btn sm" data-act="quickExp" data-id="Motorbike fuel">⛽ Motorbike fuel</button>
       <button class="btn sm" data-act="quickExp" data-id="Tech salary">👷 Tech salary</button>
+      <button class="btn sm" data-act="quickExp" data-id="Lunch">🍽 Lunch</button>
       <button class="btn sm" data-act="quickExp" data-id="Repairs & maintenance">🔧 Repairs</button>
       <button class="btn sm" data-act="quickExp" data-id="Transport">🚌 Transport</button>
       <button class="btn sm" data-go="staff">📅 Sub-tech day (500)</button></div>
@@ -1069,7 +1070,7 @@ P.ext=()=>{
 
 /* ---------- weekly costs: what running the sites costs per week (Monday to Sunday) and a weekly budget ---------- */
 const weekMon=d=>addDays(d,-((parse(d).getDay()+6)%7));
-const WK_GROUPS=[['Tokens',['Electricity tokens']],['WiFi',['Wifi subscription']],['Fuel & transport',['Motorbike fuel','Transport']],['Materials & repairs',['Materials','Repairs & maintenance']],['Wages',['Tech salary',SUBTECH_CAT]]];
+const WK_GROUPS=[['Tokens',['Electricity tokens']],['WiFi',['Wifi subscription']],['Fuel, transport & lunch',['Motorbike fuel','Transport','Lunch']],['Materials & repairs',['Materials','Repairs & maintenance']],['Wages',['Tech salary',SUBTECH_CAT]]];
 function weekRow(mon){const sun=addDays(mon,6),to=sun<today()?sun:today(),c=costsIn(mon,to),run=c.filter(x=>x.category!==INV_CAT);
   const g=WK_GROUPS.map(([n,cats])=>sum(run.filter(x=>cats.includes(x.category)),x=>x.amount));
   return {mon,sun,run:sum(run,x=>x.amount),inv:sum(c,x=>x.amount)-sum(run,x=>x.amount),g,other:sum(run,x=>x.amount)-sum(g),earn:earnIn(mon,to).total};}
@@ -2317,6 +2318,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791967990';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791974587';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

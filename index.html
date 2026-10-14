@@ -515,11 +515,13 @@ function earnIn(from,to){
   return r;
 }
 const DEBT_CAT='Debt payments';
-function costsIn(from,to){
-  // Every cost counts in the month it was paid (FIDEL, 14 Oct 2026: nothing paid last month is carried into this month).
+function costsIn(from,to,byPaidDate){
+  // Every cost counts in the month it was paid (FIDEL, 14 Oct 2026: nothing paid last month is carried into this month),
+  // except a payment marked as belonging to another month (forMonth), which counts on that month's last day.
+  // The bank always uses the day the money actually left (byPaidDate).
   const out=[];
   S.expenses.forEach(e=>{
-    const d=e.date;
+    const d=!byPaidDate&&e.forMonth&&/^\d{4}-\d{2}$/.test(e.forMonth)?monthRange(e.forMonth)[1]:e.date;
     if(d>=from&&d<=to)out.push({...e,date:d,paidOn:e.date,amount:num(e.amount),src:'exp'});
   });
   S.subtech.filter(w=>w.date>=from&&w.date<=to).forEach(w=>out.push({id:w.id,date:w.date,category:SUBTECH_CAT,site:w.site,amount:num(w.amount),desc:(w.name||'Sub-tech')+': '+(w.task||'work day'),src:'sub'}));
@@ -557,8 +559,8 @@ function projection(m){
   const e=earnIn(f,t),c=costsIn(f,t),cost=sum(c,x=>x.amount);
   if(tdy>t||tdy<f){return {daysIn,projE:e.total,projC:cost,projP:e.total-cost,breakEven:cost/daysIn,final:true,extra:[]};}
   const elapsed=diffDays(f,tdy)+1,projE=e.days?e.total/e.days*daysIn:0,extra=[];
-  const techPaid=sum(c.filter(x=>x.category==='Tech salary'),x=>x.amount),techLeft=Math.max(0,num(S.settings.techSalary)-techPaid);
-  if(techLeft)extra.push(['Tech salary still to pay',techLeft]);
+  // FIDEL, 14 Oct 2026: the head technician's monthly salary is paid the next month, so it is not forecast here;
+  // only daily pay (sub-techs) counts as it is paid.
   let wifi=0;S.sites.forEach(s=>{if(!s.wifiLastPaid||!num(s.wifiAmount))return;let due=wifiDue(s);while(due<=t){if(due>tdy||due<=tdy&&due>=f&&!c.some(x=>x.category==='Wifi subscription'&&x.site===s.id&&x.date>=addDays(due,-5)))wifi+=num(s.wifiAmount);due=addDays(due,num(s.wifiCycleDays)||30);}});
   if(wifi)extra.push(['WiFi subscriptions due',wifi]);
   const varSoFar=sum(c.filter(x=>VAR_CATS.includes(x.category)),x=>x.amount),varMore=varSoFar/elapsed*(daysIn-elapsed);
@@ -983,7 +985,7 @@ P.costs=()=>{
       <select data-chg="costSite"><option value="">All sites</option>${siteOpts().map(([v,l])=>`<option value="${v}"${v===UI.costSite?' selected':''}>${esc(l)}</option>`).join('')}</select>
       <select data-chg="costPayer"><option value="">Paid by anyone</option>${payerOpts().map(v=>`<option${v===UI.costPayer?' selected':''}>${esc(v)}</option>`).join('')}</select></div></div>
     ${list.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Category</th><th>Site</th><th>Paid by</th><th>Description</th><th class="n">Amount</th><th>Code</th><th></th></tr></thead><tbody>
-    ${list.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.category)}</td><td>${esc(siteName(x.site))}</td><td>${payerTag(x.paidBy)}</td><td class="wrap">${esc(x.desc)}</td><td class="n">${fmt(num(x.amount))}</td><td class="small">${esc(codeOf(x))}</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editExp" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delExp" data-id="${x.id}">✕</button></div></td></tr>`).join('')}
+    ${list.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.category)}</td><td>${esc(siteName(x.site))}</td><td>${payerTag(x.paidBy)}</td><td class="wrap">${esc(x.desc)}${x.forMonth?` <span class="badge b-info">for ${esc(monthLabel(x.forMonth))}, paid ${esc(fmtDs(x.paidOn||x.date))}</span>`:''}</td><td class="n">${fmt(num(x.amount))}</td><td class="small">${esc(codeOf(x))}</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editExp" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delExp" data-id="${x.id}">✕</button></div></td></tr>`).join('')}
     </tbody><tfoot><tr><td colspan="5">Total shown</td><td class="n">${fmt(sum(list,x=>x.amount))}</td><td></td><td></td></tr></tfoot></table></div>`:'<div class="empty">No cost entries for this filter.</div>'}
     <p class="small muted">Sub-tech wages are entered as work days on the Staff &amp; Wages page and are counted in the totals above.</p>
   </div>`;
@@ -1362,7 +1364,7 @@ const bankAuto=()=>S.settings.bankAuto||{};
 function bankDay(id,d){
   const a=bankAuto(),g=(BANKS.find(b=>b[0]===id)||[])[2],auto=a.start&&d>=a.start;
   const tin=sum(S.bankTx.filter(x=>x.bank===id&&x.date===d&&x.type==='in'),x=>num(x.amount)),tout=sum(S.bankTx.filter(x=>x.bank===id&&x.date===d&&x.type!=='in'),x=>num(x.amount));
-  const earn=auto?groupEarn(d,g):0,cost=auto&&a.costBank===id?sum(costsIn(d,d),x=>num(x.amount)):0;
+  const earn=auto?groupEarn(d,g):0,cost=auto&&a.costBank===id?sum(costsIn(d,d,true),x=>num(x.amount)):0;
   return {tin,tout,earn,cost,net:tin+earn-tout-cost};
 }
 function bankBal(id,upTo){
@@ -2005,6 +2007,12 @@ function reconcileBills(){
     }
     done.push('dala1-wifi-202610b');ch=true;
   }
+  // FIDEL, 14 Oct 2026: the 20,000 tech salary paid to MAURICE in October was his September salary.
+  if(ONLINE&&!done.includes('maurice-sal-202609')){
+    S.expenses.filter(e=>e.category==='Tech salary'&&String(e.date).slice(0,7)==='2026-10'&&num(e.amount)===20000&&!e.forMonth).forEach(e=>{
+      e.forMonth='2026-09';logAct('Counted the '+fmt(20000)+' tech salary paid on '+fmtD(e.date)+' in September 2026 (it was the September salary)');});
+    done.push('maurice-sal-202609');ch=true;
+  }
   if(ONLINE&&!done.includes('kibos-routers-20261012')){
     const R=S.store.filter(m=>/router/i.test(m.name)),site=(S.sites.find(x=>/kibos/i.test(x.name))||{}).id||'general';
     const already=S.matLog.some(l=>l.type==='Out'&&l.date==='2026-10-12'&&num(l.qty)===17&&/router/i.test(l.name));
@@ -2415,6 +2423,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791980047';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791980843';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

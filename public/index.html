@@ -1891,6 +1891,22 @@ function reconcileBills(){
     S.sites.filter(x=>/genzi\s*f\s*8\b|^f\s*8$/i.test(String(x.name).trim())&&x.group!=='Genzi').forEach(x=>{x.group='Genzi';moveToGroup(x);logAct('Moved '+x.name+' to the Genzi group');});
     done.push('f8-genzi');ch=true;
   }
+  // FIDEL, 14 Oct 2026: Dala 1 WiFi paid in October 2026 is 12,499 in total (it showed 24,889). Keep one payment of
+  // 12,499 and take the others off once; each one taken off can be restored from Activity History.
+  if(ONLINE&&!done.includes('dala1-wifi-202610')){
+    const d1=S.sites.find(x=>/^dala\s*0?1$/i.test(String(x.name).trim()));
+    if(d1){
+      const L=S.expenses.filter(e=>e.site===d1.id&&e.category==='Wifi subscription'&&String(e.date).slice(0,7)==='2026-10').sort((a,b)=>(/^auto-/.test(String(a.id))-/^auto-/.test(String(b.id)))||a.date.localeCompare(b.date));
+      if(sum(L,e=>num(e.amount))!==12499&&L.length){
+        const keep=L.find(e=>num(e.amount)===12499)||L[0];
+        if(num(keep.amount)!==12499){logAct('Changed Dala 1 WiFi cost of '+fmtD(keep.date)+' from '+fmt(num(keep.amount))+' to '+fmt(12499));keep.amount=12499;}
+        L.filter(e=>e!==keep).forEach(e=>{S.expenses.splice(S.expenses.indexOf(e),1);logAct('Took off an extra Dala 1 WiFi cost ('+fmtD(e.date)+', '+fmt(num(e.amount))+'): only 12,499 was paid in October',{key:'expenses',item:e});});
+        d1.wifiAmount=12499;if(d1.wifiLastPaid)d1.wifiCounted=d1.wifiLastPaid;
+        toast('Dala 1 WiFi for October corrected to '+fmt(12499));
+      }
+    }
+    done.push('dala1-wifi-202610');ch=true;
+  }
   if(ONLINE&&!done.includes('kibos-routers-20261012')){
     const R=S.store.filter(m=>/router/i.test(m.name)),site=(S.sites.find(x=>/kibos/i.test(x.name))||{}).id||'general';
     const already=S.matLog.some(l=>l.type==='Out'&&l.date==='2026-10-12'&&num(l.qty)===17&&/router/i.test(l.name));
@@ -2299,6 +2315,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791966282';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791967462';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

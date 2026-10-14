@@ -1106,6 +1106,8 @@ function dataGaps(){
   const odd=[];days.filter(d=>d>=addDays(t,-30)).forEach(d=>S.sites.forEach(x=>{const v=num(S.earnings[d][x.id]),u=usualEarn(x.id,d);if(earnOdd(v,u))odd.push({t:`${fmtD(d)} · ${x.name}: ${fmt(v)} (usual ${fmt(u)})`,act:'gotoDay',id:d,btn:'Check'});}));
   G.push({k:'Unusual earnings (last 30 days)',why:'Over 3 times or under a third of the usual for that site. Check for a typing mistake.',items:odd});
   G.push({k:'Costs with no site',why:'Tokens and WiFi must name the site, or the site looks cheaper than it is.',items:S.expenses.filter(x=>(x.category==='Electricity tokens'||x.category==='Wifi subscription')&&!S.sites.some(y=>y.id===x.site)).map(x=>({t:`${fmtD(x.date)} · ${x.category} · ${fmt(num(x.amount))}`,act:'editExp',id:x.id,btn:'Fix'}))});
+  G.push({k:'Possible double token or WiFi costs',why:'The same site has two WiFi payments within 20 days, or two tokens of the same amount within 7 days. If it was paid only once, delete the extra one.',
+    items:S.expenses.filter(x=>(x.category==='Electricity tokens'||x.category==='Wifi subscription')&&billNear(x.site,x.category,x.date,x.amount,x)).sort((a,b)=>(a.site+a.date).localeCompare(b.site+b.date)).map(x=>({t:`${siteName(x.site)} · ${x.category==='Wifi subscription'?'WiFi':'Token'} · ${fmtD(x.date)} · ${fmt(num(x.amount))}${x.desc?' · '+x.desc:''}`,act:'delExp',id:x.id,btn:'Delete'}))});
   G.push({k:'Costs with no amount',why:'A cost of 0 is usually a mistake.',items:S.expenses.filter(x=>!(num(x.amount)>0)).map(x=>({t:`${fmtD(x.date)} · ${x.category||'No category'}`,act:'editExp',id:x.id,btn:'Fix'}))});
   const meters=[];S.sites.forEach(x=>{if(!x.tokenMeter)meters.push({t:x.name+': main token meter',act:'editSite',id:x.id,btn:'Add'});(x.subs||[]).forEach((u,i)=>{if(!u.meter)meters.push({t:x.name+': '+(u.name||'Sub power '+(i+1)),act:'editSub',id:x.id+':'+i,btn:'Add'});});});
   G.push({k:'Token meters with no number',why:'Needed to pay tokens and to match token costs to the right meter.',items:meters});
@@ -1864,6 +1866,8 @@ function expFields(cat){return [fDate(),{k:'category',label:'Category',type:'sel
 const PENDING=[];
 // keep the sites list grouped: a site that changes group goes after the last site of its new group
 function moveToGroup(x){const i=S.sites.indexOf(x);if(i<0)return;S.sites.splice(i,1);let j=-1;S.sites.forEach((y,k)=>{if(y.group===x.group)j=k;});S.sites.splice(j<0?S.sites.length:j+1,0,x);}
+// a token or WiFi payment already in costs near this date (WiFi: within 20 days; token: same amount within 7 days)
+function billNear(id,cat,d,a,skip){const w=cat==='Wifi subscription'?20:7;return S.expenses.some(e=>e!==skip&&e.site===id&&e.category===cat&&Math.abs(diffDays(e.date,d))<=w&&(cat==='Wifi subscription'||num(e.amount)===num(a)));}
 function reconcileBills(){
   let ch=false;
   const done=S.settings.pendingDone=S.settings.pendingDone||[];
@@ -1904,7 +1908,7 @@ function reconcileBills(){
     for(const [dk,ak,cat,tag] of [['tokenLastPaid','tokenLastAmount','Electricity tokens','tok'],['wifiLastPaid','wifiAmount','Wifi subscription','wifi']]){
       const d=s[dk],a=num(s[ak]),mk=tag+'Counted';
       if(!d||!a||s[mk]===d)continue;
-      if(!S.expenses.some(e=>e.site===s.id&&e.category===cat&&e.date===d)){
+      if(!billNear(s.id,cat,d,a)){
         S.expenses.push({id:`auto-${tag}-${s.id}-${d}`,date:d,category:cat,site:s.id,amount:a,desc:(tag==='tok'?(s.tokenMeter?'Meter '+s.tokenMeter:'Token'):(s.wifiAccount?'Acc '+s.wifiAccount:'WiFi'))+' (from site details)',paidBy:BIZ});
       }
       s[mk]=d;ch=true;
@@ -2295,6 +2299,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791966113';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791966282';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

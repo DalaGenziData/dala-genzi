@@ -176,6 +176,14 @@ const FNS = {
     const { results } = await db.prepare('SELECT day, length(data) AS size FROM backups ORDER BY day DESC').all();
     return results;
   },
+  // an owner saves a copy right now; it is never deleted
+  async backupNow(db, pin) {
+    await checkOwner(db, pin);
+    const t = kenyaNow();
+    if (!(await snapshot(db, t.slice(0, 10) + ' ' + t.slice(11, 16)))) throw new Error('no_data');
+    const { results } = await db.prepare('SELECT day, length(data) AS size FROM backups ORDER BY day DESC').all();
+    return results;
+  },
   async getBackup(db, pin, day) {
     await checkOwner(db, pin);
     const r = await db.prepare('SELECT data FROM backups WHERE day = ?').bind(String(day)).first();
@@ -253,18 +261,24 @@ export async function onRequestGet({ env }) {
 }
 
 
-// Nightly backup: a full copy of every document, one row per day, the last 30 days kept.
-export async function dailyBackup(env) {
-  if (!env.DB) return;
-  const db = env.DB;
-  await ready(db);
+// A full copy of every document. Kept: the last 30 nightly copies, the copy of the 1st of every month (forever),
+// and every copy an owner saved by hand (forever).
+const kenyaNow = () => new Date(Date.now() + 3 * 3600e3).toISOString();
+async function snapshot(db, key) {
   const { results } = await db.prepare('SELECT path, data FROM docs').all();
-  if (!results.length) return;
+  if (!results.length) return false;
   const docs = {};
   for (const r of results) docs[r.path] = r.data;
-  const day = new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10); // Kenya date
   await db.batch([
-    db.prepare('INSERT INTO backups (day, data) VALUES (?, ?) ON CONFLICT(day) DO UPDATE SET data = excluded.data').bind(day, JSON.stringify(docs)),
-    db.prepare('DELETE FROM backups WHERE day NOT IN (SELECT day FROM backups ORDER BY day DESC LIMIT 30)'),
+    db.prepare('INSERT INTO backups (day, data) VALUES (?, ?) ON CONFLICT(day) DO UPDATE SET data = excluded.data').bind(key, JSON.stringify(docs)),
+    db.prepare("DELETE FROM backups WHERE length(day) = 10 AND substr(day, 9, 2) <> '01' AND day NOT IN (SELECT day FROM backups WHERE length(day) = 10 ORDER BY day DESC LIMIT 30)"),
   ]);
+  return true;
+}
+
+// Nightly backup (Kenya date)
+export async function dailyBackup(env) {
+  if (!env.DB) return;
+  await ready(env.DB);
+  await snapshot(env.DB, kenyaNow().slice(0, 10));
 }

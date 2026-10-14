@@ -1632,9 +1632,10 @@ function backupCard(){
   if(API_URL!=='/api'||!isOwner()||!ONLINE)return '';
   if(!UI.bkAsked){UI.bkAsked=1;remote('listBackups',PIN).then(r=>{UI.bkList=r;if(UI.page==='settings')render();}).catch(()=>{UI.bkList=[];});}
   const L=UI.bkList;
-  return `<div class="card"><h2 style="margin-bottom:6px">Automatic daily backups</h2>
-    <p class="small muted" style="margin-top:0">Every night at midnight a full copy of all data is saved online. The last 30 days are kept. Download any day and use <b>Restore from backup</b> if something goes wrong.</p>
-    ${!L?'<div class="small muted">Loading…</div>':L.length?`<div class="row">${L.map(b=>`<button class="btn sm" data-act="getBackup" data-id="${esc(b.day)}">⬇ ${esc(fmtDs(b.day))}</button>`).join('')}</div>`:'<div class="small muted">The first automatic backup will be made tonight at midnight.</div>'}
+  const lab=d=>d.length>10?fmtDs(d.slice(0,10))+' '+d.slice(11)+' (saved by hand)':fmtDs(d)+(d.slice(8)==='01'?' (month copy)':'');
+  return `<div class="card"><div class="h2row"><h2 style="margin:0">Backups</h2><button class="btn primary" data-act="backupNow">Save a backup now</button></div>
+    <p class="small muted">Every night at midnight a full copy of all data is saved online. Kept: the last 30 nights, the copy of the 1st of every month, and every copy saved with <b>Save a backup now</b>. Month copies and hand-saved copies are never deleted. Download any copy and use <b>Restore from backup</b> if something goes wrong.</p>
+    ${!L?'<div class="small muted">Loading…</div>':L.length?`<div class="row">${L.map(b=>`<button class="btn sm" data-act="getBackup" data-id="${esc(b.day)}">⬇ ${esc(lab(b.day))}</button>`).join('')}</div>`:'<div class="small muted">The first automatic backup will be made tonight at midnight.</div>'}
   </div>`;
 }
 
@@ -2137,8 +2138,9 @@ const ACT={
   async confirmTicket(id){const t=byId(S.tickets,id);if(!await ask('Did you call the client and they confirmed the internet works?','Yes, confirmed'))return;tStep(t,4);logAct('Customer issue confirmed: '+(t.customer||t.phone));save();render();toast('Issue closed');},
   async undoDel(id){const a=(S.activity||[]).find(x=>x.id===id);if(!a||!a.item)return;const arr=S[a.key];if(!Array.isArray(arr)){toast('Cannot restore this');return;}
     if(!arr.some(x=>x.id===a.item.id)){arr.push(a.item);if((a.key==='extLog'||a.key==='techReports')&&(a.item.materials||[]).length)takeMats(a.item.materials.filter(x=>byId(S.store,x.id)),today(),a.item.site,'Taken again: restored record');}logAct('Restored: '+a.text.replace(/^Deleted /,''),{undoOf:a.id});save();render();toast('Restored');},
+  async backupNow(){try{UI.bkList=await remote('backupNow',PIN);logAct('Saved a backup by hand');save();render();toast('Backup saved online. It will never be deleted.');}catch(e){toast('Could not save the backup. Check your internet.');}},
   async getBackup(day){try{const r=await remote('getBackup',PIN,day);const sn=fakeSnaps(r.docs);const st=migrate(fromDocs(sn.st,sn.ea));
-    download(`dala-genzi-backup-${day}.json`,JSON.stringify(st,null,1),'application/json');}catch(e){toast('Could not get that backup: '+(e.message||e));}},
+    download(`dala-genzi-backup-${String(day).replace(/[^0-9-]/g,"-")}.json`,JSON.stringify(st,null,1),'application/json');}catch(e){toast('Could not get that backup: '+(e.message||e));}},
   editContacts(){const c=S.settings.contacts||[],F=[];for(let i=0;i<4;i++)F.push({k:'n'+i,label:'Name '+(i+1)+(i>2?' (optional)':'')},{k:'p'+i,label:'Phone '+(i+1),type:'tel'});
     F.push({k:'days',label:'Remind how many days before a payment is due',type:'number'});
     const v={days:num(S.settings.remindDays)||3};c.forEach(([n,p],i)=>{v['n'+i]=n;v['p'+i]=p;});
@@ -2315,6 +2317,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791967462';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791967990';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

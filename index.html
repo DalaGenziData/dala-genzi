@@ -144,6 +144,7 @@ details summary{cursor:pointer;color:var(--brand)}
 @media (max-width:600px){main{padding:12px}.kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}.kpi .v{font-size:18px}.hbars .hb{grid-template-columns:82px 1fr 90px}.card{padding:12px}}
 @media print{header,nav,.noprint,.btn{display:none!important}body{background:#fff;color:#000}.card,.kpi{border-color:#ccc}}
 html.big body{zoom:1.15}
+.rhead img{background:#0f1b33;border-radius:8px;padding:4px 8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 /* ---------- dashboard: premium look ---------- */
 .hero{position:relative;overflow:hidden;border-radius:20px;padding:22px 22px 18px;margin-bottom:16px;color:#fff;
   background:radial-gradient(120% 140% at 100% 0%,rgba(94,234,212,.35) 0%,rgba(94,234,212,0) 50%),linear-gradient(140deg,#003a70 0%,#0057A6 48%,#0d9488 100%);
@@ -219,11 +220,11 @@ const INV_CAT='Equipment & investment';
 const EXP_CATS=['Motorbike fuel','Tech salary','Electricity tokens','Wifi subscription','Materials','Repairs & maintenance','Transport','Airtime / SMS','Lunch','Rent',INV_CAT,'Other'];
 const isInv=x=>x.category===INV_CAT;
 const SUBTECH_CAT='Sub-tech wages';
-const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['analysis','Analysis'],['report','Monthly Report'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup'],['crew','Sub-tech Days'],['desk','Tech Requests & Refunds'],['reports','Technician Reports'],['weekly','Weekly Costs'],['gaps','Data Check'],['thome','Home'],['ext','Router Extensions']];
+const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['analysis','Analysis'],['report','Monthly Report'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup'],['crew','Sub-tech Days'],['desk','Tech Requests & Refunds'],['reports','Technician Reports'],['weekly','Weekly Costs'],['gaps','Data Check'],['thome','Home'],['ext','Router Extensions'],['shared','Shared Costs Report']];
 
 // Main menu: each main page holds related subpages, shown as tabs under the menu.
-const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','ext','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','weekly','sitecosts','mat']],['Employees',['staff','crew','desk','reports','team']],['Profit & Loss',['pl','analysis','report','debts','bank']],['Owners',['directors','partners']],['Settings',['settings','gaps','activity','search']]];
-const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',analysis:'Analysis',report:'Monthly Report',sitecosts:'Costs per Site',search:'Search',activity:'Activity History',crew:'Sub-tech Days',desk:'Requests & Refunds',reports:'Tech Reports',weekly:'Weekly Costs',gaps:'Data Check',thome:'Home',ext:'Router Extensions'};
+const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','ext','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','weekly','sitecosts','shared','mat']],['Employees',['staff','crew','desk','reports','team']],['Profit & Loss',['pl','analysis','report','debts','bank']],['Owners',['directors','partners']],['Settings',['settings','gaps','activity','search']]];
+const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',analysis:'Analysis',report:'Monthly Report',sitecosts:'Costs per Site',search:'Search',activity:'Activity History',crew:'Sub-tech Days',desk:'Requests & Refunds',reports:'Tech Reports',weekly:'Weekly Costs',gaps:'Data Check',thome:'Home',ext:'Router Extensions',shared:'Shared Costs'};
 // The technician sees only the technical pages; staff see everything except the Owners pages.
 const TECH_GROUPS=[['Home',['thome']],['Customer Care',['tickets','issues']],['Tokens & WiFi',['bills']],['Extensions',['ext']],['Sub-techs',['crew']],['Requests & Refunds',['desk']],['Reports',['reports']],['Materials',['mat']],['Settings',['settings']]];
 const navGroups=()=>isTech()?TECH_GROUPS:isOwner()?GROUPS:GROUPS.filter(g=>g[0]!=='Owners');
@@ -811,7 +812,8 @@ function siteNet(e,c,title){
     <div class="tbl-wrap"><table><thead><tr><th>Site</th><th class="n">Earnings</th><th class="n">Token</th><th class="n">WiFi</th><th class="n">Other site costs</th><th class="n">Shared share</th><th class="n">Net profit</th></tr></thead><tbody>
     ${rows.map(x=>`<tr><td>${esc(x.s.name)}</td><td class="n">${fmt(x.en)}</td><td class="n">${miss(x.r.tok)}</td><td class="n">${miss(x.r.wifi)}</td><td class="n">${fmt(x.r.oth)}</td><td class="n">${fmt(sh)}</td><td class="n">${pnl(x.net)}</td></tr>`).join('')}
     ${lump?`<tr><td>Monthly totals (no site split)</td><td class="n">${fmt(lump)}</td><td></td><td></td><td></td><td></td><td class="n">${pnl(lump)}</td></tr>`:''}
-    </tbody><tfoot><tr><td>All sites</td><td class="n">${fmt(e.total)}</td><td class="n">${fmt(T('tok'))}</td><td class="n">${fmt(T('wifi'))}</td><td class="n">${fmt(T('oth'))}</td><td class="n">${fmt(shared)}</td><td class="n">${pnl(net)}</td></tr></tfoot></table></div></div>`;
+    </tbody><tfoot><tr><td>All sites</td><td class="n">${fmt(e.total)}</td><td class="n">${fmt(T('tok'))}</td><td class="n">${fmt(T('wifi'))}</td><td class="n">${fmt(T('oth'))}</td><td class="n">${fmt(shared)}</td><td class="n">${pnl(net)}</td></tr></tfoot></table></div>
+    ${shared?'<div class="row noprint" style="margin-top:10px"><button class="btn sm" data-go="shared">See what the shared costs are ('+fmt(shared)+')</button></div>':''}</div>`;
 }
 function profitBreakdown(earn,c,title){
   const byCat={};c.forEach(x=>byCat[x.category]=(byCat[x.category]||0)+x.amount);
@@ -820,7 +822,7 @@ function profitBreakdown(earn,c,title){
     <tr><td><b>Earnings (all sites)</b></td><td class="n"><b>${fmt(earn)}</b></td></tr>
     ${Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>minus ${esc(k)}</td><td class="n neg">−${fmt(v)}</td></tr>`).join('')||'<tr><td class="muted">No costs recorded yet</td><td></td></tr>'}
     </tbody><tfoot><tr><td>${p<0?'Loss':'Profit'} after deducting everything</td><td class="n ${p<0?'neg':'pos'}">${fmt(p)}</td></tr></tfoot></table></div>
-    <p class="small muted" style="margin:6px 0 0">Every cost is deducted: tokens, WiFi subscriptions, motorbike fuel, salaries, sub-tech days, materials, repairs, transport, equipment, debts the business pays back, and anything else in Running Costs. A WiFi payment made late last month counts in this month, because that is when it is used. It updates the moment you save.</p></div>`;
+    <p class="small muted" style="margin:6px 0 0">Every cost is deducted: tokens, WiFi subscriptions, motorbike fuel, salaries, sub-tech days, materials, repairs, transport, equipment, debts the business pays back, and anything else in Running Costs. Each cost counts in the month it was paid. It updates the moment you save.</p></div>`;
 }
 // last recorded figure and the usual (median of the last 14 recorded days) for a site, before date d
 function prevEarn(id,d){const ds=Object.keys(S.earnings).filter(x=>x<d&&S.earnings[x][id]!==undefined).sort();const x=ds[ds.length-1];return x?{d:x,v:num(S.earnings[x][id])}:null;}
@@ -1114,6 +1116,34 @@ P.ext=()=>{
   ${per.length?`<div class="card"><h2>Routers per site</h2><div class="tbl-wrap"><table><tr><th>Site</th><th class="n">This month</th><th class="n">Total</th></tr>${per.map(r=>`<tr><td>${esc(r.x.name)}</td><td class="n">${r.mon}</td><td class="n"><b>${r.all}</b></td></tr>`).join('')}</table></div></div>`:''}
   <div class="card"><h2>All extensions</h2>${L.length?`<div class="tbl-wrap"><table><tr><th>Date</th><th>Site</th><th class="n">Routers</th><th>Note</th><th>Code</th><th></th></tr>${L.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(siteName(x.site))}</td><td class="n"><b>${num(x.routers)}</b></td><td class="small">${esc(x.note||'')}${(x.materials||[]).length?`<div class="muted">Used: ${x.materials.map(m=>num(m.qty)+' '+esc(m.unit||'')+' '+esc(m.name)).join(', ')}</div>`:''}</td><td class="small muted">${esc(codeOf(x))}</td>
     <td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editExt" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delExt" data-id="${x.id}">✕</button></div></td></tr>`).join('')}</table></div>`:'<div class="empty">No extensions recorded yet.</div>'}</div>`;
+};
+
+/* ---------- shared costs report: every cost not tagged to one site, as split across the sites ---------- */
+P.shared=()=>{
+  const m=UI.shMonth||today().slice(0,7),[f,t]=monthRange(m),c=costsIn(f,t),ids=new Set(S.sites.map(x=>x.id));
+  const L=c.filter(x=>!ids.has(x.site)).sort((a,b)=>a.date.localeCompare(b.date)),tot=sum(L,x=>x.amount),n=S.sites.length||1,all=sum(c,x=>x.amount);
+  const cat={};L.forEach(x=>cat[x.category]=(cat[x.category]||0)+x.amount);
+  const who={};L.forEach(x=>{const k=x.paidBy===BIZ||!x.paidBy?'Business':x.paidBy;who[k]=(who[k]||0)+x.amount;});
+  const pc=v=>tot?(v/tot*100).toFixed(1)+'%':'—';
+  return `<div class="card noprint"><div class="h2row"><h2>Shared costs report</h2><div class="row">${monthSelect('shMonth',m)}<button class="btn primary" data-act="printPage">Download PDF</button></div></div>
+    <p class="small muted" style="margin:0">Tap <b>Download PDF</b>, then choose <b>Save as PDF</b> as the printer to get a PDF file you can keep or send.</p></div>
+  <div class="card report">
+    <div class="rhead"><img src="${$('header .logo').src}" alt="DalaWifi" style="height:46px"><div><h2 style="margin:0">${esc(S.settings.business||'DalaWifi')}: shared costs</h2><div class="muted">${esc(monthLabel(m))} · made ${fmtD(today())}</div></div></div>
+    <p>Shared costs are costs not tagged to one site (fuel, salaries, transport, lunch and so on). They are split equally across the ${n} sites when working out each site's profit.</p>
+    <div class="kpis"><div class="kpi"><div class="l">Total shared costs</div><div class="v">${fmt(tot)}</div><div class="s">${L.length} payments</div></div>
+      <div class="kpi"><div class="l">Each site's share</div><div class="v">${fmt(tot/n)}</div><div class="s">${fmt(tot)} ÷ ${n} sites</div></div>
+      <div class="kpi"><div class="l">Share of all money out</div><div class="v">${all?(tot/all*100).toFixed(1)+'%':'—'}</div><div class="s">all money out ${fmt(all)}</div></div></div>
+    <h2 style="margin:14px 0 8px">By category</h2>
+    <div class="tbl-wrap"><table><thead><tr><th>Category</th><th class="n">Payments</th><th class="n">Amount</th><th class="n">Share</th></tr></thead><tbody>
+      ${Object.entries(cat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="n">${L.filter(x=>x.category===k).length}</td><td class="n">${fmt(v)}</td><td class="n">${pc(v)}</td></tr>`).join('')||'<tr><td colspan="4" class="muted">No shared costs this month.</td></tr>'}
+    </tbody><tfoot><tr><td>Total</td><td class="n">${L.length}</td><td class="n">${fmt(tot)}</td><td class="n">${tot?'100%':''}</td></tr></tfoot></table></div>
+    <h2 style="margin:14px 0 8px">Who paid</h2>
+    <div class="tbl-wrap"><table><tbody>${Object.entries(who).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="n">${fmt(v)}</td></tr>`).join('')}</tbody></table></div>
+    <h2 style="margin:14px 0 8px">Every payment</h2>
+    <div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Paid by</th><th>Code</th><th class="n">Amount</th></tr></thead><tbody>
+      ${L.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.category)}</td><td class="wrap">${esc(x.desc||'')}</td><td>${esc(x.paidBy===BIZ||!x.paidBy?'Business':x.paidBy)}</td><td class="small">${esc(codeOf(x))}</td><td class="n">${fmt(x.amount)}</td></tr>`).join('')}
+    </tbody><tfoot><tr><td colspan="5">Total shared costs, ${esc(monthLabel(m))}</td><td class="n">${fmt(tot)}</td></tr></tfoot></table></div>
+  </div>`;
 };
 
 /* ---------- weekly costs: what running the sites costs per week (Monday to Sunday) and a weekly budget ---------- */
@@ -2309,6 +2339,7 @@ function downloadLink(name,text,type){const a=document.createElement('a');a.href
 const CHG={
   earnDate(el){if(el.value){UI.earnDate=el.value;UI.earnMonth=el.value.slice(0,7);render();}},
   earnMonth(el){UI.earnMonth=el.value;render();},
+  shMonth(el){UI.shMonth=el.value;render();},
   upSite(el){UI.upload[Number(el.dataset.k)].site=el.value;render();},
   perfRange(el){UI.perfRange=el.value;render();},
   costMonth(el){UI.costMonth=el.value;render();},
@@ -2384,6 +2415,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791979588';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791980047';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

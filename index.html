@@ -1179,9 +1179,11 @@ P.weekly=()=>{
 };
 
 /* ---------- data check: gaps and doubtful figures that would spoil the analysis ---------- */
+// a site is only expected to have figures from its first day: the day it was added or its first recorded earnings, whichever is earlier
+function siteStart(x){const f=Object.keys(S.earnings).filter(d=>S.earnings[d][x.id]!==undefined).sort()[0];return [x.addedOn,f].filter(Boolean).sort()[0]||today();}
 function dataGaps(){
   const t=today(),G=[],days=Object.keys(S.earnings).sort(),first=days[0]||t,from=[first,addDays(t,-60)].sort()[1];
-  const miss=[],part=[];for(let d=from;d<t;d=addDays(d,1)){const r=S.earnings[d];if(!r)miss.push(d);else{const n=S.sites.filter(x=>r[x.id]===undefined).map(x=>x.name);if(n.length&&n.length<S.sites.length)part.push([d,n]);}}
+  const miss=[],part=[];for(let d=from;d<t;d=addDays(d,1)){const r=S.earnings[d];if(!r)miss.push(d);else{const n=S.sites.filter(x=>d>=siteStart(x)&&r[x.id]===undefined).map(x=>x.name);if(n.length&&n.length<S.sites.length)part.push([d,n]);}}
   G.push({k:'Days with no earnings',why:'Every day without figures makes averages, forecasts and site ranking wrong.',items:miss.map(d=>({t:fmtD(d),act:'gotoDay',id:d,btn:'Enter'}))});
   G.push({k:'Days with some sites missing',why:'A missing site counts as zero for that day.',items:part.map(([d,n])=>({t:fmtD(d)+': '+n.join(', '),act:'gotoDay',id:d,btn:'Fix'}))});
   const odd=[];days.filter(d=>d>=addDays(t,-30)).forEach(d=>S.sites.forEach(x=>{const v=num(S.earnings[d][x.id]),u=usualEarn(x.id,d);if(earnOdd(v,u))odd.push({t:`${fmtD(d)} · ${x.name}: ${fmt(v)} (usual ${fmt(u)})`,act:'gotoDay',id:d,btn:'Check'});}));
@@ -2423,6 +2425,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791980843';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1791981250';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

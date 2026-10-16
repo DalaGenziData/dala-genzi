@@ -221,11 +221,11 @@ const INV_CAT='Equipment & investment';
 const EXP_CATS=['Motorbike fuel','Tech salary','Electricity tokens','Wifi subscription','Materials','Repairs & maintenance','Transport','Airtime / SMS','Lunch','Rent',INV_CAT,'Other'];
 const isInv=x=>x.category===INV_CAT;
 const SUBTECH_CAT='Sub-tech wages';
-const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['analysis','Analysis'],['report','Monthly Report'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup'],['crew','Sub-tech Days'],['desk','Tech Requests & Refunds'],['reports','Technician Reports'],['weekly','Weekly Costs'],['gaps','Data Check'],['thome','Home'],['ext','Router Extensions'],['shared','Shared Costs Report']];
+const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['analysis','Analysis'],['report','Monthly Report'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup'],['crew','Sub-tech Days'],['desk','Tech Requests & Refunds'],['reports','Technician Reports'],['weekly','Weekly Costs'],['gaps','Data Check'],['thome','Home'],['ext','Router Extensions'],['shared','Shared Costs Report'],['split','Profit Split']];
 
 // Main menu: each main page holds related subpages, shown as tabs under the menu.
-const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','ext','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','weekly','sitecosts','shared','mat']],['Employees',['staff','crew','desk','reports','team']],['Profit & Loss',['pl','analysis','report','debts','bank']],['Owners',['directors','partners']],['Settings',['settings','gaps','activity','search']]];
-const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',analysis:'Analysis',report:'Monthly Report',sitecosts:'Costs per Site',search:'Search',activity:'Activity History',crew:'Sub-tech Days',desk:'Requests & Refunds',reports:'Tech Reports',weekly:'Weekly Costs',gaps:'Data Check',thome:'Home',ext:'Router Extensions',shared:'Shared Costs'};
+const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','ext','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','weekly','sitecosts','shared','mat']],['Employees',['staff','crew','desk','reports','team']],['Profit & Loss',['pl','analysis','report','debts','bank']],['Owners',['split','partners','directors']],['Settings',['settings','gaps','activity','search']]];
+const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',analysis:'Analysis',report:'Monthly Report',sitecosts:'Costs per Site',search:'Search',activity:'Activity History',crew:'Sub-tech Days',desk:'Requests & Refunds',reports:'Tech Reports',weekly:'Weekly Costs',gaps:'Data Check',thome:'Home',ext:'Router Extensions',shared:'Shared Costs',split:'Profit Split'};
 // The technician sees only the technical pages; staff see everything except the Owners pages.
 const TECH_GROUPS=[['Home',['thome']],['Customer Care',['tickets','issues']],['Tokens & WiFi',['bills']],['Extensions',['ext']],['Sub-techs',['crew']],['Requests & Refunds',['desk']],['Reports',['reports']],['Materials',['mat']],['Settings',['settings']]];
 const navGroups=()=>isTech()?TECH_GROUPS:isOwner()?GROUPS:GROUPS.filter(g=>g[0]!=='Owners');
@@ -735,7 +735,7 @@ P.dash=()=>{
   <div class="lux">
     <div class="t" data-go="earn"><div class="ic">💰</div><div class="l">${tE===null?'Latest day ('+(latest?fmtDs(latest):'—')+')':'Earnings today'}</div><div class="v">${fmt(tE===null?latestTot:tE)}</div><div class="s">${tE===null?'today not entered yet':'avg '+fmt(avgDay)+' a day'}</div></div>
     <div class="t" data-go="costs"><div class="ic">🧾</div><div class="l">Costs today</div><div class="v">${fmt(tC)}</div><div class="s">this week ${fmt(wk.run)}${B.v?' of '+fmt(B.v):''}</div></div>
-    ${banked?BANKS.map(b=>`<div class="t" data-go="bank"><div class="ic">🏦</div><div class="l">${b[0]==='coop'?'Account One · Co-op':'Account Two · Equity'}</div><div class="v ${bankBal(b[0],t)<0?'neg':''}">${fmt(bankBal(b[0],t))}</div><div class="s">${esc(b[2])} money</div></div>`).join(''):''}
+    ${banked?BANKS.map(b=>`<div class="t" data-go="bank"><div class="ic">🏦</div><div class="l">${b[0]==='coop'?'Account One · Co-op':'Account Two · I&M'}</div><div class="v ${bankBal(b[0],t)<0?'neg':''}">${fmt(bankBal(b[0],t))}</div><div class="s">${esc(b[2])} money</div></div>`).join(''):''}
   </div>
   ${gD+gG?`<div class="card"><h2 style="margin-bottom:10px">Dala and Genzi this month</h2><div class="grp">
     <div class="g1"><div class="small muted">Dala</div><div style="font-size:20px;font-weight:700">${fmt(gD)}</div><div class="small muted">${Math.round(gD/(gD+gG)*100)}% of earnings</div></div>
@@ -1371,7 +1371,8 @@ function partnerLedger(from,to){
   S.partnerTx.filter(x=>inR(x.date)).forEach(x=>L.push({date:x.date,who:x.person,kind:x.type==='in'?'Put money in':'Took money out',dir:x.type==='in'?1:-1,amount:num(x.amount),note:x.note||'',id:x.id}));
   return L.sort((a,b)=>b.date.localeCompare(a.date));
 }
-const BANKS=[['coop','Account One · Co-operative Bank','Dala'],['equity','Account Two · Equity Bank','Genzi']];
+const ptBankOpts=()=>[['equity','I&M account (Genzi money)'],['coop','Co-op account (Dala money)'],['','Cash or M-Pesa, not a bank']];
+const BANKS=[['coop','Account One · Co-operative Bank','Dala'],['equity','Account Two · I&M Bank','Genzi']];
 // Balance of a bank at the end of a day: the starting balance FIDEL sets, plus deposits, minus withdrawals from that date on.
 const bankOpen=id=>((S.settings.bankOpen||{})[id])||{date:'',amount:0};
 // FIDEL, 11 Oct 2026: from 12 Oct each day's earnings go into the site group's bank (Dala → One, Genzi → Two)
@@ -1380,11 +1381,13 @@ const bankAuto=()=>S.settings.bankAuto||{};
 function bankDay(id,d){
   const a=bankAuto(),g=(BANKS.find(b=>b[0]===id)||[])[2],auto=a.start&&d>=a.start;
   const tin=sum(S.bankTx.filter(x=>x.bank===id&&x.date===d&&x.type==='in'),x=>num(x.amount)),tout=sum(S.bankTx.filter(x=>x.bank===id&&x.date===d&&x.type!=='in'),x=>num(x.amount));
-  const earn=auto?groupEarn(d,g):0,cost=auto&&a.costBank===id?sum(costsIn(d,d,true),x=>num(x.amount)):0;
-  return {tin,tout,earn,cost,net:tin+earn-tout-cost};
+  const fs=S.settings.freshStart||'9999';
+  const earn=auto?groupEarn(d,g):0,cost=auto&&a.costBank===id?sum(costsIn(d,d,true).filter(x=>d<fs||!ownPocket(x.paidBy)),x=>num(x.amount)):0;
+  const pin=sum(S.partnerTx.filter(x=>x.bank===id&&x.date===d&&x.type==='in'),x=>num(x.amount)),pout=sum(S.partnerTx.filter(x=>x.bank===id&&x.date===d&&x.type!=='in'),x=>num(x.amount));
+  return {tin:tin+pin,tout:tout+pout,earn,cost,net:tin+pin+earn-tout-pout-cost};
 }
 function bankBal(id,upTo){
-  const o=bankOpen(id),a=bankAuto();let b=num(o.amount)+sum(S.bankTx.filter(x=>x.bank===id&&(!o.date||x.date>=o.date)&&x.date<=upTo),x=>(x.type==='in'?1:-1)*num(x.amount));
+  const o=bankOpen(id),a=bankAuto(),inR=x=>x.bank===id&&(!o.date||x.date>=o.date)&&x.date<=upTo;let b=num(o.amount)+sum([...S.bankTx.filter(inR),...S.partnerTx.filter(inR)],x=>(x.type==='in'?1:-1)*num(x.amount));
   if(a.start){let d=o.date&&o.date>a.start?o.date:a.start;for(let n=0;d<=upTo&&n<4000;n++,d=addDays(d,1)){const x=bankDay(id,d);b+=x.earn-x.cost;}}
   return b;
 }
@@ -1399,7 +1402,7 @@ P.bank=()=>{
   const dayIO=(id,d,ty)=>{const x=bankDay(id,d);return ty==='in'?x.tin+x.earn:x.tout+x.cost;};
   return `
   <div class="card"><div class="h2row"><h2>Bank balances today</h2><div class="row"><button class="btn primary" data-act="addBank" data-id="in">+ Deposit</button><button class="btn" data-act="addBank" data-id="out">+ Withdrawal</button><button class="btn" data-act="bankStart">Starting balance</button></div></div>
-    <div class="note"><b>Account One</b> (Co-operative Bank) holds <b>Dala</b> money and <b>Account Two</b> (Equity Bank) holds <b>Genzi</b> money. From <b>${fmtDs(bankAuto().start||today())}</b> each day's Dala earnings are added to Account One and Genzi earnings to Account Two automatically, and every cost (tokens, WiFi, fuel, materials, wages…) is taken from <b>Account Two</b>. Record a deposit or withdrawal only for money that is not earnings or a cost, for example owners putting money in or taking profit out.</div>
+    <div class="note"><b>Account One</b> (Co-operative Bank) holds <b>Dala</b> money and <b>Account Two</b> (I&amp;M Bank) holds <b>Genzi</b> money. From <b>${fmtDs(bankAuto().start||today())}</b> each day's Dala earnings are added to Account One and Genzi earnings to Account Two automatically, and every cost paid with business money (tokens, WiFi, fuel, materials, wages…) is taken from <b>Account Two</b>. A cost a partner paid from their own pocket is not taken from the bank: it counts as that partner's contribution on the Profit Split page. Money a partner takes for personal use is recorded on Profit Split and comes off the bank too. Record a deposit or withdrawal only for money that is not earnings or a cost, for example owners putting money in or taking profit out.</div>
     <div class="kpis">${BANKS.map(([id,n,g])=>{const o=bankOpen(id);return `<div class="kpi"><div class="l">${esc(n)} (${g})</div><div class="v ${bankBal(id,td)<0?'neg':''}">${fmt(bankBal(id,td))}</div><div class="s">${o.date?'from '+fmt(num(o.amount))+' on '+fmtDs(o.date):'<a href="#" data-act="bankStart">Set the starting balance</a>'}</div></div>`;}).join('')}
       <div class="kpi"><div class="l">Both accounts</div><div class="v">${fmt(sum(BANKS,b=>bankBal(b[0],td)))}</div></div></div>
   </div>
@@ -1414,6 +1417,51 @@ P.bank=()=>{
   </div>
   <div class="card"><h2 style="margin-bottom:10px">Bank records</h2>
     ${L.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Bank</th><th>Type</th><th class="n">Amount</th><th>By</th><th>What for</th><th></th></tr></thead><tbody>${L.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(bankName(x.bank))}</td><td>${x.type==='in'?'<span class="badge b-ok">Deposit</span>':'<span class="badge b-warn">Withdrawal</span>'}</td><td class="n">${fmt(x.amount)}</td><td>${esc(x.by||'')}</td><td class="wrap small">${esc(x.note||'')}</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editBank" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delBank" data-id="${x.id}">✕</button></div></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No bank records for this period.</div>'}
+  </div>`;
+};
+const SPLIT_RANGES=[['fresh','Since the I&M fresh start'],['month','This month'],['last','Last month'],['all','All time']];
+function splitRange(){const r=UI.splitRange||'fresh',fs=S.settings.freshStart||today();
+  if(r==='fresh')return [fs,today()];if(r==='all')return ['2000-01-01',today()];return rangeOf(r==='last'?'lastmonth':'month');}
+function splitCalc(f,t){
+  const ps=S.settings.partners,raw=ps.map(p=>num(S.settings.partnerShares[p])),tot=sum(raw,x=>x)||ps.length,share=Object.fromEntries(ps.map((p,i)=>[p,(raw[i]||(sum(raw,x=>x)?0:1))/tot]));
+  const earn=earnIn(f,t).total,cost=sum(costsIn(f,t),x=>num(x.amount)),profit=earn-cost,L=partnerLedger(f,t);
+  const R=ps.map(p=>{const m=L.filter(x=>x.who===p),put=sum(m.filter(x=>x.kind==='Put money in'),x=>x.amount),paid=sum(m.filter(x=>x.dir>0&&x.kind!=='Put money in'),x=>x.amount),took=sum(m.filter(x=>x.dir<0),x=>x.amount);
+    return {p,share:share[p],due:profit*share[p],paid,put,took,net:paid+put-took};});
+  const all=sum(R,r=>r.net);R.forEach(r=>{r.fair=all*r.share;r.pos=r.net-r.fair;r.biz=r.due+r.net;});
+  return {earn,cost,profit,R,L};
+}
+P.split=()=>{
+  const [f,t]=splitRange(),C=splitCalc(f,t),R=C.R,amt=UI.splitAmt===undefined?100:num(UI.splitAmt);
+  const pos=R.filter(r=>r.pos>0.5).sort((a,b)=>b.pos-a.pos),neg=R.filter(r=>r.pos<-0.5).sort((a,b)=>a.pos-b.pos);
+  const owe=pos.length&&neg.length?`<b>${esc(neg[0].p)}</b> owes <b>${esc(pos[0].p)}</b> <b>${fmt(Math.round(pos[0].pos))}</b>`:'Nobody owes anybody: you have both put in and taken out in line with your shares.';
+  const pl=r=>esc(r.p)+' '+Math.round(r.share*100)+'%';
+  return `
+  <div class="card"><div class="h2row"><h2>Profit split</h2><div class="row noprint"><select data-chg="splitRange">${SPLIT_RANGES.map(([v,l])=>`<option value="${v}"${v===(UI.splitRange||'fresh')?' selected':''}>${l}</option>`).join('')}</select><button class="btn" data-act="editShares">Shares</button><button class="btn primary" data-act="addPartnerTx">+ Personal money / money in</button></div></div>
+    <div class="note"><b>Where Genzi money lives:</b> Genzi earnings go into <b>Account Two (I&amp;M Bank)</b>, under Profit &amp; Loss → Bank. That money runs both Dala and Genzi, and what is left finances the partners. It started afresh at <b>${fmt(1797)}</b> at the close of ${fmtD('2026-10-16')}. Every shilling a partner takes from it for personal use is recorded here with <b>+ Personal money</b>, and it comes off the I&amp;M balance.</div>
+    <div class="kpis"><div class="kpi"><div class="l">Earnings</div><div class="v">${fmt(C.earn)}</div><div class="s">${fmtDs(f)} to ${fmtDs(t)}</div></div><div class="kpi"><div class="l">All costs</div><div class="v">${fmt(C.cost)}</div></div><div class="kpi"><div class="l">${C.profit<0?'Loss':'Profit'}</div><div class="v ${C.profit<0?'neg':''}">${fmt(C.profit)}</div><div class="s">${R.map(r=>pl(r)+': '+fmt(Math.round(r.due))).join(' · ')}</div></div>
+      <div class="kpi"><div class="l">I&amp;M balance now</div><div class="v ${bankBal('equity',today())<0?'neg':''}">${fmt(bankBal('equity',today()))}</div><div class="s"><a href="#bank" data-go="bank">open Bank</a></div></div></div>
+  </div>
+  <div class="card"><h2 style="margin-bottom:6px">Between the partners</h2><p style="font-size:17px;margin:4px 0 10px">${owe}</p>
+    <div class="tbl-wrap"><table><thead><tr><th>Partner</th><th class="n">Share</th><th class="n">Paid business costs from own pocket</th><th class="n">Put money in</th><th class="n">Took for personal use</th><th class="n">Net put in</th><th class="n">Fair part of the net</th><th class="n">Difference</th></tr></thead><tbody>
+    ${R.map(r=>`<tr><td><b>${esc(r.p)}</b></td><td class="n">${Math.round(r.share*100)}%</td><td class="n">${fmt(r.paid)}</td><td class="n">${fmt(r.put)}</td><td class="n">${fmt(r.took)}</td><td class="n">${pnl(r.net)}</td><td class="n">${pnl(Math.round(r.fair))}</td><td class="n"><b>${pnl(Math.round(r.pos))}</b></td></tr>`).join('')}
+    </tbody><tfoot><tr><td>Total</td><td class="n">100%</td><td class="n">${fmt(sum(R,r=>r.paid))}</td><td class="n">${fmt(sum(R,r=>r.put))}</td><td class="n">${fmt(sum(R,r=>r.took))}</td><td class="n">${pnl(sum(R,r=>r.net))}</td><td></td><td></td></tr></tfoot></table></div>
+    <p class="small muted">How it works: money each partner puts into the business (costs paid from their own pocket plus money put in) minus money they take out for personal use is their <b>net put in</b>. Partners should carry the net in their profit shares (${R.map(pl).join(', ')}). <b>Difference</b> above zero means that partner has carried more than their share and the other partner owes them that amount.</p>
+  </div>
+  <div class="card"><h2 style="margin-bottom:6px">Profit each partner should get</h2>
+    <div class="tbl-wrap"><table><thead><tr><th>Partner</th><th class="n">Share of ${C.profit<0?'loss':'profit'}</th><th class="n">Net put in</th><th class="n">The business owes them</th></tr></thead><tbody>
+    ${R.map(r=>`<tr><td><b>${esc(r.p)}</b></td><td class="n">${pnl(Math.round(r.due))}</td><td class="n">${pnl(r.net)}</td><td class="n"><b>${pnl(Math.round(r.biz))}</b></td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="small muted">The business owes a partner their share of profit plus what they put in, minus what they took. A negative figure means that partner has taken more than their share so far.</p>
+  </div>
+  <div class="card"><h2 style="margin-bottom:6px">Quick split calculator</h2>
+    <div class="row"><label class="small">Amount (Ksh) <input type="number" inputmode="decimal" data-chg="splitAmt" value="${amt}" style="width:140px"></label></div>
+    <div class="kpis" style="margin-top:10px;margin-bottom:0">${R.map(r=>`<div class="kpi"><div class="l">${pl(r)}</div><div class="v">${fmt(Math.round(amt*r.share*100)/100)}</div></div>`).join('')}</div>
+  </div>
+  <div class="card"><h2 style="margin-bottom:10px">Every partner shilling in this period</h2>
+    ${C.L.filter(x=>S.settings.partners.includes(x.who)).length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Who</th><th>What</th><th>Details</th><th class="n">Amount</th><th></th></tr></thead><tbody>
+    ${C.L.filter(x=>S.settings.partners.includes(x.who)).map(x=>{const pt=x.id&&byId(S.partnerTx,x.id);return `<tr><td>${fmtD(x.date)}</td><td>${payerTag(x.who)}</td><td>${esc(x.kind==='Took money out'?'Personal use':x.kind)}${pt&&pt.bank?` <span class="small muted">(${esc(bankName(pt.bank).split(' · ')[1]||'')})</span>`:''}</td><td class="wrap small">${esc(x.note)}</td><td class="n ${x.dir<0?'neg':''}">${x.dir<0?'−':''}${fmt(x.amount)}</td><td>${x.id?`<div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editPartnerTx" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delPartnerTx" data-id="${x.id}">✕</button></div>`:''}</td></tr>`;}).join('')}
+    </tbody></table></div>`:'<div class="empty">No partner money in this period yet.</div>'}
+    <p class="small muted">Costs show here when "Paid by" is a partner's own pocket. Costs paid with business money come from the I&amp;M account and are already in the profit.</p>
   </div>`;
 };
 P.partners=()=>{
@@ -1954,7 +2002,8 @@ function lockOk(d){if(!lockedDate(d))return true;if(!isOwner()){toast(lockMsg())
 async function del(arr,id,what){{const it=arr.find(x=>x.id===id);if(it&&!lockOk(it.date))return;}if(!await ask(`Delete this ${what}?`,'Delete'))return;const i=arr.findIndex(x=>x.id===id);if(i>=0){const it=arr[i];arr.splice(i,1);const key=Object.keys(S).find(k=>S[k]===arr);logAct('Deleted '+what+': '+itemLabel(it),key?{key,item:it}:null);}save();render();toast('Deleted. You can undo it in Settings → Activity History');}
 const BIZ='Business money';
 const payerOpts=()=>[...S.settings.partners,BIZ];
-const fPaid=(label='Paid by')=>({k:'paidBy',label,type:'select',options:payerOpts(),def:S.settings.lastPayer||S.settings.partners[0]});
+const fPaid=(label='Paid by')=>({k:'paidBy',label,type:'select',options:[[BIZ,'Business money (I&M account)'],...S.settings.partners.map(p=>[p,p+' from own pocket'])],def:BIZ});
+const ownPocket=p=>!!p&&p!==BIZ&&S.settings.partners.includes(p);
 const payerTag=p=>p?`<span class="badge ${p===BIZ?'b-info':'b-dala'}">${esc(p===BIZ?'Business':p)}</span>`:'<span class="muted small">—</span>';
 function expFields(cat){return [fDate(),{k:'category',label:'Category',type:'select',options:EXP_CATS,def:cat||EXP_CATS[0]},{k:'site',label:'Site',type:'select',options:siteOpts(),def:'general'},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},fPaid(),{k:'desc',label:'Description',type:'text'},{k:'power',label:'Which power (for tokens)',type:'select',options:[['','Main power'],['s0','Sub power 1'],['s1','Sub power 2']],def:''}];}
 // A token or WiFi payment typed straight into a site's details (Last paid + amount) must still count as a cost.
@@ -2027,6 +2076,16 @@ function reconcileBills(){
     done.push('dala1-wifi-202610b');ch=true;
   }
   // FIDEL, 14 Oct 2026: the 20,000 tech salary paid to MAURICE in October was his September salary.
+  if(ONLINE&&isOwner()&&!done.includes('im-fresh-20261016')){
+    // FIDEL, 16 Oct 2026: Account Two moved from Equity to I&M; balance 1,797 now. Start Genzi money afresh from that.
+    const o=bankOpen('equity'),fs='2026-10-17';
+    const old=o.date?Math.round(bankBal('equity','2026-10-16')):null,gap=old===null?0:old-1797;
+    if(gap>0){const P=S.settings.partners,sh={FIDEL:88,DOROTHY:12};let left=gap;P.forEach((p,i)=>{const v=i===P.length-1?left:Math.round(gap*(sh[p]||0)/100);left-=v;if(v>0)S.partnerTx.push({id:'im-gap-'+p,date:'2026-10-16',person:p,type:'out',amount:v,bank:'',note:'Account Two money used for personal lives before the I&M fresh start (missing '+fmt(gap)+', split 88/12, edit if different)'});});}
+    S.settings.bankOpen=S.settings.bankOpen||{};S.settings.bankOpen.equity={date:fs,amount:1797};
+    S.settings.freshStart=fs;S.settings.partnerShares={...(S.settings.partnerShares||{}),FIDEL:88,DOROTHY:12};
+    logAct('Account Two is now I&M Bank, starting afresh at '+fmt(1797)+' at the close of 16 Oct 2026'+(gap>0?'. '+fmt(gap)+' missing from the old balance was recorded as personal use, split 88/12':gap<0?'. The old figures showed '+fmt(-gap)+' less than the real balance':''));
+    done.push('im-fresh-20261016');ch=true;
+  }
   if(ONLINE&&!done.includes('maurice-sal-202609')){
     S.expenses.filter(e=>e.category==='Tech salary'&&String(e.date).slice(0,7)==='2026-10'&&num(e.amount)===20000&&!e.forMonth).forEach(e=>{
       e.forMonth='2026-09';logAct('Counted the '+fmt(20000)+' tech salary paid on '+fmtD(e.date)+' in September 2026 (it was the September salary)');});
@@ -2231,7 +2290,9 @@ const ACT={
   payDebt(id){const d=byId(S.debts,id);openForm(`Payment: ${d.person}`,[fDate(),{k:'amount',label:`Amount paid (balance ${fmt(debtBal(d))})`,type:'number',req:true,def:debtBal(d)},fPaid(d.type==='weOwe'?'Paid by':'Received by'),{k:'note',label:'Note (e.g. M-Pesa code)'}],{},o=>{(d.payments=d.payments||[]).push(o);toast('Payment recorded');});},
   editTargets(){const [f,t]=rangeOf('30'),e=earnIn(f,t);
     openForm('Monthly targets (Ksh)',S.sites.map(s=>({k:s.id,label:s.name,type:'number',hint:'Last 30 days: '+fmt(e.bySite[s.id].total)})),Object.fromEntries(S.sites.map(s=>[s.id,num(S.targets[s.id])||Math.round(e.bySite[s.id].total/100)*100||''])),o=>{S.targets=o;toast('Targets saved');});},
-  addPartnerTx(){openForm('Partner money in / out',[fDate(),{k:'person',label:'Partner',type:'select',options:S.settings.partners,def:S.settings.lastPayer&&S.settings.partners.includes(S.settings.lastPayer)?S.settings.lastPayer:S.settings.partners[0]},{k:'type',label:'Type',type:'select',options:[['in','Put money into the business'],['out','Took money out (e.g. withdrew earnings)']]},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'note',label:'Note'}],{},o=>{S.partnerTx.push({id:uid(),...o});toast('Saved');});},
+  addPartnerTx(){openForm('Partner money in / out',[fDate(),{k:'person',label:'Partner',type:'select',options:S.settings.partners,def:S.settings.lastPayer&&S.settings.partners.includes(S.settings.lastPayer)?S.settings.lastPayer:S.settings.partners[0]},{k:'type',label:'Type',type:'select',options:[['in','Put money into the business'],['out','Took money out for personal use']]},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'bank',label:'Which money',type:'select',options:ptBankOpts(),def:'equity'},{k:'note',label:'What for'}],{},o=>{S.partnerTx.push({id:uid(),...o});toast('Saved');});},
+  editPartnerTx(id){const x=byId(S.partnerTx,id);openForm('Edit partner money',[fDate(),{k:'person',label:'Partner',type:'select',options:S.settings.partners},{k:'type',label:'Type',type:'select',options:[['in','Put money into the business'],['out','Took money out for personal use']]},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'bank',label:'Which money',type:'select',options:ptBankOpts()},{k:'note',label:'What for'}],x,o=>{Object.assign(x,o,{amount:num(o.amount)});});},
+
   delPartnerTx(id){del(S.partnerTx,id,'partner entry');},
   addEquity(type){openForm(type==='out'?'Take money out of the company':'Put money into the company',equityFields(type),{},o=>{S.equityTx.push({id:uid(),...o});const r=ownCalc();toast('New ownership: '+r.names.map(n=>n+' '+(r.share[n]*100).toFixed(1)+'%').join(' · '));});},
   editEquity(id){const x=byId(S.equityTx,id);openForm('Edit money in / out',equityFields(x.type),x,o=>{Object.assign(x,o);});},
@@ -2374,6 +2435,8 @@ const CHG={
   upSite(el){UI.upload[Number(el.dataset.k)].site=el.value;render();},
   perfRange(el){UI.perfRange=el.value;render();},
   costMonth(el){UI.costMonth=el.value;render();},
+  splitRange(el){UI.splitRange=el.value;render();},
+  splitAmt(el){UI.splitAmt=el.value;render();},
   tokMonth(el){UI.tokMonth=el.value;render();},
   costCat(el){UI.costCat=el.value;render();},
   costSite(el){UI.costSite=el.value;render();},
@@ -2447,6 +2510,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1792112352';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1792160562';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

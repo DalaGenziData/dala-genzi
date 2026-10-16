@@ -183,6 +183,9 @@ html.big body{zoom:1.15}
 .db-c4{background:linear-gradient(135deg,#115e59,#0f766e 55%,#0d9488)}
 .db-t span{display:block;font-size:12px;color:var(--muted)}.db-t b{display:block;font-size:22px;margin:2px 0}.db-t small{color:var(--muted);font-size:12px}
 .db-week{cursor:pointer}.db-flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:4px 0 12px}.db-flow div span{display:block;font-size:12px;color:var(--muted)}.db-flow b{font-size:18px}.db-flow i{font-style:normal;color:var(--muted);font-size:18px}
+.db-flow>div{border-radius:12px;padding:8px 12px;color:#fff;min-width:110px}.db-flow>div span{color:rgba(255,255,255,.85)!important}.db-flow>div b.neg{color:#fff}
+.db-people>div{color:#fff;border:0!important}.db-people>div span,.db-people>div small{color:rgba(255,255,255,.85)!important}.db-people>div b,.db-people>div b.pos,.db-people>div b.neg{color:#fff}
+.db-p1{background:linear-gradient(135deg,#0b2a4a,#0057A6)}.db-p2{background:linear-gradient(135deg,#be185d,#db2777)}
 .db-people{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}.db-people div{border:1px solid var(--line);border-radius:12px;padding:10px 12px}.db-people span{display:block;font-size:12px;color:var(--muted)}.db-people b{display:block;font-size:20px}.db-people small{color:var(--muted);font-size:12px}
 :root{--cD:#0057A6;--cG:#0d9488}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cD:#3b8fe8;--cG:#0f9f90}}
@@ -767,8 +770,8 @@ P.dash=()=>{
     ${banked?BANKS.map(b=>`<a class="db-t ${b[2]==='Dala'?'db-c3':'db-c4'}" data-go="bank"><span>${b[0]==='coop'?'Account One · Dala savings':'Account Two · I&amp;M (Genzi)'}</span><b class="${bankBal(b[0],t)<0?'neg':''}">${fmt(bankBal(b[0],t))}</b><small>${b[0]==='coop'?'divided once a month':'runs the sites'}</small></a>`).join(''):''}
   </div>
   ${wkG?`<div class="card db-week" data-go="week"><div class="h2row"><h2>Genzi money this week</h2><span class="small muted">${fmtDs(wkG.f)} to ${fmtDs(wkG.t)} · tap for the report</span></div>
-    <div class="db-flow"><div><span>Genzi earned${wkG.start?' + start':''}</span><b>${fmt(wkG.earn+wkG.start)}</b></div><i>−</i><div><span>Running costs</span><b>${fmt(wkG.cost)}</b></div><i>−</i><div><span>Personal money</span><b>${fmt(sum(wkG.R,r=>r.took))}</b></div><i>=</i><div><span>Left</span><b class="${sum(wkG.R,r=>r.biz)<0?'neg':''}">${fmt(sum(wkG.R,r=>r.biz))}</b></div></div>
-    <div class="db-people">${wkG.R.map(r=>`<div><span>${esc(r.p)} ${Math.round(r.share*100)}%</span><b class="${r.biz<0?'neg':'pos'}">${fmt(Math.round(r.biz))}</b><small>costs ${fmt(Math.round(r.cost))} · took ${fmt(r.took)}</small></div>`).join('')}</div></div>`:''}
+    <div class="db-flow"><div class="db-c4"><span>Genzi earned${wkG.start?' + start':''}</span><b>${fmt(wkG.earn+wkG.start)}</b></div><i>−</i><div class="db-c2"><span>Running costs</span><b>${fmt(wkG.cost)}</b></div><i>−</i><div class="db-c3"><span>Personal money</span><b>${fmt(sum(wkG.R,r=>r.took))}</b></div><i>=</i><div class="db-c1"><span>Left</span><b class="${sum(wkG.R,r=>r.biz)<0?'neg':''}">${fmt(sum(wkG.R,r=>r.biz))}</b></div></div>
+    <div class="db-people">${wkG.R.map((r,i)=>`<div class="${i?'db-p2':'db-p1'}"><span>${esc(r.p)} ${Math.round(r.share*100)}%</span><b class="${r.biz<0?'neg':'pos'}">${fmt(Math.round(r.biz))}</b><small>costs ${fmt(Math.round(r.cost))} · took ${fmt(r.took)}</small></div>`).join('')}</div></div>`:''}
   <div class="card"><div class="h2row"><h2>Earnings, last 14 days</h2><div class="db-legend"><span><i class="db-d"></i>Dala</span><span><i class="db-g"></i>Genzi</span></div></div>
     ${chart}
     ${gD+gG?`<div class="db-split"><div class="db-sbar"><i class="db-d" style="width:${pct}%"></i><i class="db-g" style="width:${100-pct}%"></i></div><div class="db-sl"><span><b>Dala</b> ${fmt(gD)} · ${pct}%</span><span><b>Genzi</b> ${fmt(gG)} · ${100-pct}%</span></div><div class="small muted">This month's earnings</div></div>`:''}
@@ -2651,6 +2654,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1792165006';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1792165168';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

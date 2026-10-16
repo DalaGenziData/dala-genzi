@@ -1383,7 +1383,7 @@ const bankAuto=()=>S.settings.bankAuto||{};
 function bankDay(id,d){
   const a=bankAuto(),g=(BANKS.find(b=>b[0]===id)||[])[2],auto=a.start&&d>=a.start;
   const tin=sum(S.bankTx.filter(x=>x.bank===id&&x.date===d&&x.type==='in'),x=>num(x.amount)),tout=sum(S.bankTx.filter(x=>x.bank===id&&x.date===d&&x.type!=='in'),x=>num(x.amount));
-    const earn=auto?groupEarn(d,g):0,cost=auto&&a.costBank===id?sum(costsIn(d,d,true),x=>num(x.amount)):0;
+    const earn=auto?(g==='Genzi'?genziEarnDay(d):groupEarn(d,g)):0,cost=auto&&a.costBank===id?sum(costsFrom(d,d,true),x=>num(x.amount)):0;
   const pin=sum(S.partnerTx.filter(x=>x.bank===id&&x.date===d&&x.type==='in'),x=>num(x.amount)),pout=sum(S.partnerTx.filter(x=>x.bank===id&&x.date===d&&x.type!=='in'),x=>num(x.amount));
   return {tin:tin+pin,tout:tout+pout,earn,cost,net:tin+pin+earn-tout-pout-cost};
 }
@@ -1423,16 +1423,24 @@ P.bank=()=>{
 const SPLIT_RANGES=[['fresh','Since the I&M fresh start'],['month','This month'],['last','Last month'],['all','All time']];
 const fmt2=v=>'Ksh '+(Math.round(num(v)*100)/100).toLocaleString('en-KE',{minimumFractionDigits:0,maximumFractionDigits:2});
 const pnl2=v=>`<span class="${v<0?'neg':'pos'}">${v<0?'−':''}${fmt2(Math.abs(v))}</span>`;
-function genziDay(d){const g=sum(S.sites.filter(x=>x.group==='Genzi'),x=>num((S.earnings[d]||{})[x.id])),c=sum(costsIn(d,d),x=>num(x.amount)),R=splitCalc(d,d).R.map(r=>({p:r.p,share:r.share,v:(g-c)*r.share}));return {g,c,R};}
+// FIDEL, 16 Oct 2026: the I&M count starts at midday 16 Oct with 1,797. That day only Genzi earnings from midday
+// to midnight count (FIDEL enters the figure), and only costs saved after midday.
+const NOON=()=>S.settings.freshNoon||{};
+const madeAt=x=>{if(x.addedAt)return Date.parse(x.addedAt)||0;const n=parseInt(String(x.id||'').slice(0,8),36);return n>1.6e12&&n<2.2e12?n:0;};
+const noonCost=x=>{const o=NOON();return !(o.date&&x.date===o.date&&!x.forMonth)||madeAt(x)>=Date.parse(o.at);};
+function genziEarnDay(d){const o=NOON();if(o.date===d)return num(o.genzi);return sum(S.sites.filter(x=>x.group==='Genzi'),x=>num((S.earnings[d]||{})[x.id]));}
+function genziEarnRange(f,t){let v=0;for(const d of Object.keys(S.earnings))if(d>=f&&d<=t&&d!==NOON().date)v+=genziEarnDay(d);const o=NOON();if(o.date&&o.date>=f&&o.date<=t)v+=num(o.genzi);return v;}
+const costsFrom=(f,t,b)=>costsIn(f,t,b).filter(noonCost);
+function genziDay(d){const g=genziEarnDay(d)+(d===NOON().date?num(bankOpen('equity').amount):0),c=sum(costsFrom(d,d),x=>num(x.amount)),R=splitCalc(d,d).R.map(r=>({p:r.p,share:r.share,v:(g-c)*r.share}));return {g,c,R};}
 function splitRange(){const r=UI.splitRange||'fresh',fs=S.settings.freshStart||today();
   if(r==='fresh')return [fs<=today()?fs:today(),today()];if(r==='all')return ['2000-01-01',today()];return rangeOf(r==='last'?'lastmonth':'month');}
 function splitCalc(f,t){
   const ps=S.settings.partners,raw=ps.map(p=>num(S.settings.partnerShares[p])),tot=sum(raw,x=>x)||ps.length,share=Object.fromEntries(ps.map((p,i)=>[p,(raw[i]||(sum(raw,x=>x)?0:1))/tot]));
-  const E=earnIn(f,t),earn=sum(S.sites.filter(x=>x.group==='Genzi'),x=>(E.bySite[x.id]||{total:0}).total),cost=sum(costsIn(f,t),x=>num(x.amount)),profit=earn-cost,L=partnerLedger(f,t).filter(x=>x.kind==='Took money out'&&(byId(S.partnerTx,x.id)||{}).bank!=='coop');
+  const o=NOON(),start=o.date&&o.date>=f&&o.date<=t?num(bankOpen('equity').amount):0,earn=genziEarnRange(f,t),cost=sum(costsFrom(f,t),x=>num(x.amount)),profit=start+earn-cost,L=partnerLedger(f,t).filter(x=>x.kind==='Took money out'&&!String(x.id).startsWith('im-gap')&&(byId(S.partnerTx,x.id)||{}).bank!=='coop');
   const R=ps.map(p=>{const m=L.filter(x=>x.who===p&&x.kind==='Took money out'),put=0,paid=0,took=sum(m,x=>x.amount);
     return {p,share:share[p],due:profit*share[p],paid,put,took,net:paid+put-took};});
   const all=sum(R,r=>r.net);R.forEach(r=>{r.fair=all*r.share;r.pos=r.net-r.fair;r.biz=r.due+r.net;});
-  return {earn,cost,profit,R,L};
+  return {start,earn,cost,profit,R,L};
 }
 P.split=()=>{
   const [f,t]=splitRange(),C=splitCalc(f,t),R=C.R,amt=UI.splitAmt===undefined?100:num(UI.splitAmt),cst=UI.splitCost===undefined?60:num(UI.splitCost);
@@ -1445,18 +1453,21 @@ P.split=()=>{
     <div class="kpis"><div class="kpi"><div class="l">Genzi earnings</div><div class="v">${fmt(C.earn)}</div><div class="s">${fmtDs(f)} to ${fmtDs(t)}</div></div><div class="kpi"><div class="l">Running costs, Dala and Genzi</div><div class="v">${fmt(C.cost)}</div><div class="s">all paid from Genzi money</div></div><div class="kpi"><div class="l">Genzi money left to share${C.profit<0?' (short)':''}</div><div class="v ${C.profit<0?'neg':''}">${fmt(C.profit)}</div><div class="s">${R.map(r=>pl(r)+': '+fmt(Math.round(r.due))).join(' · ')}</div></div>
       <div class="kpi"><div class="l">I&amp;M balance now</div><div class="v ${bankBal('equity',today())<0?'neg':''}">${fmt(bankBal('equity',today()))}</div><div class="s"><a href="#bank" data-go="bank">open Bank</a></div></div></div>
   </div>
+  ${NOON().date?`<div class="card"><div class="h2row"><h2>Start day, ${fmtD(NOON().date)}</h2><button class="btn primary" data-act="setNoon">${num(NOON().genzi)?'Change':'Enter'} Genzi earnings, midday to midnight</button></div>
+    <p class="small muted" style="margin:0">The count started at midday with <b>${fmt(1797)}</b> in I&amp;M. Earnings and costs from that morning are left out. Genzi earned from midday to midnight: <b>${num(NOON().genzi)?fmt(num(NOON().genzi)):'not entered yet'}</b>.</p></div>`:''}
   <div class="card"><h2 style="margin-bottom:6px">Step by step, 88/12 on everything</h2>
     <div class="tbl-wrap"><table><thead><tr><th></th><th class="n">Total</th>${R.map(r=>`<th class="n">${esc(r.p)} ${Math.round(r.share*100)}%</th>`).join('')}</tr></thead><tbody>
+    ${C.start?`<tr><td>Money in I&amp;M at the midday start</td><td class="n">${fmt(C.start)}</td>${R.map(r=>`<td class="n">${fmt2(C.start*r.share)}</td>`).join('')}</tr>`:''}
     <tr><td>1. Genzi money earned</td><td class="n">${fmt(C.earn)}</td>${R.map(r=>`<td class="n">${fmt2(C.earn*r.share)}</td>`).join('')}</tr>
     <tr><td>2. Running sites (Dala and Genzi costs), each pays their share</td><td class="n">${fmt(C.cost)}</td>${R.map(r=>`<td class="n">−${fmt2(C.cost*r.share)}</td>`).join('')}</tr>
-    <tr><td><b>3. Remaining to divide</b></td><td class="n"><b>${pnl(C.profit)}</b></td>${R.map(r=>`<td class="n"><b>${fmt2(r.due)}</b></td>`).join('')}</tr>
+    <tr><td><b>3. Remaining to divide${C.start?' (with the starting money)':''}</b></td><td class="n"><b>${pnl(C.profit)}</b></td>${R.map(r=>`<td class="n"><b>${fmt2(r.due)}</b></td>`).join('')}</tr>
     <tr><td>4. Already taken for personal use</td><td class="n">${fmt(sum(R,r=>r.took))}</td>${R.map(r=>`<td class="n">−${fmt2(r.took)}</td>`).join('')}</tr>
     <tr><td><b>5. Still to be given to each partner</b></td><td class="n"><b>${pnl(sum(R,r=>r.biz))}</b></td>${R.map(r=>`<td class="n"><b>${pnl2(r.biz)}</b></td>`).join('')}</tr>
     </tbody></table></div>
     <p class="small muted">Line 5 = line 3 − line 4. All running costs are paid from Account Two (I&amp;M). This updates by itself every time a day's earnings or a cost is saved. If one partner has taken more than their 88/12 share, the other is owed the difference: that is the "owes" line below.</p>
   </div>
   <div class="card"><h2 style="margin-bottom:6px">Day by day</h2>
-    ${(()=>{const E=earnIn(f,t),cb={};costsIn(f,t).forEach(c=>{const d=c.forMonth?c.date:c.date;cb[d]=(cb[d]||0)+num(c.amount);});const days=[];for(let d=t;d>=f&&days.length<62;d=addDays(d,-1)){const g=sum(S.sites.filter(x=>x.group==='Genzi'),x=>num((S.earnings[d]||{})[x.id])),c=cb[d]||0;if(g||c)days.push([d,g,c]);}
+    ${(()=>{const cb={};costsFrom(f,t).forEach(c=>{cb[c.date]=(cb[c.date]||0)+num(c.amount);});const days=[];for(let d=t;d>=f&&days.length<62;d=addDays(d,-1)){const g=genziEarnDay(d)+(d===NOON().date?num(bankOpen('equity').amount):0),c=cb[d]||0;if(g||c||d===NOON().date)days.push([d,g,c]);}
       return days.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th class="n">Genzi earned</th><th class="n">Running costs</th><th class="n">Remaining</th>${R.map(r=>`<th class="n">${esc(r.p)} ${Math.round(r.share*100)}%</th>`).join('')}</tr></thead><tbody>${days.map(([d,g,c])=>`<tr><td>${fmtD(d)}</td><td class="n">${fmt(g)}</td><td class="n">${fmt(c)}</td><td class="n">${pnl(g-c)}</td>${R.map(r=>`<td class="n">${pnl2((g-c)*r.share)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<div class="empty">No Genzi earnings or costs in this period yet.</div>';})()}
   </div>
   <div class="card"><h2 style="margin-bottom:6px">Between the partners</h2><p style="font-size:17px;margin:4px 0 10px">${owe}</p>
@@ -2110,6 +2121,12 @@ function reconcileBills(){
     logAct('Account Two is now I&M Bank, starting afresh at '+fmt(1797)+' at the close of 16 Oct 2026'+(gap>0?'. '+fmt(gap)+' missing from the old balance was recorded as personal use, split 88/12':gap<0?'. The old figures showed '+fmt(-gap)+' less than the real balance':''));
     done.push('im-fresh-20261016');ch=true;
   }
+  if(ONLINE&&isOwner()&&done.includes('im-fresh-20261016')&&!done.includes('im-noon-20261016')){
+    S.settings.bankOpen.equity={date:'2026-10-16',amount:1797};S.settings.freshStart='2026-10-16';
+    S.settings.freshNoon={date:'2026-10-16',at:'2026-10-16T09:00:00Z',genzi:(S.settings.freshNoon||{}).genzi||0};
+    logAct('The I&M count now starts at midday 16 Oct 2026 with '+fmt(1797)+'. Earlier money that day is left out; enter Genzi earnings from midday to midnight on Profit Split');
+    done.push('im-noon-20261016');ch=true;
+  }
   if(ONLINE&&!done.includes('maurice-sal-202609')){
     S.expenses.filter(e=>e.category==='Tech salary'&&String(e.date).slice(0,7)==='2026-10'&&num(e.amount)===20000&&!e.forMonth).forEach(e=>{
       e.forMonth='2026-09';logAct('Counted the '+fmt(20000)+' tech salary paid on '+fmtD(e.date)+' in September 2026 (it was the September salary)');});
@@ -2317,6 +2334,7 @@ const ACT={
   addPartnerTx(){openForm('Partner money in / out',[fDate(),{k:'person',label:'Partner',type:'select',options:S.settings.partners,def:S.settings.lastPayer&&S.settings.partners.includes(S.settings.lastPayer)?S.settings.lastPayer:S.settings.partners[0]},{k:'type',label:'Type',type:'select',options:[['in','Put money into the business'],['out','Took money out for personal use']]},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'bank',label:'Which money',type:'select',options:ptBankOpts(),def:'equity'},{k:'note',label:'What for'}],{},o=>{S.partnerTx.push({id:uid(),...o});toast('Saved');});},
   editPartnerTx(id){const x=byId(S.partnerTx,id);openForm('Edit partner money',[fDate(),{k:'person',label:'Partner',type:'select',options:S.settings.partners},{k:'type',label:'Type',type:'select',options:[['in','Put money into the business'],['out','Took money out for personal use']]},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'bank',label:'Which money',type:'select',options:ptBankOpts()},{k:'note',label:'What for'}],x,o=>{Object.assign(x,o,{amount:num(o.amount)});});},
 
+  setNoon(){const o=NOON();openForm('Genzi earnings, midday to midnight '+fmtDs(o.date),[{k:'genzi',label:'Genzi earned after midday (Ksh)',type:'number',req:true,hint:'Only the money that came in after the I&M count started with '+fmt(1797)}],{genzi:o.genzi||''},v=>{S.settings.freshNoon={...o,genzi:num(v.genzi)};toast('Start day updated: I&M now '+fmt(bankBal('equity',today())));});},
   addPersonal(){openForm('Personal money from Account Two',[fDate(),{k:'person',label:'Partner',type:'select',options:S.settings.partners},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'note',label:'What for'}],{},o=>{S.partnerTx.push({id:uid(),...o,type:'out',bank:'equity',amount:num(o.amount)});toast('Saved and taken off Account Two');});},
   divideDala(){const td=today(),bal=Math.max(0,Math.round(bankBal('coop',td))),R=splitCalc(td,td).R;
     openForm('Divide Account One (Dala savings)',[fDate(),{k:'amount',label:'Amount divided (Ksh)',type:'number',req:true,hint:R.map(r=>r.p+' gets '+Math.round(r.share*100)+'%').join(', ')},{k:'note',label:'Note'}],{amount:bal||'',note:'Monthly Dala savings, '+monthLabel(td.slice(0,7))},o=>{
@@ -2541,6 +2559,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1792162414';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1792162824';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

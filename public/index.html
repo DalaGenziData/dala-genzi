@@ -175,6 +175,12 @@ html.big body{zoom:1.15}
 .db-trio{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;border-top:1px solid rgba(255,255,255,.18);padding-top:12px}.db-trio span{display:block;font-size:12px;opacity:.75}.db-trio b{font-size:17px}
 .db-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
 .db-t{display:block;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--muted);border-radius:14px;padding:12px 14px;cursor:pointer;color:var(--ink);text-decoration:none}.db-t.db-td{border-left-color:var(--cD)}.db-t.db-tg{border-left-color:var(--cG)}
+.db-t[class*="db-c"]{border:0;color:#fff;box-shadow:0 10px 24px -16px rgba(0,0,0,.55)}
+.db-t[class*="db-c"] span,.db-t[class*="db-c"] small{color:rgba(255,255,255,.85)}.db-t[class*="db-c"] b.neg{color:#fff}
+.db-c1{background:linear-gradient(135deg,#00427f,#0057A6 55%,#2b7fd4)}
+.db-c2{background:linear-gradient(135deg,#9a3412,#c2410c 55%,#ea580c)}
+.db-c3{background:linear-gradient(135deg,#4c1d95,#6d28d9 55%,#8b5cf6)}
+.db-c4{background:linear-gradient(135deg,#115e59,#0f766e 55%,#0d9488)}
 .db-t span{display:block;font-size:12px;color:var(--muted)}.db-t b{display:block;font-size:22px;margin:2px 0}.db-t small{color:var(--muted);font-size:12px}
 .db-week{cursor:pointer}.db-flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:4px 0 12px}.db-flow div span{display:block;font-size:12px;color:var(--muted)}.db-flow b{font-size:18px}.db-flow i{font-style:normal;color:var(--muted);font-size:18px}
 .db-people{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}.db-people div{border:1px solid var(--line);border-radius:12px;padding:10px 12px}.db-people span{display:block;font-size:12px;color:var(--muted)}.db-people b{display:block;font-size:20px}.db-people small{color:var(--muted);font-size:12px}
@@ -756,9 +762,9 @@ P.dash=()=>{
       <div class="db-trio"><div><span>Earned</span><b>${fmt(e.total)}</b></div><div><span>Spent</span><b>${fmt(exp)}</b></div><div><span>Month-end forecast</span><b>${fmt(pj0.projP)}</b></div></div></div>
   </div>
   <div class="db-tiles">
-    <a class="db-t" data-go="earn"><span>${tE===null?'Latest day, '+(latest?fmtDs(latest):'—'):'Earned today'}</span><b>${fmt(tE===null?latestTot:tE)}</b><small>${tE===null?'today not entered yet':'average '+fmt(avgDay)+' a day'}</small></a>
-    <a class="db-t" data-go="costs"><span>Costs today</span><b>${fmt(tC)}</b><small>this week ${fmt(wk.run)}${B.v?' of '+fmt(B.v):''}</small></a>
-    ${banked?BANKS.map(b=>`<a class="db-t ${b[2]==='Dala'?'db-td':'db-tg'}" data-go="bank"><span>${b[0]==='coop'?'Account One · Dala savings':'Account Two · I&amp;M (Genzi)'}</span><b class="${bankBal(b[0],t)<0?'neg':''}">${fmt(bankBal(b[0],t))}</b><small>${b[0]==='coop'?'divided once a month':'runs the sites'}</small></a>`).join(''):''}
+    <a class="db-t db-c1" data-go="earn"><span>${tE===null?'Latest day, '+(latest?fmtDs(latest):'—'):'Earned today'}</span><b>${fmt(tE===null?latestTot:tE)}</b><small>${tE===null?'today not entered yet':'average '+fmt(avgDay)+' a day'}</small></a>
+    <a class="db-t db-c2" data-go="costs"><span>Costs today</span><b>${fmt(tC)}</b><small>this week ${fmt(wk.run)}${B.v?' of '+fmt(B.v):''}</small></a>
+    ${banked?BANKS.map(b=>`<a class="db-t ${b[2]==='Dala'?'db-c3':'db-c4'}" data-go="bank"><span>${b[0]==='coop'?'Account One · Dala savings':'Account Two · I&amp;M (Genzi)'}</span><b class="${bankBal(b[0],t)<0?'neg':''}">${fmt(bankBal(b[0],t))}</b><small>${b[0]==='coop'?'divided once a month':'runs the sites'}</small></a>`).join(''):''}
   </div>
   ${wkG?`<div class="card db-week" data-go="week"><div class="h2row"><h2>Genzi money this week</h2><span class="small muted">${fmtDs(wkG.f)} to ${fmtDs(wkG.t)} · tap for the report</span></div>
     <div class="db-flow"><div><span>Genzi earned${wkG.start?' + start':''}</span><b>${fmt(wkG.earn+wkG.start)}</b></div><i>−</i><div><span>Running costs</span><b>${fmt(wkG.cost)}</b></div><i>−</i><div><span>Personal money</span><b>${fmt(sum(wkG.R,r=>r.took))}</b></div><i>=</i><div><span>Left</span><b class="${sum(wkG.R,r=>r.biz)<0?'neg':''}">${fmt(sum(wkG.R,r=>r.biz))}</b></div></div>
@@ -2645,6 +2651,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1792164674';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1792165006';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

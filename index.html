@@ -1424,7 +1424,7 @@ function splitRange(){const r=UI.splitRange||'fresh',fs=S.settings.freshStart||t
   if(r==='fresh')return [fs,today()];if(r==='all')return ['2000-01-01',today()];return rangeOf(r==='last'?'lastmonth':'month');}
 function splitCalc(f,t){
   const ps=S.settings.partners,raw=ps.map(p=>num(S.settings.partnerShares[p])),tot=sum(raw,x=>x)||ps.length,share=Object.fromEntries(ps.map((p,i)=>[p,(raw[i]||(sum(raw,x=>x)?0:1))/tot]));
-  const earn=earnIn(f,t).total,cost=sum(costsIn(f,t),x=>num(x.amount)),profit=earn-cost,L=partnerLedger(f,t);
+  const E=earnIn(f,t),earn=sum(S.sites.filter(x=>x.group==='Genzi'),x=>(E.bySite[x.id]||{total:0}).total),cost=sum(costsIn(f,t),x=>num(x.amount)),profit=earn-cost,L=partnerLedger(f,t).filter(x=>!(x.id&&(byId(S.partnerTx,x.id)||{}).bank==='coop'));
   const R=ps.map(p=>{const m=L.filter(x=>x.who===p),put=sum(m.filter(x=>x.kind==='Put money in'),x=>x.amount),paid=sum(m.filter(x=>x.dir>0&&x.kind!=='Put money in'),x=>x.amount),took=sum(m.filter(x=>x.dir<0),x=>x.amount);
     return {p,share:share[p],due:profit*share[p],paid,put,took,net:paid+put-took};});
   const all=sum(R,r=>r.net);R.forEach(r=>{r.fair=all*r.share;r.pos=r.net-r.fair;r.biz=r.due+r.net;});
@@ -1436,9 +1436,9 @@ P.split=()=>{
   const owe=pos.length&&neg.length?`<b>${esc(neg[0].p)}</b> owes <b>${esc(pos[0].p)}</b> <b>${fmt(Math.round(pos[0].pos))}</b>`:'Nobody owes anybody: you have both put in and taken out in line with your shares.';
   const pl=r=>esc(r.p)+' '+Math.round(r.share*100)+'%';
   return `
-  <div class="card"><div class="h2row"><h2>Profit split</h2><div class="row noprint"><select data-chg="splitRange">${SPLIT_RANGES.map(([v,l])=>`<option value="${v}"${v===(UI.splitRange||'fresh')?' selected':''}>${l}</option>`).join('')}</select><button class="btn" data-act="editShares">Shares</button><button class="btn primary" data-act="addPartnerTx">+ Personal money / money in</button></div></div>
-    <div class="note"><b>Where Genzi money lives:</b> Genzi earnings go into <b>Account Two (I&amp;M Bank)</b>, under Profit &amp; Loss → Bank. That money runs both Dala and Genzi, and what is left finances the partners. It started afresh at <b>${fmt(1797)}</b> at the close of ${fmtD('2026-10-16')}. Every shilling a partner takes from it for personal use is recorded here with <b>+ Personal money</b>, and it comes off the I&amp;M balance.</div>
-    <div class="kpis"><div class="kpi"><div class="l">Earnings</div><div class="v">${fmt(C.earn)}</div><div class="s">${fmtDs(f)} to ${fmtDs(t)}</div></div><div class="kpi"><div class="l">All costs</div><div class="v">${fmt(C.cost)}</div></div><div class="kpi"><div class="l">${C.profit<0?'Loss':'Profit'}</div><div class="v ${C.profit<0?'neg':''}">${fmt(C.profit)}</div><div class="s">${R.map(r=>pl(r)+': '+fmt(Math.round(r.due))).join(' · ')}</div></div>
+  <div class="card"><div class="h2row"><h2>Genzi money split</h2><div class="row noprint"><select data-chg="splitRange">${SPLIT_RANGES.map(([v,l])=>`<option value="${v}"${v===(UI.splitRange||'fresh')?' selected':''}>${l}</option>`).join('')}</select><button class="btn" data-act="editShares">Shares</button><button class="btn primary" data-act="addPartnerTx">+ Personal money / money in</button></div></div>
+    <div class="note"><b>Where Genzi money lives:</b> Genzi earnings go into <b>Account Two (I&amp;M Bank)</b>, under Profit &amp; Loss → Bank. Genzi money does two things: it runs all the sites, Dala and Genzi, and what is left finances the partners' personal lives. This page splits only Genzi money. Dala money is saved in Account One and divided once a month (see the bottom of this page). It started afresh at <b>${fmt(1797)}</b> at the close of ${fmtD('2026-10-16')}. Every shilling a partner takes from it for personal use is recorded here with <b>+ Personal money</b>, and it comes off the I&amp;M balance.</div>
+    <div class="kpis"><div class="kpi"><div class="l">Genzi earnings</div><div class="v">${fmt(C.earn)}</div><div class="s">${fmtDs(f)} to ${fmtDs(t)}</div></div><div class="kpi"><div class="l">Running costs, Dala and Genzi</div><div class="v">${fmt(C.cost)}</div><div class="s">all paid from Genzi money</div></div><div class="kpi"><div class="l">Genzi money left to share${C.profit<0?' (short)':''}</div><div class="v ${C.profit<0?'neg':''}">${fmt(C.profit)}</div><div class="s">${R.map(r=>pl(r)+': '+fmt(Math.round(r.due))).join(' · ')}</div></div>
       <div class="kpi"><div class="l">I&amp;M balance now</div><div class="v ${bankBal('equity',today())<0?'neg':''}">${fmt(bankBal('equity',today()))}</div><div class="s"><a href="#bank" data-go="bank">open Bank</a></div></div></div>
   </div>
   <div class="card"><h2 style="margin-bottom:6px">Between the partners</h2><p style="font-size:17px;margin:4px 0 10px">${owe}</p>
@@ -1461,9 +1461,22 @@ P.split=()=>{
     ${C.L.filter(x=>S.settings.partners.includes(x.who)).length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Who</th><th>What</th><th>Details</th><th class="n">Amount</th><th></th></tr></thead><tbody>
     ${C.L.filter(x=>S.settings.partners.includes(x.who)).map(x=>{const pt=x.id&&byId(S.partnerTx,x.id);return `<tr><td>${fmtD(x.date)}</td><td>${payerTag(x.who)}</td><td>${esc(x.kind==='Took money out'?'Personal use':x.kind)}${pt&&pt.bank?` <span class="small muted">(${esc(bankName(pt.bank).split(' · ')[1]||'')})</span>`:''}</td><td class="wrap small">${esc(x.note)}</td><td class="n ${x.dir<0?'neg':''}">${x.dir<0?'−':''}${fmt(x.amount)}</td><td>${x.id?`<div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editPartnerTx" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delPartnerTx" data-id="${x.id}">✕</button></div>`:''}</td></tr>`;}).join('')}
     </tbody></table></div>`:'<div class="empty">No partner money in this period yet.</div>'}
-    <p class="small muted">Costs show here when "Paid by" is a partner's own pocket. Costs paid with business money come from the I&amp;M account and are already in the profit.</p>
-  </div>`;
+    <p class="small muted">Costs show here when "Paid by" is a partner's own pocket. Costs paid with business money come from the I&amp;M account and are already in the figures above.</p>
+  </div>
+  ${dalaSavings()}`;
 };
+function dalaSavings(){
+  const td=today(),[mf,mt]=rangeOf('month'),E=earnIn(mf,mt),dm=sum(S.sites.filter(x=>x.group==='Dala'),x=>(E.bySite[x.id]||{total:0}).total),bal=bankBal('coop',td);
+  const R=splitCalc(td,td).R,div=S.partnerTx.filter(x=>x.bank==='coop'&&x.type==='out').sort((a,b)=>b.date.localeCompare(a.date));
+  const last=div[0]&&div[0].date,thisMonth=div.some(x=>x.date.slice(0,7)===td.slice(0,7));
+  return `<div class="card"><div class="h2row"><h2>Dala savings (Account One · Co-op)</h2><button class="btn primary" data-act="divideDala">Divide Account One</button></div>
+    <div class="note">Dala earnings go into Account One, a savings account you open once a month. When you open it, tap <b>Divide Account One</b>, enter the amount you shared and the site splits it by your shares and takes it off the Account One balance.</div>
+    <div class="kpis"><div class="kpi"><div class="l">Account One balance now</div><div class="v ${bal<0?'neg':''}">${fmt(bal)}</div><div class="s">${R.map(r=>esc(r.p)+' '+Math.round(r.share*100)+'%: '+fmt(Math.round(bal*r.share))).join(' · ')}</div></div>
+      <div class="kpi"><div class="l">Dala earnings this month</div><div class="v">${fmt(dm)}</div></div>
+      <div class="kpi"><div class="l">Last divided</div><div class="v">${last?fmtDs(last):'Not yet'}</div><div class="s">${thisMonth?'Divided this month':'Not divided this month yet'}</div></div></div>
+    ${div.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Partner</th><th>Note</th><th class="n">Amount</th><th></th></tr></thead><tbody>${div.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${payerTag(x.person)}</td><td class="wrap small">${esc(x.note||'')}</td><td class="n">${fmt(num(x.amount))}</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="editPartnerTx" data-id="${x.id}">Edit</button><button class="btn sm danger" data-act="delPartnerTx" data-id="${x.id}">✕</button></div></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No monthly division recorded yet.</div>'}
+  </div>`;
+}
 P.partners=()=>{
   const [f,t]=rangeOf(UI.partRange),L=partnerLedger(f,t),ps=S.settings.partners;
   const e=earnIn(f,t),profit=e.total-sum(costsIn(f,t),x=>x.amount);
@@ -2293,6 +2306,10 @@ const ACT={
   addPartnerTx(){openForm('Partner money in / out',[fDate(),{k:'person',label:'Partner',type:'select',options:S.settings.partners,def:S.settings.lastPayer&&S.settings.partners.includes(S.settings.lastPayer)?S.settings.lastPayer:S.settings.partners[0]},{k:'type',label:'Type',type:'select',options:[['in','Put money into the business'],['out','Took money out for personal use']]},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'bank',label:'Which money',type:'select',options:ptBankOpts(),def:'equity'},{k:'note',label:'What for'}],{},o=>{S.partnerTx.push({id:uid(),...o});toast('Saved');});},
   editPartnerTx(id){const x=byId(S.partnerTx,id);openForm('Edit partner money',[fDate(),{k:'person',label:'Partner',type:'select',options:S.settings.partners},{k:'type',label:'Type',type:'select',options:[['in','Put money into the business'],['out','Took money out for personal use']]},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'bank',label:'Which money',type:'select',options:ptBankOpts()},{k:'note',label:'What for'}],x,o=>{Object.assign(x,o,{amount:num(o.amount)});});},
 
+  divideDala(){const td=today(),bal=Math.max(0,Math.round(bankBal('coop',td))),R=splitCalc(td,td).R;
+    openForm('Divide Account One (Dala savings)',[fDate(),{k:'amount',label:'Amount divided (Ksh)',type:'number',req:true,hint:R.map(r=>r.p+' gets '+Math.round(r.share*100)+'%').join(', ')},{k:'note',label:'Note'}],{amount:bal||'',note:'Monthly Dala savings, '+monthLabel(td.slice(0,7))},o=>{
+      const a=num(o.amount);let left=a;R.forEach((r,i)=>{const v=i===R.length-1?left:Math.round(a*r.share);left-=v;S.partnerTx.push({id:uid(),date:o.date,person:r.p,type:'out',amount:v,bank:'coop',note:o.note||'Monthly Dala savings'});});
+      toast('Divided: '+R.map(r=>r.p+' '+fmt(Math.round(a*r.share))).join(', '));});},
   delPartnerTx(id){del(S.partnerTx,id,'partner entry');},
   addEquity(type){openForm(type==='out'?'Take money out of the company':'Put money into the company',equityFields(type),{},o=>{S.equityTx.push({id:uid(),...o});const r=ownCalc();toast('New ownership: '+r.names.map(n=>n+' '+(r.share[n]*100).toFixed(1)+'%').join(' · '));});},
   editEquity(id){const x=byId(S.equityTx,id);openForm('Edit money in / out',equityFields(x.type),x,o=>{Object.assign(x,o);});},
@@ -2510,6 +2527,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1792160562';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1792160912';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

@@ -1433,10 +1433,10 @@ function genziEarnDay(d){const o=NOON();if(o.date===d)return num(o.genzi);return
 function genziEarnRange(f,t){let v=0;for(const d of Object.keys(S.earnings))if(d>=f&&d<=t&&d!==NOON().date)v+=genziEarnDay(d);const o=NOON();if(o.date&&o.date>=f&&o.date<=t)v+=num(o.genzi);return v;}
 const costsFrom=(f,t,b)=>costsIn(f,t,b).filter(noonCost);
 function genziDay(d){const g=genziEarnDay(d)+(d===NOON().date?num(bankOpen('equity').amount):0),c=sum(costsFrom(d,d),x=>num(x.amount)),R=splitCalc(d,d).R.map(r=>({p:r.p,share:r.share,v:(g-c)*r.share}));return {g,c,R};}
-/* ---------- weekly Genzi report: Monday to Sunday, closed for good every Monday 8 AM (Kenya time) ---------- */
+/* ---------- weekly Genzi report: Monday 00:00 to Sunday 23:59, closed for good when Sunday ends ---------- */
 const kenyaHour=()=>new Date(Date.now()+3*3600e3).getUTCHours();
 const weekClosesOn=m=>addDays(m,7);
-const weekDue=m=>{const c=weekClosesOn(m),t=today();return t>c||(t===c&&kenyaHour()>=8);};
+const weekDue=m=>today()>=weekClosesOn(m);
 function weekCalc(m){
   const fs=S.settings.freshStart||m,f=m<fs?fs:m,t=addDays(m,6),C=splitCalc(f,t>today()?today():t);
   const took=S.partnerTx.filter(x=>x.type==='out'&&x.bank!=='coop'&&!String(x.id).startsWith('im-gap')&&x.date>=f&&x.date<=t).sort((a,b)=>a.date.localeCompare(b.date)).map(x=>({date:x.date,person:x.person,amount:num(x.amount),note:x.note||''}));
@@ -1461,9 +1461,9 @@ P.week=()=>{
   if(!m)return '<div class="card"><div class="empty">The weekly report starts once the I&amp;M count has started.</div></div>';
   const closed=weekGet(m),W=closed||weekCalc(m),R=W.R,live=closed?weekCalc(m):null,changed=live&&Math.abs(live.profit-closed.profit)+Math.abs(sum(live.R,r=>r.took)-sum(closed.R,r=>r.took))>0.5;
   return `<div class="card noprint"><div class="h2row"><h2>Weekly Genzi report</h2><div class="row"><select data-chg="weekM">${L.map(x=>`<option value="${x}"${x===m?' selected':''}>${fmtDs(x)} to ${fmtDs(addDays(x,6))}${weekGet(x)?' · closed':' · open'}</option>`).join('')}</select><button class="btn" data-act="addPersonal">+ Personal money</button><button class="btn primary" data-act="printPage">Download PDF</button></div></div>
-    <p class="small muted" style="margin:0">Each week runs Monday to Sunday. Every Monday at 8 AM the week before is closed for good: its figures, positive or negative, never change after that. The report is ready on this page and on the dashboard. Tap <b>Download PDF</b>, then <b>Save as PDF</b>, to keep or send it.</p></div>
+    <p class="small muted" style="margin:0">Each week runs from Monday 00:00 to Sunday 23:59. When Sunday ends the week is closed for good: its figures, positive or negative, never change after that. You can download any week's report at any time, including the week still running: tap <b>Download PDF</b>, then <b>Save as PDF</b>.</p></div>
   <div class="card report">
-    <div class="rhead"><img src="${$('header .logo').src}" alt="DalaWifi" style="height:46px"><div><h2 style="margin:0">Genzi money: week of ${fmtD(W.m)}</h2><div class="muted">${fmtD(W.f)} to ${fmtD(W.t)} · ${closed?'closed '+fmtD(closed.closedAt.slice(0,10)):'open, closes '+fmtD(weekClosesOn(W.m))+' at 8 AM'}</div></div></div>
+    <div class="rhead"><img src="${$('header .logo').src}" alt="DalaWifi" style="height:46px"><div><h2 style="margin:0">Genzi money: week of ${fmtD(W.m)}</h2><div class="muted">${fmtD(W.f)} to ${fmtD(W.t)} · ${closed?'closed '+fmtD(closed.closedAt.slice(0,10)):'open, closes '+fmtD(W.t)+' at 23:59'}</div></div></div>
     ${closed?'<span class="badge b-ok">Closed for good</span>':'<span class="badge b-warn">This week is still open</span>'}
     <ol style="line-height:1.7;padding-left:20px">${weekText(W).map(x=>`<li>${x}</li>`).join('')}</ol>
     <div class="tbl-wrap"><table><thead><tr><th></th><th class="n">Total</th>${R.map(r=>`<th class="n">${esc(r.p)} ${Math.round(r.share*100)}%</th>`).join('')}</tr></thead><tbody>
@@ -2613,6 +2613,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1792163123';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1792163244';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

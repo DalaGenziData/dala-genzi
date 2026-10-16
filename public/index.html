@@ -1420,6 +1420,8 @@ P.bank=()=>{
   </div>`;
 };
 const SPLIT_RANGES=[['fresh','Since the I&M fresh start'],['month','This month'],['last','Last month'],['all','All time']];
+const fmt2=v=>'Ksh '+(Math.round(num(v)*100)/100).toLocaleString('en-KE',{minimumFractionDigits:0,maximumFractionDigits:2});
+const pnl2=v=>`<span class="${v<0?'neg':'pos'}">${v<0?'−':''}${fmt2(Math.abs(v))}</span>`;
 function splitRange(){const r=UI.splitRange||'fresh',fs=S.settings.freshStart||today();
   if(r==='fresh')return [fs,today()];if(r==='all')return ['2000-01-01',today()];return rangeOf(r==='last'?'lastmonth':'month');}
 function splitCalc(f,t){
@@ -1431,7 +1433,7 @@ function splitCalc(f,t){
   return {earn,cost,profit,R,L};
 }
 P.split=()=>{
-  const [f,t]=splitRange(),C=splitCalc(f,t),R=C.R,amt=UI.splitAmt===undefined?100:num(UI.splitAmt);
+  const [f,t]=splitRange(),C=splitCalc(f,t),R=C.R,amt=UI.splitAmt===undefined?100:num(UI.splitAmt),cst=UI.splitCost===undefined?60:num(UI.splitCost);
   const pos=R.filter(r=>r.pos>0.5).sort((a,b)=>b.pos-a.pos),neg=R.filter(r=>r.pos<-0.5).sort((a,b)=>a.pos-b.pos);
   const owe=pos.length&&neg.length?`<b>${esc(neg[0].p)}</b> owes <b>${esc(pos[0].p)}</b> <b>${fmt(Math.round(pos[0].pos))}</b>`:'Nobody owes anybody: you have both put in and taken out in line with your shares.';
   const pl=r=>esc(r.p)+' '+Math.round(r.share*100)+'%';
@@ -1441,21 +1443,35 @@ P.split=()=>{
     <div class="kpis"><div class="kpi"><div class="l">Genzi earnings</div><div class="v">${fmt(C.earn)}</div><div class="s">${fmtDs(f)} to ${fmtDs(t)}</div></div><div class="kpi"><div class="l">Running costs, Dala and Genzi</div><div class="v">${fmt(C.cost)}</div><div class="s">all paid from Genzi money</div></div><div class="kpi"><div class="l">Genzi money left to share${C.profit<0?' (short)':''}</div><div class="v ${C.profit<0?'neg':''}">${fmt(C.profit)}</div><div class="s">${R.map(r=>pl(r)+': '+fmt(Math.round(r.due))).join(' · ')}</div></div>
       <div class="kpi"><div class="l">I&amp;M balance now</div><div class="v ${bankBal('equity',today())<0?'neg':''}">${fmt(bankBal('equity',today()))}</div><div class="s"><a href="#bank" data-go="bank">open Bank</a></div></div></div>
   </div>
+  <div class="card"><h2 style="margin-bottom:6px">Step by step, 88/12 on everything</h2>
+    <div class="tbl-wrap"><table><thead><tr><th></th><th class="n">Total</th>${R.map(r=>`<th class="n">${esc(r.p)} ${Math.round(r.share*100)}%</th>`).join('')}</tr></thead><tbody>
+    <tr><td>1. Genzi money earned</td><td class="n">${fmt(C.earn)}</td>${R.map(r=>`<td class="n">${fmt2(C.earn*r.share)}</td>`).join('')}</tr>
+    <tr><td>2. Running sites (Dala and Genzi costs), each pays their share</td><td class="n">${fmt(C.cost)}</td>${R.map(r=>`<td class="n">−${fmt2(C.cost*r.share)}</td>`).join('')}</tr>
+    <tr><td><b>3. Remaining to divide</b></td><td class="n"><b>${pnl(C.profit)}</b></td>${R.map(r=>`<td class="n"><b>${fmt2(r.due)}</b></td>`).join('')}</tr>
+    <tr><td>4. Paid for the sites from own pocket (lent to the business)</td><td class="n">${fmt(sum(R,r=>r.paid+r.put))}</td>${R.map(r=>`<td class="n">+${fmt2(r.paid+r.put)}</td>`).join('')}</tr>
+    <tr><td>5. Already taken for personal use</td><td class="n">${fmt(sum(R,r=>r.took))}</td>${R.map(r=>`<td class="n">−${fmt2(r.took)}</td>`).join('')}</tr>
+    <tr><td><b>6. Still to be given to each partner</b></td><td class="n"><b>${pnl(sum(R,r=>r.biz))}</b></td>${R.map(r=>`<td class="n"><b>${pnl2(r.biz)}</b></td>`).join('')}</tr>
+    </tbody></table></div>
+    <p class="small muted">Line 6 = line 3 + line 4 − line 5. Give each partner their line 6 from the I&amp;M money. If the I&amp;M money is not enough, the partner below zero has taken or borrowed more than their share and pays the other back: that is the "owes" line above.</p>
+  </div>
+  <div class="card"><h2 style="margin-bottom:6px">Day by day</h2>
+    ${(()=>{const E=earnIn(f,t),cb={};costsIn(f,t).forEach(c=>{const d=c.forMonth?c.date:c.date;cb[d]=(cb[d]||0)+num(c.amount);});const days=[];for(let d=t;d>=f&&days.length<62;d=addDays(d,-1)){const g=sum(S.sites.filter(x=>x.group==='Genzi'),x=>num((S.earnings[d]||{})[x.id])),c=cb[d]||0;if(g||c)days.push([d,g,c]);}
+      return days.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th class="n">Genzi earned</th><th class="n">Running costs</th><th class="n">Remaining</th>${R.map(r=>`<th class="n">${esc(r.p)} ${Math.round(r.share*100)}%</th>`).join('')}</tr></thead><tbody>${days.map(([d,g,c])=>`<tr><td>${fmtD(d)}</td><td class="n">${fmt(g)}</td><td class="n">${fmt(c)}</td><td class="n">${pnl(g-c)}</td>${R.map(r=>`<td class="n">${pnl2((g-c)*r.share)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<div class="empty">No Genzi earnings or costs in this period yet.</div>';})()}
+  </div>
   <div class="card"><h2 style="margin-bottom:6px">Between the partners</h2><p style="font-size:17px;margin:4px 0 10px">${owe}</p>
     <div class="tbl-wrap"><table><thead><tr><th>Partner</th><th class="n">Share</th><th class="n">Paid business costs from own pocket</th><th class="n">Put money in</th><th class="n">Took for personal use</th><th class="n">Net put in</th><th class="n">Fair part of the net</th><th class="n">Difference</th></tr></thead><tbody>
     ${R.map(r=>`<tr><td><b>${esc(r.p)}</b></td><td class="n">${Math.round(r.share*100)}%</td><td class="n">${fmt(r.paid)}</td><td class="n">${fmt(r.put)}</td><td class="n">${fmt(r.took)}</td><td class="n">${pnl(r.net)}</td><td class="n">${pnl(Math.round(r.fair))}</td><td class="n"><b>${pnl(Math.round(r.pos))}</b></td></tr>`).join('')}
     </tbody><tfoot><tr><td>Total</td><td class="n">100%</td><td class="n">${fmt(sum(R,r=>r.paid))}</td><td class="n">${fmt(sum(R,r=>r.put))}</td><td class="n">${fmt(sum(R,r=>r.took))}</td><td class="n">${pnl(sum(R,r=>r.net))}</td><td></td><td></td></tr></tfoot></table></div>
     <p class="small muted">How it works: money each partner puts into the business (costs paid from their own pocket plus money put in) minus money they take out for personal use is their <b>net put in</b>. Partners should carry the net in their profit shares (${R.map(pl).join(', ')}). <b>Difference</b> above zero means that partner has carried more than their share and the other partner owes them that amount.</p>
   </div>
-  <div class="card"><h2 style="margin-bottom:6px">Profit each partner should get</h2>
-    <div class="tbl-wrap"><table><thead><tr><th>Partner</th><th class="n">Share of ${C.profit<0?'loss':'profit'}</th><th class="n">Net put in</th><th class="n">The business owes them</th></tr></thead><tbody>
-    ${R.map(r=>`<tr><td><b>${esc(r.p)}</b></td><td class="n">${pnl(Math.round(r.due))}</td><td class="n">${pnl(r.net)}</td><td class="n"><b>${pnl(Math.round(r.biz))}</b></td></tr>`).join('')}
-    </tbody></table></div>
-    <p class="small muted">The business owes a partner their share of profit plus what they put in, minus what they took. A negative figure means that partner has taken more than their share so far.</p>
-  </div>
-  <div class="card"><h2 style="margin-bottom:6px">Quick split calculator</h2>
-    <div class="row"><label class="small">Amount (Ksh) <input type="number" inputmode="decimal" data-chg="splitAmt" value="${amt}" style="width:140px"></label></div>
-    <div class="kpis" style="margin-top:10px;margin-bottom:0">${R.map(r=>`<div class="kpi"><div class="l">${pl(r)}</div><div class="v">${fmt(Math.round(amt*r.share*100)/100)}</div></div>`).join('')}</div>
+  <div class="card"><h2 style="margin-bottom:6px">Quick calculator</h2>
+    <div class="row"><label class="small">Genzi money earned <input type="number" inputmode="decimal" data-chg="splitAmt" value="${amt}" style="width:110px"></label><label class="small">Running costs <input type="number" inputmode="decimal" data-chg="splitCost" value="${cst}" style="width:110px"></label><label class="small">Costs paid from <select data-chg="splitWho"><option value="">Shared I&amp;M money</option>${R.map(r=>`<option${UI.splitWho===r.p?' selected':''}>${esc(r.p)}</option>`).join('')}</select></label></div>
+    ${(()=>{const rem=amt-cst,who=UI.splitWho;let html=`<div class="tbl-wrap" style="margin-top:10px"><table><thead><tr><th></th>${R.map(r=>`<th class="n">${esc(r.p)} ${Math.round(r.share*100)}%</th>`).join('')}</tr></thead><tbody>
+      <tr><td>Share of money earned</td>${R.map(r=>`<td class="n">${fmt2(amt*r.share)}</td>`).join('')}</tr>
+      <tr><td>Share of running costs</td>${R.map(r=>`<td class="n">${fmt2(cst*r.share)}</td>`).join('')}</tr>
+      <tr><td><b>Gets from the remaining ${fmt(rem)}</b></td>${R.map(r=>`<td class="n"><b>${pnl2(rem*r.share)}</b></td>`).join('')}</tr></tbody></table></div>`;
+      if(who){const o=R.filter(r=>r.p!==who);html+=`<p style="margin:8px 0 0">${esc(who)} paid all ${fmt(cst)} of running costs, so ${o.map(r=>`<b>${esc(r.p)}</b> gives ${esc(who)} <b>${fmt2(cst*r.share)}</b> (their ${Math.round(r.share*100)}% of the costs)`).join(' and ')}.</p>`;}
+      return html;})()}
   </div>
   <div class="card"><h2 style="margin-bottom:10px">Every partner shilling in this period</h2>
     ${C.L.filter(x=>S.settings.partners.includes(x.who)).length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Who</th><th>What</th><th>Details</th><th class="n">Amount</th><th></th></tr></thead><tbody>
@@ -2454,6 +2470,8 @@ const CHG={
   costMonth(el){UI.costMonth=el.value;render();},
   splitRange(el){UI.splitRange=el.value;render();},
   splitAmt(el){UI.splitAmt=el.value;render();},
+  splitCost(el){UI.splitCost=el.value;render();},
+  splitWho(el){UI.splitWho=el.value;render();},
   tokMonth(el){UI.tokMonth=el.value;render();},
   costCat(el){UI.costCat=el.value;render();},
   costSite(el){UI.costSite=el.value;render();},
@@ -2527,6 +2545,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1792160912';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1792161500';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

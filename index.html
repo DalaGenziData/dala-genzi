@@ -221,11 +221,11 @@ const INV_CAT='Equipment & investment';
 const EXP_CATS=['Motorbike fuel','Tech salary','Electricity tokens','Wifi subscription','Materials','Repairs & maintenance','Transport','Airtime / SMS','Lunch','Rent',INV_CAT,'Other'];
 const isInv=x=>x.category===INV_CAT;
 const SUBTECH_CAT='Sub-tech wages';
-const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['analysis','Analysis'],['report','Monthly Report'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup'],['crew','Sub-tech Days'],['desk','Tech Requests & Refunds'],['reports','Technician Reports'],['weekly','Weekly Costs'],['gaps','Data Check'],['thome','Home'],['ext','Router Extensions'],['shared','Shared Costs Report'],['split','Profit Split']];
+const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['analysis','Analysis'],['report','Monthly Report'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup'],['crew','Sub-tech Days'],['desk','Tech Requests & Refunds'],['reports','Technician Reports'],['weekly','Weekly Costs'],['gaps','Data Check'],['thome','Home'],['ext','Router Extensions'],['shared','Shared Costs Report'],['split','Profit Split'],['week','Weekly Genzi Report']];
 
 // Main menu: each main page holds related subpages, shown as tabs under the menu.
-const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','ext','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','weekly','sitecosts','shared','mat']],['Employees',['staff','crew','desk','reports','team']],['Profit & Loss',['pl','analysis','report','debts','bank']],['Owners',['split','partners','directors']],['Settings',['settings','gaps','activity','search']]];
-const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',analysis:'Analysis',report:'Monthly Report',sitecosts:'Costs per Site',search:'Search',activity:'Activity History',crew:'Sub-tech Days',desk:'Requests & Refunds',reports:'Tech Reports',weekly:'Weekly Costs',gaps:'Data Check',thome:'Home',ext:'Router Extensions',shared:'Shared Costs',split:'Profit Split'};
+const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','ext','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','weekly','sitecosts','shared','mat']],['Employees',['staff','crew','desk','reports','team']],['Profit & Loss',['pl','analysis','report','debts','bank']],['Owners',['split','week','partners','directors']],['Settings',['settings','gaps','activity','search']]];
+const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',analysis:'Analysis',report:'Monthly Report',sitecosts:'Costs per Site',search:'Search',activity:'Activity History',crew:'Sub-tech Days',desk:'Requests & Refunds',reports:'Tech Reports',weekly:'Weekly Costs',gaps:'Data Check',thome:'Home',ext:'Router Extensions',shared:'Shared Costs',split:'Profit Split',week:'Weekly Report'};
 // The technician sees only the technical pages; staff see everything except the Owners pages.
 const TECH_GROUPS=[['Home',['thome']],['Customer Care',['tickets','issues']],['Tokens & WiFi',['bills']],['Extensions',['ext']],['Sub-techs',['crew']],['Requests & Refunds',['desk']],['Reports',['reports']],['Materials',['mat']],['Settings',['settings']]];
 const navGroups=()=>isTech()?TECH_GROUPS:isOwner()?GROUPS:GROUPS.filter(g=>g[0]!=='Owners');
@@ -794,6 +794,7 @@ function alerts(){
   {const r=reminderText();if(r.n)a.unshift({cls:r.od?'b-bad':'b-warn',tag:'Payments',html:`${r.n} payment${r.n>1?'s':''} overdue or due soon (${fmt(sum(upcomingList().filter(x=>x.left!==null&&x.left<=(num(S.settings.remindDays)||3)),x=>x.amount))}). <a href="#upcoming" data-go="upcoming">Send reminders</a>`});}
   {const w=(S.tickets||[]).filter(t=>t.stage<4).length;if(w)a.unshift({cls:'b-bad',tag:'Customers',html:`${w} customer issue${w>1?'s':''} not finished. <a href="#tickets" data-go="tickets">View</a>`});}
   if(open)a.push({cls:'b-bad',tag:'Issues',html:`${open} open site issue${open>1?'s':''}. <a href="#issues" data-go="issues">View</a>`});
+  if(isOwner()){const lw=weekList().find(x=>weekGet(x));if(lw&&diffDays(weekClosesOn(lw),today())<=1)a.push({cls:'b-ok',tag:'Report',html:`The Genzi report for ${fmtDs(lw)} to ${fmtDs(addDays(lw,6))} is ready. <a href="#week" data-act="openWeek" data-id="${lw}">Open it</a>`});}
   if(isOwner()){const n=sum(dataGaps(),g=>g.items.length);if(n)a.push({cls:'b-info',tag:'Data',html:`${n} gap${n>1?'s':''} or doubtful figure${n>1?'s':''} in the data. <a href="#gaps" data-go="gaps">Check</a>`});}
   if(!S.lastBackup||diffDays(S.lastBackup,t)>7)a.push({cls:'b-warn',tag:'Backup',html:`${S.lastBackup?'Last backup was '+fmtD(S.lastBackup):'No backup made yet'}. <a href="#" data-act="exportJSON">Download backup</a>`});
   return a;
@@ -1432,6 +1433,56 @@ function genziEarnDay(d){const o=NOON();if(o.date===d)return num(o.genzi);return
 function genziEarnRange(f,t){let v=0;for(const d of Object.keys(S.earnings))if(d>=f&&d<=t&&d!==NOON().date)v+=genziEarnDay(d);const o=NOON();if(o.date&&o.date>=f&&o.date<=t)v+=num(o.genzi);return v;}
 const costsFrom=(f,t,b)=>costsIn(f,t,b).filter(noonCost);
 function genziDay(d){const g=genziEarnDay(d)+(d===NOON().date?num(bankOpen('equity').amount):0),c=sum(costsFrom(d,d),x=>num(x.amount)),R=splitCalc(d,d).R.map(r=>({p:r.p,share:r.share,v:(g-c)*r.share}));return {g,c,R};}
+/* ---------- weekly Genzi report: Monday to Sunday, closed for good every Monday 8 AM (Kenya time) ---------- */
+const kenyaHour=()=>new Date(Date.now()+3*3600e3).getUTCHours();
+const weekClosesOn=m=>addDays(m,7);
+const weekDue=m=>{const c=weekClosesOn(m),t=today();return t>c||(t===c&&kenyaHour()>=8);};
+function weekCalc(m){
+  const fs=S.settings.freshStart||m,f=m<fs?fs:m,t=addDays(m,6),C=splitCalc(f,t>today()?today():t);
+  const took=S.partnerTx.filter(x=>x.type==='out'&&x.bank!=='coop'&&!String(x.id).startsWith('im-gap')&&x.date>=f&&x.date<=t).sort((a,b)=>a.date.localeCompare(b.date)).map(x=>({date:x.date,person:x.person,amount:num(x.amount),note:x.note||''}));
+  return {m,f,t,start:C.start,earn:C.earn,cost:C.cost,profit:C.profit,R:C.R.map(r=>({p:r.p,share:r.share,cost:C.cost*r.share,due:r.due,took:r.took,biz:r.biz,pos:r.pos})),took};
+}
+function weekList(){const fs=S.settings.freshStart;if(!fs)return [];const L=[];for(let m=weekMon(fs);m<=today();m=addDays(m,7))L.push(m);return L.reverse();}
+const weekGet=m=>((S.settings.weekClose||{})[m])||null;
+function closeWeeks(){let ch=false;S.settings.weekClose=S.settings.weekClose||{};
+  for(const m of weekList())if(weekDue(m)&&!S.settings.weekClose[m]){S.settings.weekClose[m]={...weekCalc(m),closedAt:new Date().toISOString(),closedBy:meName()};logAct('Closed the Genzi week '+fmtDs(m)+' to '+fmtDs(addDays(m,6))+' for good');ch=true;}
+  return ch;}
+function weekText(W){const R=W.R,p2=v=>fmt2(Math.abs(v)),pos=R.filter(r=>r.pos>0.5),neg=R.filter(r=>r.pos<-0.5);
+  const L=[];
+  L.push(`Genzi earned <b>${fmt(W.earn)}</b>${W.start?` and the week started with <b>${fmt(W.start)}</b> in I&amp;M`:''}.`);
+  L.push(`Running all the sites cost <b>${fmt(W.cost)}</b>. ${R.map(r=>`${esc(r.p)} contributed ${Math.round(r.share*100)}%: <b>${p2(r.cost)}</b>`).join(', ')}.`);
+  L.push(W.profit>=0?`That leaves <b>${fmt(W.profit)}</b> to divide: ${R.map(r=>`${esc(r.p)} <b>${p2(r.due)}</b>`).join(', ')}.`:`The week ran short by <b>${fmt(-W.profit)}</b>, carried ${R.map(r=>`${esc(r.p)} <b>${p2(r.due)}</b>`).join(', ')}.`);
+  L.push(R.map(r=>r.took?`${esc(r.p)} took <b>${fmt(r.took)}</b> for personal life`:`${esc(r.p)} took nothing for personal life`).join('. ')+'.');
+  L.push(pos.length&&neg.length?`<b>${esc(neg[0].p)} owes ${esc(pos[0].p)} ${p2(pos[0].pos)}</b>, because ${esc(neg[0].p)} took more than their ${Math.round(neg[0].share*100)}% share of the personal money.`:'Nobody owes anybody this week: personal money followed the 88/12 shares.');
+  L.push(`Left for each partner at the end of the week: ${R.map(r=>`${esc(r.p)} ${r.biz<0?'<span class="neg">':''}<b>${r.biz<0?'−':''}${p2(r.biz)}</b>${r.biz<0?'</span>':''}`).join(', ')}.`);
+  return L;}
+P.week=()=>{
+  const L=weekList(),m=UI.weekM&&L.includes(UI.weekM)?UI.weekM:(L.find(x=>weekGet(x))||L[0]);
+  if(!m)return '<div class="card"><div class="empty">The weekly report starts once the I&amp;M count has started.</div></div>';
+  const closed=weekGet(m),W=closed||weekCalc(m),R=W.R,live=closed?weekCalc(m):null,changed=live&&Math.abs(live.profit-closed.profit)+Math.abs(sum(live.R,r=>r.took)-sum(closed.R,r=>r.took))>0.5;
+  return `<div class="card noprint"><div class="h2row"><h2>Weekly Genzi report</h2><div class="row"><select data-chg="weekM">${L.map(x=>`<option value="${x}"${x===m?' selected':''}>${fmtDs(x)} to ${fmtDs(addDays(x,6))}${weekGet(x)?' · closed':' · open'}</option>`).join('')}</select><button class="btn" data-act="addPersonal">+ Personal money</button><button class="btn primary" data-act="printPage">Download PDF</button></div></div>
+    <p class="small muted" style="margin:0">Each week runs Monday to Sunday. Every Monday at 8 AM the week before is closed for good: its figures, positive or negative, never change after that. The report is ready on this page and on the dashboard. Tap <b>Download PDF</b>, then <b>Save as PDF</b>, to keep or send it.</p></div>
+  <div class="card report">
+    <div class="rhead"><img src="${$('header .logo').src}" alt="DalaWifi" style="height:46px"><div><h2 style="margin:0">Genzi money: week of ${fmtD(W.m)}</h2><div class="muted">${fmtD(W.f)} to ${fmtD(W.t)} · ${closed?'closed '+fmtD(closed.closedAt.slice(0,10)):'open, closes '+fmtD(weekClosesOn(W.m))+' at 8 AM'}</div></div></div>
+    ${closed?'<span class="badge b-ok">Closed for good</span>':'<span class="badge b-warn">This week is still open</span>'}
+    <ol style="line-height:1.7;padding-left:20px">${weekText(W).map(x=>`<li>${x}</li>`).join('')}</ol>
+    <div class="tbl-wrap"><table><thead><tr><th></th><th class="n">Total</th>${R.map(r=>`<th class="n">${esc(r.p)} ${Math.round(r.share*100)}%</th>`).join('')}</tr></thead><tbody>
+      ${W.start?`<tr><td>Money in I&amp;M at the start</td><td class="n">${fmt(W.start)}</td>${R.map(r=>`<td class="n">${fmt2(W.start*r.share)}</td>`).join('')}</tr>`:''}
+      <tr><td>Genzi earned</td><td class="n">${fmt(W.earn)}</td>${R.map(r=>`<td class="n">${fmt2(W.earn*r.share)}</td>`).join('')}</tr>
+      <tr><td>Running costs contributed</td><td class="n">${fmt(W.cost)}</td>${R.map(r=>`<td class="n">−${fmt2(r.cost)}</td>`).join('')}</tr>
+      <tr><td><b>Remaining</b></td><td class="n"><b>${pnl(W.profit)}</b></td>${R.map(r=>`<td class="n"><b>${pnl2(r.due)}</b></td>`).join('')}</tr>
+      <tr><td>Personal money taken</td><td class="n">${fmt(sum(R,r=>r.took))}</td>${R.map(r=>`<td class="n">−${fmt2(r.took)}</td>`).join('')}</tr>
+      <tr><td><b>Week result</b></td><td class="n"><b>${pnl(sum(R,r=>r.biz))}</b></td>${R.map(r=>`<td class="n"><b>${pnl2(r.biz)}</b></td>`).join('')}</tr>
+    </tbody></table></div>
+    <h3 style="margin:14px 0 6px">Personal money this week</h3>
+    ${W.took.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Partner</th><th>What for</th><th class="n">Amount</th></tr></thead><tbody>${W.took.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.person)}</td><td class="wrap small">${esc(x.note)}</td><td class="n">${fmt(x.amount)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">None.</div>'}
+    ${changed?`<p class="small" style="color:var(--warn)">Records for this week were changed after it closed. The closed report stays as it was; with today's records the week result would be ${pnl(sum(live.R,r=>r.biz))}.</p>`:''}
+  </div>
+  <div class="card noprint"><h2 style="margin-bottom:10px">All weeks</h2>
+    <div class="tbl-wrap"><table><thead><tr><th>Week</th><th>Status</th><th class="n">Genzi earned</th><th class="n">Running costs</th><th class="n">Personal money</th>${R.map(r=>`<th class="n">${esc(r.p)} result</th>`).join('')}</tr></thead><tbody>
+    ${L.map(x=>{const w=weekGet(x)||weekCalc(x);return `<tr><td><a href="#" data-act="openWeek" data-id="${x}">${fmtDs(x)} to ${fmtDs(addDays(x,6))}</a></td><td>${weekGet(x)?'<span class="badge b-ok">Closed</span>':'<span class="badge b-warn">Open</span>'}</td><td class="n">${fmt(w.earn)}</td><td class="n">${fmt(w.cost)}</td><td class="n">${fmt(sum(w.R,r=>r.took))}</td>${w.R.map(r=>`<td class="n">${pnl2(r.biz)}</td>`).join('')}</tr>`;}).join('')}
+    </tbody></table></div></div>`;
+};
 function splitRange(){const r=UI.splitRange||'fresh',fs=S.settings.freshStart||today();
   if(r==='fresh')return [fs<=today()?fs:today(),today()];if(r==='all')return ['2000-01-01',today()];return rangeOf(r==='last'?'lastmonth':'month');}
 function splitCalc(f,t){
@@ -2127,6 +2178,7 @@ function reconcileBills(){
     logAct('The I&M count now starts at midday 16 Oct 2026 with '+fmt(1797)+'. Earlier money that day is left out; enter Genzi earnings from midday to midnight on Profit Split');
     done.push('im-noon-20261016');ch=true;
   }
+  if(ONLINE&&isOwner()&&closeWeeks())ch=true;
   if(ONLINE&&!done.includes('maurice-sal-202609')){
     S.expenses.filter(e=>e.category==='Tech salary'&&String(e.date).slice(0,7)==='2026-10'&&num(e.amount)===20000&&!e.forMonth).forEach(e=>{
       e.forMonth='2026-09';logAct('Counted the '+fmt(20000)+' tech salary paid on '+fmtD(e.date)+' in September 2026 (it was the September salary)');});
@@ -2335,6 +2387,7 @@ const ACT={
   editPartnerTx(id){const x=byId(S.partnerTx,id);openForm('Edit partner money',[fDate(),{k:'person',label:'Partner',type:'select',options:S.settings.partners},{k:'type',label:'Type',type:'select',options:[['in','Put money into the business'],['out','Took money out for personal use']]},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'bank',label:'Which money',type:'select',options:ptBankOpts()},{k:'note',label:'What for'}],x,o=>{Object.assign(x,o,{amount:num(o.amount)});});},
 
   setNoon(){const o=NOON();openForm('Genzi earnings, midday to midnight '+fmtDs(o.date),[{k:'genzi',label:'Genzi earned after midday (Ksh)',type:'number',req:true,hint:'Only the money that came in after the I&M count started with '+fmt(1797)}],{genzi:o.genzi||''},v=>{S.settings.freshNoon={...o,genzi:num(v.genzi)};toast('Start day updated: I&M now '+fmt(bankBal('equity',today())));});},
+  openWeek(m){UI.weekM=m;goto('week');},
   addPersonal(){openForm('Personal money from Account Two',[fDate(),{k:'person',label:'Partner',type:'select',options:S.settings.partners},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},{k:'note',label:'What for'}],{},o=>{S.partnerTx.push({id:uid(),...o,type:'out',bank:'equity',amount:num(o.amount)});toast('Saved and taken off Account Two');});},
   divideDala(){const td=today(),bal=Math.max(0,Math.round(bankBal('coop',td))),R=splitCalc(td,td).R;
     openForm('Divide Account One (Dala savings)',[fDate(),{k:'amount',label:'Amount divided (Ksh)',type:'number',req:true,hint:R.map(r=>r.p+' gets '+Math.round(r.share*100)+'%').join(', ')},{k:'note',label:'Note'}],{amount:bal||'',note:'Monthly Dala savings, '+monthLabel(td.slice(0,7))},o=>{
@@ -2484,6 +2537,7 @@ const CHG={
   costMonth(el){UI.costMonth=el.value;render();},
   splitRange(el){UI.splitRange=el.value;render();},
   splitAmt(el){UI.splitAmt=el.value;render();},
+  weekM(el){UI.weekM=el.value;render();},
   splitCost(el){UI.splitCost=el.value;render();},
   splitWho(el){UI.splitWho=el.value;render();},
   tokMonth(el){UI.tokMonth=el.value;render();},
@@ -2559,6 +2613,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1792162824';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1792163123';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

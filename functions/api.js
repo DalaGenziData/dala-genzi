@@ -160,7 +160,7 @@ const FNS = {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(o.date) ? o.date : new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
     const amount = Number(o.amount);
     if (!(amount > 0)) throw new Error('bad_amount');
-    const item = { id: 'tc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), date, category: ['Materials', 'Electricity tokens', 'Wifi subscription'].includes(o.category) ? o.category : 'Materials', site: String(o.site || 'general').slice(0, 40), amount, desc: String(o.desc || '').slice(0, 200), paidBy: String(o.paidBy || '').slice(0, 60), addedBy: me.name || 'Technician', addedCode: String(o.addedCode || '').slice(0, 20), addedAt: new Date().toISOString() };
+    const item = { id: 'tc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), date, category: ['Materials', 'Electricity tokens', 'Wifi subscription'].includes(o.category) ? o.category : 'Materials', site: String(o.site || 'general').slice(0, 40), amount, desc: String(o.desc || '').slice(0, 200), paidBy: String(o.paidBy || '').slice(0, 60), ...(['main', 's0', 's1'].includes(o.power) ? { power: o.power } : {}), addedBy: me.name || 'Technician', addedCode: String(o.addedCode || '').slice(0, 20), addedAt: new Date().toISOString() };
     const path = 'state/expenses@' + date.slice(0, 4), r = await db.prepare('SELECT data FROM docs WHERE path = ?').bind(path).first();
     const doc = r ? JSON.parse(r.data) : { v: [] };
     (doc.v = doc.v || []).push(item);

@@ -144,6 +144,7 @@ details summary{cursor:pointer;color:var(--brand)}
 @media (max-width:600px){main{padding:12px}.kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}.kpi .v{font-size:18px}.hbars .hb{grid-template-columns:82px 1fr 90px}.card{padding:12px}}
 @media print{header,nav,.noprint,.btn{display:none!important}body{background:#fff;color:#000}.card,.kpi{border-color:#ccc}}
 html.big body{zoom:1.15}
+.tokall{margin:8px 0 4px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);font-size:14px}
 .rhead img{background:#0f1b33;border-radius:8px;padding:4px 8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 /* ---------- dashboard: premium look ---------- */
 .hero{position:relative;overflow:hidden;border-radius:20px;padding:22px 22px 18px;margin-bottom:16px;color:#fff;
@@ -895,23 +896,36 @@ P.perf=()=>{
 };
 const trend=p=>p===null||!isFinite(p)?'—':`<span class="${p<0?'neg':'pos'}">${p<0?'▼':'▲'} ${Math.abs(p).toFixed(0)}%</span>`;
 
+function tokTable(){
+  const m=UI.tokMonth||today().slice(0,7),[f,t]=monthRange(m),mc=costsIn(f,t),cats=['main','s0','s1'];
+  const rows=S.sites.map(s=>{const v=cats.map(p=>tokSum(mc,s.id,p));return {s,v,tot:sum(v,x=>x),n:mc.filter(e=>e.category==='Electricity tokens'&&e.site===s.id).length,earn:earnIn(f,t).bySite[s.id].total};});
+  const col=i=>sum(rows,r=>r.v[i]),all=sum(rows,r=>r.tot),earn=sum(rows,r=>r.earn),other=sum(mc.filter(e=>e.category==='Electricity tokens'&&!S.sites.some(x=>x.id===e.site)),e=>num(e.amount));
+  return `<div class="card"><div class="h2row"><h2>Token money, ${monthLabel(m)}</h2>${monthSelect('tokMonth',m)}</div>
+    <p class="small muted" style="margin-top:0">Every token payment is added, never replaced: pay 1,000 last week and 1,000 today and the site shows 2,000. Main power and both sub powers are added together, and the total comes off the site's profit.</p>
+    <div class="tbl-wrap"><table><thead><tr><th>Site</th><th class="n">Main power</th><th class="n">Sub power 1</th><th class="n">Sub power 2</th><th class="n">All tokens</th><th class="n">Payments</th><th class="n">Tokens as % of earnings</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td><b>${esc(r.s.name)}</b></td>${r.v.map(x=>`<td class="n">${x?fmt(x):'<span class="muted">0</span>'}</td>`).join('')}<td class="n"><b>${fmt(r.tot)}</b></td><td class="n">${r.n}</td><td class="n">${r.earn?Math.round(r.tot/r.earn*100)+'%':'—'}</td></tr>`).join('')}
+    ${other?`<tr><td>Tokens with no site</td><td colspan="3"></td><td class="n"><b>${fmt(other)}</b></td><td colspan="2"></td></tr>`:''}
+    </tbody><tfoot><tr><td>Total</td><td class="n">${fmt(col(0))}</td><td class="n">${fmt(col(1))}</td><td class="n">${fmt(col(2))}</td><td class="n">${fmt(all+other)}</td><td class="n">${sum(rows,r=>r.n)}</td><td class="n">${earn?Math.round((all+other)/earn*100)+'%':'—'}</td></tr></tfoot></table></div></div>`;
+}
 P.bills=()=>{
   const [mf,mt]=rangeOf('month'),me=earnIn(mf,mt),msc={};costsIn(mf,mt).forEach(x=>msc[x.site]=(msc[x.site]||0)+x.amount);const mc=costsIn(mf,mt),mTok=(id,cat)=>sum(mc.filter(x=>x.site===id&&x.category===cat),x=>x.amount);const mGen=sum(Object.keys(msc).filter(k=>!S.sites.some(x=>x.id===k)),k=>msc[k])/(S.sites.length||1);
   const hist=S.expenses.filter(x=>x.category==='Electricity tokens'||x.category==='Wifi subscription').sort((a,b)=>b.date.localeCompare(a.date)).slice(0,40);
   return `
   <div class="note">Keep each site's token meter number and WiFi account here. Use <b>Pay token</b> or <b>Pay WiFi</b> when you pay: it updates the last paid date and adds the cost to Running Costs automatically.</div>
   ${isOwner()?'<div class="row" style="margin-bottom:12px"><button class="btn primary" data-act="addSite">+ Add new site</button></div>':''}
+  ${isTech()?'':tokTable()}
   <div class="card"><h2 style="margin-bottom:6px">Token numbers</h2><p class="small muted" style="margin-top:0">Main power and the two sub powers of every site. Tap <b>add</b> or a number to change it. Swipe the table sideways to see all columns.</p>
     <div class="tbl-wrap"><table><thead><tr><th>Site</th><th>Main power</th><th>Sub power 1</th><th>Sub power 2</th><th>WiFi account</th></tr></thead><tbody>${S.sites.map(s=>{const cell=(n,ph,act,id)=>`<td><a href="#" data-act="${act}" data-id="${id}">${n?'<b>'+esc(n)+'</b>':'<span class="muted">add</span>'}</a>${ph?`<div class="small"><a href="tel:${esc(String(ph).replace(/[^0-9+]/g,''))}">${esc(ph)}</a></div>`:''}</td>`;const u=s.subs||[];
       return `<tr><td><b>${esc(s.name)}</b></td>${cell(s.tokenMeter,s.powerPhone,'editPower',s.id)}${cell((u[0]||{}).meter,(u[0]||{}).phone,'editSub',s.id+':0')}${cell((u[1]||{}).meter,(u[1]||{}).phone,'editSub',s.id+':1')}${cell(s.wifiAccount,'','editWifi',s.id)}</tr>`;}).join('')}</tbody></table></div></div>
   <div class="scards">${S.sites.map(s=>{const k=tokenStatus(s),w=wifiStatus(s);return `
     <div class="scard"><div class="h2row" style="margin:0"><h3 style="margin:0">${esc(s.name)}</h3>${groupBadge(s)}</div>
       <div class="sec">Main power</div>
-      <dl><dt>Token number</dt><dd>${esc(s.tokenMeter||'—')}</dd><dt>Power house</dt><dd>${esc(s.powerName||'—')}${s.powerPhone?` · <a href="tel:${esc(String(s.powerPhone).replace(/[^0-9+]/g,''))}">${esc(s.powerPhone)}</a>`:''}</dd><dt>Last paid</dt><dd>${fmtD(s.tokenLastPaid)}</dd>${isTech()?'':`<dt>Token paid this month</dt><dd><b>${fmt(mTok(s.id,'Electricity tokens'))}</b></dd>`}<dt>Last amount</dt><dd>${s.tokenLastAmount?fmt(s.tokenLastAmount):'—'}</dd><dt>Status</dt><dd><span class="badge ${k.cls}">${k.txt}</span></dd></dl>
+      <dl><dt>Token number</dt><dd>${esc(s.tokenMeter||'—')}</dd><dt>Power house</dt><dd>${esc(s.powerName||'—')}${s.powerPhone?` · <a href="tel:${esc(String(s.powerPhone).replace(/[^0-9+]/g,''))}">${esc(s.powerPhone)}</a>`:''}</dd><dt>Last paid</dt><dd>${fmtD(s.tokenLastPaid)}</dd>${isTech()?'':`<dt>Main power tokens this month</dt><dd><b>${fmt(tokSum(mc,s.id,'main'))}</b> <span class="small muted">(${mc.filter(e=>e.category==='Electricity tokens'&&e.site===s.id&&powerOf(e)==='main').length} payments)</span></dd>`}<dt>Last amount</dt><dd>${s.tokenLastAmount?fmt(s.tokenLastAmount):'—'}</dd><dt>Status</dt><dd><span class="badge ${k.cls}">${k.txt}</span></dd></dl>
       <div class="row" style="margin-bottom:6px"><button class="btn sm primary" data-act="payToken" data-id="${s.id}">Pay token</button><button class="btn sm" data-act="editPower" data-id="${s.id}">Edit token number &amp; phone</button></div>
       ${(s.subs||[]).map((u,i)=>`<div class="sec">${esc(u.name||'Sub power '+(i+1))}</div>
-      <dl><dt>Token number</dt><dd>${esc(u.meter||'—')}</dd><dt>Power house</dt><dd>${esc(u.powerName||'—')}${u.phone?` · <a href="tel:${esc(String(u.phone).replace(/[^0-9+]/g,''))}">${esc(u.phone)}</a>`:''}</dd><dt>Token amount</dt><dd>${u.amount?fmt(num(u.amount)):'—'}</dd><dt>Last paid</dt><dd>${u.lastPaid?fmtD(u.lastPaid)+(u.lastAmount?' · '+fmt(num(u.lastAmount)):''):'—'}</dd></dl>
+      <dl><dt>Token number</dt><dd>${esc(u.meter||'—')}</dd><dt>Power house</dt><dd>${esc(u.powerName||'—')}${u.phone?` · <a href="tel:${esc(String(u.phone).replace(/[^0-9+]/g,''))}">${esc(u.phone)}</a>`:''}</dd><dt>Token amount</dt><dd>${u.amount?fmt(num(u.amount)):'—'}</dd><dt>Last paid</dt><dd>${u.lastPaid?fmtD(u.lastPaid)+(u.lastAmount?' · '+fmt(num(u.lastAmount)):''):'—'}</dd>${isTech()?'':`<dt>Tokens this month</dt><dd><b>${fmt(tokSum(mc,s.id,'s'+i))}</b> <span class="small muted">(${mc.filter(e=>e.category==='Electricity tokens'&&e.site===s.id&&powerOf(e)==='s'+i).length} payments)</span></dd>`}</dl>
       <div class="row" style="margin-bottom:6px"><button class="btn sm primary" data-act="paySub" data-id="${s.id}:${i}">Pay token</button><button class="btn sm" data-act="editSub" data-id="${s.id}:${i}">Edit token number &amp; phone</button></div>`).join('')}
+      ${isTech()?'':`<div class="tokall">All tokens this month (main + sub powers): <b>${fmt(tokSum(mc,s.id))}</b></div>`}
       <div class="sec">WiFi subscription</div>
       <dl><dt>Provider</dt><dd>${esc(s.wifiProvider||'—')}</dd><dt>Account no.</dt><dd>${esc(s.wifiAccount||'—')}</dd><dt>Last paid</dt><dd>${fmtD(s.wifiLastPaid)}</dd><dt>Next due</dt><dd>${fmtD(wifiDue(s))}</dd>${isTech()?'':`<dt>WiFi paid this month</dt><dd><b>${fmt(mTok(s.id,'Wifi subscription'))}</b></dd>`}<dt>Status</dt><dd><span class="badge ${w.cls}">${w.txt}</span></dd></dl>
       <div class="row" style="margin-bottom:6px"><button class="btn sm primary" data-act="payWifi" data-id="${s.id}">Pay WiFi</button><button class="btn sm" data-act="editWifi" data-id="${s.id}">Edit WiFi details</button></div>
@@ -1942,7 +1956,7 @@ const BIZ='Business money';
 const payerOpts=()=>[...S.settings.partners,BIZ];
 const fPaid=(label='Paid by')=>({k:'paidBy',label,type:'select',options:payerOpts(),def:S.settings.lastPayer||S.settings.partners[0]});
 const payerTag=p=>p?`<span class="badge ${p===BIZ?'b-info':'b-dala'}">${esc(p===BIZ?'Business':p)}</span>`:'<span class="muted small">—</span>';
-function expFields(cat){return [fDate(),{k:'category',label:'Category',type:'select',options:EXP_CATS,def:cat||EXP_CATS[0]},{k:'site',label:'Site',type:'select',options:siteOpts(),def:'general'},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},fPaid(),{k:'desc',label:'Description',type:'text'}];}
+function expFields(cat){return [fDate(),{k:'category',label:'Category',type:'select',options:EXP_CATS,def:cat||EXP_CATS[0]},{k:'site',label:'Site',type:'select',options:siteOpts(),def:'general'},{k:'amount',label:'Amount (Ksh)',type:'number',req:true},fPaid(),{k:'desc',label:'Description',type:'text'},{k:'power',label:'Which power (for tokens)',type:'select',options:[['','Main power'],['s0','Sub power 1'],['s1','Sub power 2']],def:''}];}
 // A token or WiFi payment typed straight into a site's details (Last paid + amount) must still count as a cost.
 // Deterministic ids, so two phones adding the same one never double it.
 // Payments FIDEL asked Claude to enter. Each is added once for the whole business (remembered in settings.pendingDone,
@@ -1951,7 +1965,10 @@ const PENDING=[];
 // keep the sites list grouped: a site that changes group goes after the last site of its new group
 function moveToGroup(x){const i=S.sites.indexOf(x);if(i<0)return;S.sites.splice(i,1);let j=-1;S.sites.forEach((y,k)=>{if(y.group===x.group)j=k;});S.sites.splice(j<0?S.sites.length:j+1,0,x);}
 // a token or WiFi payment already in costs near this date (WiFi: within 20 days; token: same amount within 7 days)
-function billNear(id,cat,d,a,skip){const w=cat==='Wifi subscription'?20:7;return S.expenses.some(e=>e!==skip&&e.site===id&&e.category===cat&&Math.abs(diffDays(e.date,d))<=w&&(cat==='Wifi subscription'||num(e.amount)===num(a)));}
+function billNear(id,cat,d,a,skip,pw){const w=cat==='Wifi subscription'?20:0;pw=pw||(skip&&skip.power);return S.expenses.some(e=>e!==skip&&e.site===id&&e.category===cat&&Math.abs(diffDays(e.date,d))<=w&&(cat==='Wifi subscription'||(num(e.amount)===num(a)&&(!pw||!e.power||e.power===pw))));}
+// which power a token cost belongs to: main, s0 (sub power 1) or s1 (sub power 2)
+function powerOf(e){if(e.power)return e.power;const s=site(e.site),d=String(e.desc||'').toLowerCase();for(const [i,u] of ((s&&s.subs)||[]).entries()){if(d.includes(String(u.name||'Sub power '+(i+1)).toLowerCase())||(u.meter&&d.includes(String(u.meter).toLowerCase())))return 's'+i;}return /sub ?power ?1/.test(d)?'s0':/sub ?power ?2/.test(d)?'s1':'main';}
+function tokSum(list,id,pw){return sum(list.filter(e=>e.category==='Electricity tokens'&&e.site===id&&(!pw||powerOf(e)===pw)),e=>num(e.amount));}
 function reconcileBills(){
   let ch=false;
   const done=S.settings.pendingDone=S.settings.pendingDone||[];
@@ -2032,17 +2049,21 @@ function reconcileBills(){
     for(const [dk,ak,cat,tag] of [['tokenLastPaid','tokenLastAmount','Electricity tokens','tok'],['wifiLastPaid','wifiAmount','Wifi subscription','wifi']]){
       const d=s[dk],a=num(s[ak]),mk=tag+'Counted';
       if(!d||!a||s[mk]===d)continue;
-      if(!billNear(s.id,cat,d,a)){
-        S.expenses.push({id:`auto-${tag}-${s.id}-${d}`,date:d,category:cat,site:s.id,amount:a,desc:(tag==='tok'?(s.tokenMeter?'Meter '+s.tokenMeter:'Token'):(s.wifiAccount?'Acc '+s.wifiAccount:'WiFi'))+' (from site details)',paidBy:BIZ});
+      if(!billNear(s.id,cat,d,a,null,tag==='tok'?'main':'')){
+        S.expenses.push({id:`auto-${tag}-${s.id}-${d}`,date:d,category:cat,site:s.id,amount:a,desc:(tag==='tok'?(s.tokenMeter?'Meter '+s.tokenMeter:'Token'):(s.wifiAccount?'Acc '+s.wifiAccount:'WiFi'))+' (from site details)',paidBy:BIZ,...(tag==='tok'?{power:'main'}:{})});
       }
       s[mk]=d;ch=true;
     }
+    (s.subs||[]).forEach((u,i)=>{const d=u.lastPaid,a=num(u.lastAmount),pw='s'+i;
+      if(!d||!a||u.counted===d+'|'+a)return;
+      if(!billNear(s.id,'Electricity tokens',d,a,null,pw))S.expenses.push({id:`auto-tok${i}-${s.id}-${d}`,date:d,category:'Electricity tokens',site:s.id,amount:a,desc:(u.name||'Sub power '+(i+1))+(u.meter?' · Token '+u.meter:'')+' (from site details)',paidBy:BIZ,power:pw});
+      u.counted=d+'|'+a;ch=true;});
   }
   return ch;
 }
 function addExpense(o){
   if(isTech()){if(num(o.amount)>0)remote('techAddCost',PIN,{...o,amount:num(o.amount),addedCode:myCode()}).then(()=>toast('Cost sent to the owners')).catch(()=>toast('Could not send the cost. Tell the owners: '+fmt(num(o.amount))));return;}
-  S.expenses.push({id:uid(),date:o.date,category:o.category,site:o.site,amount:num(o.amount),desc:o.desc||'',paidBy:o.paidBy||''});}
+  S.expenses.push({id:uid(),date:o.date,category:o.category,site:o.site,amount:num(o.amount),desc:o.desc||'',paidBy:o.paidBy||'',...(o.power?{power:o.power}:{})});}
 function addToStore(name,qty,unit,unitCost){
   let it=S.store.find(m=>m.name.toLowerCase()===name.toLowerCase());
   if(it){it.qty=num(it.qty)+qty;if(unitCost)it.unitCost=unitCost;}
@@ -2098,8 +2119,8 @@ const ACT={
   editWifi(id){const s=site(id);openForm(`${s.name}: WiFi`,[{k:'wifiProvider',label:'WiFi / internet provider'},{k:'wifiAccount',label:'WiFi account number'},{k:'wifiLastPaid',label:'Date last paid',type:'date'},{k:'wifiAmount',label:'Subscription amount (Ksh)',type:'number'},{k:'wifiCycleDays',label:'Subscription lasts (days)',type:'number',hint:'Usually 30'}],s,o=>{Object.assign(s,o,{wifiAmount:num(o.wifiAmount),wifiCycleDays:num(o.wifiCycleDays)||30});});},
   editSub(ref){const [id,i]=ref.split(':'),s=site(id),u=s.subs[+i];openForm(`${s.name}: ${u.name}`,[{k:'name',label:'Name',def:'Sub power '+(+i+1)},{k:'meter',label:'Token number'},{k:'powerName',label:'Power house owner (name)'},{k:'phone',label:'Power house phone',type:'tel'},{k:'amount',label:'Usual token amount (Ksh)',type:'number'},{k:'lastPaid',label:'Date last paid',type:'date'},{k:'lastAmount',label:'Amount last paid (Ksh)',type:'number'}],u,o=>{Object.assign(u,o,{amount:num(o.amount),lastAmount:num(o.lastAmount)});});},
   paySub(ref){const [id,i]=ref.split(':'),s=site(id),u=s.subs[+i];openForm(`Pay token: ${s.name}, ${u.name}`,[fDate(),{k:'amount',label:'Amount (Ksh)',type:'number',req:true,def:u.amount||u.lastAmount||''},fPaid(),{k:'desc',label:'Note',def:u.name+(u.meter?' · Token '+u.meter:'')}],{},o=>{
-    if(!u.lastPaid||o.date>=u.lastPaid){u.lastPaid=o.date;u.lastAmount=o.amount;}
-    addExpense({date:o.date,category:'Electricity tokens',site:id,amount:o.amount,desc:o.desc,paidBy:o.paidBy});toast('Token payment saved and counted in costs');});},
+    if(!u.lastPaid||o.date>=u.lastPaid){u.lastPaid=o.date;u.lastAmount=o.amount;u.counted=o.date+'|'+num(o.amount);}
+    addExpense({date:o.date,category:'Electricity tokens',site:id,amount:o.amount,desc:o.desc,paidBy:o.paidBy,power:'s'+i});toast('Token payment added to the token total');});},
   addReq(){openForm('New request to the owners',reqFields(),{},o=>{S.techReq.push({id:uid(),...o,status:'Open',by:meName()});toast('Request sent to the owners');});},
   editReq(id){const r=byId(S.techReq,id);openForm('Edit request',reqFields(),r,o=>{Object.assign(r,o);});},
   answerReq(id){const r=byId(S.techReq,id);openForm('Reply to the technician',[{k:'status',label:'Status',type:'select',options:['Open','Seen','Done']},{k:'reply',label:'Your reply (he sees this)',type:'textarea'}],{...r,status:r.status==='Open'?'Seen':r.status},o=>{Object.assign(r,o);});},
@@ -2166,7 +2187,7 @@ const ACT={
     {k:'wifiProvider',label:'WiFi / internet provider'},{k:'wifiAccount',label:'WiFi account number'},{k:'wifiLastPaid',label:'WiFi subscription last paid',type:'date'},{k:'wifiAmount',label:'WiFi subscription amount (Ksh)',type:'number'},{k:'wifiCycleDays',label:'Subscription lasts (days)',type:'number',hint:'Usually 30'},{k:'notes',label:'Notes',type:'textarea'}],s,o=>{Object.assign(s,o);if(s.group!==g0)moveToGroup(s);if(!isTech())reconcileBills();toast('Saved');});},
   payToken(id){const s=site(id);openForm(`Pay token: ${s.name}`,[fDate(),{k:'amount',label:'Amount (Ksh)',type:'number',req:true,def:s.tokenLastAmount||''},fPaid(),{k:'desc',label:'Note',def:s.tokenMeter?'Meter '+s.tokenMeter:''}],{},o=>{
     if(!s.tokenLastPaid||o.date>=s.tokenLastPaid){s.tokenLastPaid=o.date;s.tokenLastAmount=o.amount;s.tokCounted=o.date;}
-    addExpense({date:o.date,category:'Electricity tokens',site:id,amount:o.amount,desc:o.desc,paidBy:o.paidBy});toast('Token payment saved and counted in costs');});},
+    addExpense({date:o.date,category:'Electricity tokens',site:id,amount:o.amount,desc:o.desc,paidBy:o.paidBy,power:'main'});toast('Token payment added to the token total');});},
   payWifi(id){const s=site(id);openForm(`Pay WiFi: ${s.name}`,[fDate(),{k:'amount',label:'Amount (Ksh)',type:'number',req:true,def:s.wifiAmount||''},{k:'cycle',label:'Subscription lasts (days)',type:'number',def:s.wifiCycleDays||30},fPaid(),{k:'desc',label:'Note',def:s.wifiAccount?'Acc '+s.wifiAccount:''}],{},o=>{
     if(!s.wifiLastPaid||o.date>=s.wifiLastPaid){s.wifiLastPaid=o.date;s.wifiAmount=o.amount;s.wifiCycleDays=o.cycle||30;s.wifiCounted=o.date;}
     addExpense({date:o.date,category:'Wifi subscription',site:id,amount:o.amount,desc:o.desc,paidBy:o.paidBy});toast('WiFi payment saved and counted in costs');});},
@@ -2353,6 +2374,7 @@ const CHG={
   upSite(el){UI.upload[Number(el.dataset.k)].site=el.value;render();},
   perfRange(el){UI.perfRange=el.value;render();},
   costMonth(el){UI.costMonth=el.value;render();},
+  tokMonth(el){UI.tokMonth=el.value;render();},
   costCat(el){UI.costCat=el.value;render();},
   costSite(el){UI.costSite=el.value;render();},
   costPayer(el){UI.costPayer=el.value;render();},
@@ -2425,6 +2447,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1791981250';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1792112352';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

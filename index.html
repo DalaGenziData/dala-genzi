@@ -169,6 +169,23 @@ html.big body{zoom:1.15}
 .hero .legend{display:flex;justify-content:space-between;font-size:11.5px;color:rgba(255,255,255,.75);margin-top:6px}
 .hero svg{display:block;width:100%;height:64px;margin-top:14px}
 .hero .foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;color:rgba(255,255,255,.8);margin-top:6px}
+.db-hero{background:linear-gradient(135deg,#0b2a4a 0%,#0057A6 60%,#0d9488 130%);color:#fff;border-radius:20px;padding:20px 22px;margin-bottom:14px;box-shadow:0 18px 40px -24px rgba(0,58,110,.7)}
+.db-greet{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#99f6e4;font-weight:700}.db-date{font-size:13px;opacity:.8;margin-top:2px}
+.db-main{margin-top:14px}.db-l{font-size:13px;opacity:.85}.db-big{font-size:40px;font-weight:800;letter-spacing:-.02em;line-height:1.1;margin:2px 0 14px}.db-big.neg{color:#fecaca}
+.db-trio{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;border-top:1px solid rgba(255,255,255,.18);padding-top:12px}.db-trio span{display:block;font-size:12px;opacity:.75}.db-trio b{font-size:17px}
+.db-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.db-t{display:block;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--muted);border-radius:14px;padding:12px 14px;cursor:pointer;color:var(--ink);text-decoration:none}.db-t.db-td{border-left-color:var(--cD)}.db-t.db-tg{border-left-color:var(--cG)}
+.db-t span{display:block;font-size:12px;color:var(--muted)}.db-t b{display:block;font-size:22px;margin:2px 0}.db-t small{color:var(--muted);font-size:12px}
+.db-week{cursor:pointer}.db-flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:4px 0 12px}.db-flow div span{display:block;font-size:12px;color:var(--muted)}.db-flow b{font-size:18px}.db-flow i{font-style:normal;color:var(--muted);font-size:18px}
+.db-people{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}.db-people div{border:1px solid var(--line);border-radius:12px;padding:10px 12px}.db-people span{display:block;font-size:12px;color:var(--muted)}.db-people b{display:block;font-size:20px}.db-people small{color:var(--muted);font-size:12px}
+:root{--cD:#0057A6;--cG:#0d9488}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cD:#3b8fe8;--cG:#0f9f90}}
+:root[data-theme="dark"]{--cD:#3b8fe8;--cG:#0f9f90}
+.db-chart{width:100%;height:170px;display:block}.db-days{display:grid;grid-template-columns:repeat(14,1fr);text-align:center;font-size:11px;color:var(--muted);margin-top:4px}.db-chart .db-d{fill:var(--cD)}.db-chart .db-g{fill:var(--cG)}.db-grid{stroke:var(--line);stroke-dasharray:3 3}.db-base{stroke:var(--line)}.db-ax{color:var(--muted);font-size:11px;margin-bottom:2px}
+.db-legend{display:flex;gap:12px;font-size:12px;color:var(--muted)}.db-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+i.db-d{background:var(--cD)}i.db-g{background:var(--cG)}
+.db-split{margin-top:12px}.db-sbar{display:flex;gap:2px;height:10px;border-radius:6px;overflow:hidden;background:var(--line)}.db-sbar i{display:block;height:100%}.db-sl{display:flex;justify-content:space-between;font-size:13px;margin:6px 0 2px}
+@media (max-width:520px){.db-big{font-size:34px}.db-trio b{font-size:15px}}
 .lux{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
 .lux .t{position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;cursor:pointer;box-shadow:0 6px 18px -12px rgba(15,27,51,.35);transition:transform .15s,box-shadow .15s}
 .lux .t:hover{transform:translateY(-2px);box-shadow:0 12px 24px -14px rgba(15,27,51,.45)}
@@ -723,26 +740,33 @@ P.dash=()=>{
   const sp=last14.map(x=>x.v),mx=Math.max(1,...sp),W=300,H=64,pts=sp.map((v,i)=>[i*(W/(sp.length-1)),H-4-(v/mx)*(H-12)]);
   const line=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
   const spark=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="Earnings, last 14 days"><defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5eead4" stop-opacity=".5"/><stop offset="1" stop-color="#5eead4" stop-opacity="0"/></linearGradient></defs><path d="${line} L${W} ${H} L0 ${H} Z" fill="url(#hg)"/><path d="${line}" fill="none" stroke="#ccfbf1" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>${pts.length?`<circle cx="${pts[pts.length-1][0]}" cy="${pts[pts.length-1][1]}" r="3.5" fill="#ffffff"/>`:''}</svg>`;
-  const tot=Math.max(1,e.total+exp);
-  const top=`<div class="hero">
-    <div class="hi"><div><div class="greet">Good ${hr<12?'morning':hr<17?'afternoon':'evening'}${who}</div><div class="date">${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div></div>
-      <span class="chip">${esc(monthLabel(t.slice(0,7)))} · day ${pj0.elapsed||e.days} of ${pj0.daysIn}</span></div>
-    <div class="big"><div class="l">${profit<0?'LOSS':'PROFIT'} THIS MONTH</div><div class="v ${profit<0?'neg':''}">${fmt(profit)}</div></div>
-    <div class="split"><div><div class="l">Earned</div><div class="v">${fmt(e.total)}</div></div><div><div class="l">Spent</div><div class="v">${fmt(exp)}</div></div></div>
-    <div class="bar"><i style="width:${(e.total/tot*100).toFixed(1)}%;background:linear-gradient(90deg,#5eead4,#ccfbf1)"></i><i style="width:${(exp/tot*100).toFixed(1)}%;background:rgba(255,255,255,.28)"></i></div>
-    ${spark}
-    <div class="foot"><span>Earnings, last 14 days</span><span>Month-end forecast: <b style="color:#ccfbf1">${fmt(pj0.projP)}</b></span></div>
+  // 14-day chart: Dala and Genzi stacked per day
+  const d14=last14.map((x,i)=>{const d=addDays(t,i-13);return {d,lab:d.slice(8),dl:groupEarn(d,'Dala'),gz:groupEarn(d,'Genzi')};}),m14=Math.max(1,...d14.map(x=>x.dl+x.gz));
+  const CW=560,CH=150,PB=0,PT=4,bw=CW/14,y=v=>(v/m14)*(CH-PB-PT);
+  const chart=`<div class="db-ax">${fmt(m14)}</div><svg class="db-chart" viewBox="0 0 ${CW} ${CH}" preserveAspectRatio="none" role="img" aria-label="Earnings per day, last 14 days, Dala and Genzi">
+    <line x1="0" x2="${CW}" y1="${PT}" y2="${PT}" class="db-grid" vector-effect="non-scaling-stroke"/>
+    <line x1="0" x2="${CW}" y1="${CH}" y2="${CH}" class="db-base" vector-effect="non-scaling-stroke"/>
+    ${d14.map((x,i)=>{const X=i*bw+bw*0.2,w=bw*0.6,hD=y(x.dl),hG=y(x.gz),b=CH-PB,gap=x.dl&&x.gz?2:0;return `<g><title>${fmtD(x.d)}: Dala ${fmt(x.dl)}, Genzi ${fmt(x.gz)}, total ${fmt(x.dl+x.gz)}</title><rect x="${i*bw}" y="0" width="${bw}" height="${CH}" fill="transparent"/>${hD?`<rect x="${X}" y="${b-hD}" width="${w}" height="${hD}" rx="${hG?0:3}" class="db-d"/>`:''}${hG?`<rect x="${X}" y="${b-hD-gap-hG}" width="${w}" height="${hG}" rx="3" class="db-g"/>`:''}</g>`;}).join('')}
+  </svg><div class="db-days">${d14.map((x,i)=>`<span>${i%2===1||i===13?x.lab:''}</span>`).join('')}</div>`;
+  const pct=gD+gG?Math.round(gD/(gD+gG)*100):0;
+  const wkG=isOwner()&&S.settings.freshStart?weekCalc(weekMon(t)):null;
+  const top=`<div class="db-hero">
+    <div class="db-top"><div><div class="db-greet">Good ${hr<12?'morning':hr<17?'afternoon':'evening'}${who}</div><div class="db-date">${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})} · day ${pj0.elapsed||e.days} of ${pj0.daysIn}</div></div></div>
+    <div class="db-main"><div class="db-l">${profit<0?'Loss':'Profit'} this month</div><div class="db-big ${profit<0?'neg':''}">${fmt(profit)}</div>
+      <div class="db-trio"><div><span>Earned</span><b>${fmt(e.total)}</b></div><div><span>Spent</span><b>${fmt(exp)}</b></div><div><span>Month-end forecast</span><b>${fmt(pj0.projP)}</b></div></div></div>
   </div>
-  <div class="lux">
-    <div class="t" data-go="earn"><div class="ic">💰</div><div class="l">${tE===null?'Latest day ('+(latest?fmtDs(latest):'—')+')':'Earnings today'}</div><div class="v">${fmt(tE===null?latestTot:tE)}</div><div class="s">${tE===null?'today not entered yet':'avg '+fmt(avgDay)+' a day'}</div></div>
-    <div class="t" data-go="costs"><div class="ic">🧾</div><div class="l">Costs today</div><div class="v">${fmt(tC)}</div><div class="s">this week ${fmt(wk.run)}${B.v?' of '+fmt(B.v):''}</div></div>
-    ${banked?BANKS.map(b=>`<div class="t" data-go="bank"><div class="ic">🏦</div><div class="l">${b[0]==='coop'?'Account One · Co-op':'Account Two · I&M'}</div><div class="v ${bankBal(b[0],t)<0?'neg':''}">${fmt(bankBal(b[0],t))}</div><div class="s">${esc(b[2])} money</div></div>`).join(''):''}
+  <div class="db-tiles">
+    <a class="db-t" data-go="earn"><span>${tE===null?'Latest day, '+(latest?fmtDs(latest):'—'):'Earned today'}</span><b>${fmt(tE===null?latestTot:tE)}</b><small>${tE===null?'today not entered yet':'average '+fmt(avgDay)+' a day'}</small></a>
+    <a class="db-t" data-go="costs"><span>Costs today</span><b>${fmt(tC)}</b><small>this week ${fmt(wk.run)}${B.v?' of '+fmt(B.v):''}</small></a>
+    ${banked?BANKS.map(b=>`<a class="db-t ${b[2]==='Dala'?'db-td':'db-tg'}" data-go="bank"><span>${b[0]==='coop'?'Account One · Dala savings':'Account Two · I&amp;M (Genzi)'}</span><b class="${bankBal(b[0],t)<0?'neg':''}">${fmt(bankBal(b[0],t))}</b><small>${b[0]==='coop'?'divided once a month':'runs the sites'}</small></a>`).join(''):''}
   </div>
-  ${gD+gG?`<div class="card"><h2 style="margin-bottom:10px">Dala and Genzi this month</h2><div class="grp">
-    <div class="g1"><div class="small muted">Dala</div><div style="font-size:20px;font-weight:700">${fmt(gD)}</div><div class="small muted">${Math.round(gD/(gD+gG)*100)}% of earnings</div></div>
-    <div class="g2"><div class="small muted">Genzi</div><div style="font-size:20px;font-weight:700">${fmt(gG)}</div><div class="small muted">${Math.round(gG/(gD+gG)*100)}% of earnings</div></div></div></div>`:''}
-  ${!isOwner()||!latest?'':(()=>{const gs=genziDay(latest),fs=S.settings.freshStart||latest,C=splitCalc(fs<=t?fs:t,t);return `<div class="card" data-go="split" style="cursor:pointer"><div class="h2row"><h2>Genzi money split, ${fmtDs(latest)}</h2><span class="small muted">88/12 · tap for details</span></div>
-    <div class="kpis" style="margin-bottom:0"><div class="kpi"><div class="l">Genzi earned − running costs</div><div class="v ${gs.g-gs.c<0?'neg':''}">${fmt(gs.g-gs.c)}</div><div class="s">${fmt(gs.g)} − ${fmt(gs.c)}</div></div>${gs.R.map(r=>`<div class="kpi"><div class="l">${esc(r.p)} ${Math.round(r.share*100)}%</div><div class="v">${pnl(r.v)}</div><div class="s">still to give since ${fmtDs(fs<=t?fs:t)}: ${fmt(Math.round((C.R.find(x=>x.p===r.p)||{}).biz||0))}</div></div>`).join('')}</div></div>`;})()}
+  ${wkG?`<div class="card db-week" data-go="week"><div class="h2row"><h2>Genzi money this week</h2><span class="small muted">${fmtDs(wkG.f)} to ${fmtDs(wkG.t)} · tap for the report</span></div>
+    <div class="db-flow"><div><span>Genzi earned${wkG.start?' + start':''}</span><b>${fmt(wkG.earn+wkG.start)}</b></div><i>−</i><div><span>Running costs</span><b>${fmt(wkG.cost)}</b></div><i>−</i><div><span>Personal money</span><b>${fmt(sum(wkG.R,r=>r.took))}</b></div><i>=</i><div><span>Left</span><b class="${sum(wkG.R,r=>r.biz)<0?'neg':''}">${fmt(sum(wkG.R,r=>r.biz))}</b></div></div>
+    <div class="db-people">${wkG.R.map(r=>`<div><span>${esc(r.p)} ${Math.round(r.share*100)}%</span><b class="${r.biz<0?'neg':'pos'}">${fmt(Math.round(r.biz))}</b><small>costs ${fmt(Math.round(r.cost))} · took ${fmt(r.took)}</small></div>`).join('')}</div></div>`:''}
+  <div class="card"><div class="h2row"><h2>Earnings, last 14 days</h2><div class="db-legend"><span><i class="db-d"></i>Dala</span><span><i class="db-g"></i>Genzi</span></div></div>
+    ${chart}
+    ${gD+gG?`<div class="db-split"><div class="db-sbar"><i class="db-d" style="width:${pct}%"></i><i class="db-g" style="width:${100-pct}%"></i></div><div class="db-sl"><span><b>Dala</b> ${fmt(gD)} · ${pct}%</span><span><b>Genzi</b> ${fmt(gG)} · ${100-pct}%</span></div><div class="small muted">This month's earnings</div></div>`:''}
+  </div>
   <div class="card"><div class="h2row"><h2>Needs attention</h2><span class="badge ${al.length?'b-warn':'b-ok'}">${al.length||'All clear'}</span></div>
     ${al.length?`<ul class="alerts">${al.map(a=>`<li><span class="badge ${a.cls}">${esc(a.tag)}</span><span>${a.html}</span></li>`).join('')}</ul>`:'<div class="empty">Nothing urgent. Good work.</div>'}</div>
   <div class="row noprint" style="justify-content:center;margin:6px 0 14px"><button class="btn" data-act="dashMore">${UI.dashMore?'Hide':'Show'} month totals, charts and site ranking</button></div>`;
@@ -2621,6 +2645,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1792164050';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1792164674';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

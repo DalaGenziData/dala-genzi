@@ -142,6 +142,7 @@ details summary{cursor:pointer;color:var(--brand)}
 .drop{border:2px dashed var(--line);border-radius:10px;padding:14px;font-size:13.5px}
 .drop.over{border-color:var(--brand);background:var(--brand-2)}
 @media (max-width:600px){main{padding:12px}.kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}.kpi .v{font-size:18px}.hbars .hb{grid-template-columns:82px 1fr 90px}.card{padding:12px}}
+@media screen{.printonly{display:none!important}}
 @media print{header,nav,.noprint,.btn{display:none!important}body{background:#fff;color:#000}.card,.kpi{border-color:#ccc}}
 html.big body{zoom:1.15}
 .tokall{margin:8px 0 4px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);font-size:14px}
@@ -1476,10 +1477,11 @@ P.week=()=>{
       <tr><td>Personal money taken</td><td class="n">${fmt(sum(R,r=>r.took))}</td>${R.map(r=>`<td class="n">−${fmt2(r.took)}</td>`).join('')}</tr>
       <tr><td><b>Week result</b></td><td class="n"><b>${pnl(sum(R,r=>r.biz))}</b></td>${R.map(r=>`<td class="n"><b>${pnl2(r.biz)}</b></td>`).join('')}</tr>
     </tbody></table></div>
-    <h3 style="margin:14px 0 6px">Running costs this week, paid from Genzi money</h3>
-    ${(()=>{const L=W.costs||[];if(!L.length)return '<div class="empty">No running costs this week.</div>';const cat={};L.forEach(x=>cat[x.category]=(cat[x.category]||0)+x.amount);
+    <h3 style="margin:14px 0 6px">Running costs this week, paid from Genzi money: ${fmt(W.cost)}</h3>
+    <p class="small muted noprint" style="margin:0">Taken straight from the Running Costs page. The downloaded PDF lists every cost.</p>
+    <div class="printonly">${(()=>{const L=W.costs||[];if(!L.length)return '<div class="empty">No running costs this week.</div>';const cat={};L.forEach(x=>cat[x.category]=(cat[x.category]||0)+x.amount);
       return `<div class="tbl-wrap"><table><thead><tr><th>Type of cost</th><th class="n">Amount</th>${R.map(r=>`<th class="n">${esc(r.p)} ${Math.round(r.share*100)}%</th>`).join('')}</tr></thead><tbody>${Object.entries(cat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="n">${fmt(v)}</td>${R.map(r=>`<td class="n">${fmt2(v*r.share)}</td>`).join('')}</tr>`).join('')}</tbody><tfoot><tr><td>Total running costs</td><td class="n">${fmt(W.cost)}</td>${R.map(r=>`<td class="n">${fmt2(r.cost)}</td>`).join('')}</tr></tfoot></table></div>
-      <div class="tbl-wrap" style="margin-top:8px"><table><thead><tr><th>Date</th><th>Cost</th><th>Site</th><th>Details</th><th class="n">Amount</th></tr></thead><tbody>${L.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.category)}</td><td>${esc(x.site)}</td><td class="wrap small">${esc(x.desc)}</td><td class="n">${fmt(x.amount)}</td></tr>`).join('')}</tbody></table></div>`;})()}
+      <div class="tbl-wrap" style="margin-top:8px"><table><thead><tr><th>Date</th><th>Cost</th><th>Site</th><th>Details</th><th class="n">Amount</th></tr></thead><tbody>${L.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.category)}</td><td>${esc(x.site)}</td><td class="wrap small">${esc(x.desc)}</td><td class="n">${fmt(x.amount)}</td></tr>`).join('')}</tbody></table></div>`;})()}</div>
     <h3 style="margin:14px 0 6px">Personal money this week</h3>
     ${W.took.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Partner</th><th>What for</th><th class="n">Amount</th></tr></thead><tbody>${W.took.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.person)}</td><td class="wrap small">${esc(x.note)}</td><td class="n">${fmt(x.amount)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">None.</div>'}
     ${changed?`<p class="small" style="color:var(--warn)">Records for this week were changed after it closed. The closed report stays as it was; with today's records the week result would be ${pnl(sum(live.R,r=>r.biz))}.</p>`:''}
@@ -2619,6 +2621,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1792163883';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1792164050';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

@@ -1470,7 +1470,8 @@ const pnl2=v=>`<span class="${v<0?'neg':'pos'}">${v<0?'−':''}${fmt2(Math.abs(v
 // to midnight count (FIDEL enters the figure), and only costs saved after midday.
 const NOON=()=>S.settings.freshNoon||{};
 const madeAt=x=>{if(x.addedAt)return Date.parse(x.addedAt)||0;const n=parseInt(String(x.id||'').slice(0,8),36);return n>1.6e12&&n<2.2e12?n:0;};
-const noonCost=x=>{const o=NOON();return !(o.date&&x.date===o.date&&!x.forMonth)||madeAt(x)>=Date.parse(o.at);};
+// FIDEL, 17 Oct: on the start day only the costs ticked in costIds count (the 6,299, not the 5,000 paid before the start)
+const noonCost=x=>{const o=NOON();if(!(o.date&&x.date===o.date&&!x.forMonth))return true;if(Array.isArray(o.costIds))return o.costIds.includes(x.id);return madeAt(x)>=Date.parse(o.at);};
 function genziEarnDay(d){const o=NOON();if(o.date===d)return num(o.genzi);return sum(S.sites.filter(x=>x.group==='Genzi'),x=>num((S.earnings[d]||{})[x.id]));}
 function genziEarnRange(f,t){let v=0;for(const d of Object.keys(S.earnings))if(d>=f&&d<=t&&d!==NOON().date)v+=genziEarnDay(d);const o=NOON();if(o.date&&o.date>=f&&o.date<=t)v+=num(o.genzi);return v;}
 const costsFrom=(f,t,b)=>costsIn(f,t,b).filter(noonCost);
@@ -1554,7 +1555,9 @@ P.split=()=>{
       <div class="kpi"><div class="l">I&amp;M balance now</div><div class="v ${bankBal('equity',today())<0?'neg':''}">${fmt(bankBal('equity',today()))}</div><div class="s"><a href="#bank" data-go="bank">open Bank</a></div></div></div>
   </div>
   ${NOON().date?`<div class="card"><div class="h2row"><h2>Start day, ${fmtD(NOON().date)}</h2><button class="btn primary" data-act="setNoon">${num(NOON().genzi)?'Change':'Enter'} Genzi earnings, midday to midnight</button></div>
-    <p class="small muted" style="margin:0">The count started at midday with <b>${fmt(1797)}</b> in I&amp;M. Earnings and costs from that morning are left out. Genzi earned from midday to midnight: <b>${num(NOON().genzi)?fmt(num(NOON().genzi)):'not entered yet'}</b>.</p></div>`:''}
+    <p class="small muted" style="margin:0">The count started at midday with <b>${fmt(1797)}</b> in I&amp;M. Earnings and costs from that morning are left out. Genzi earned from midday to midnight: <b>${num(NOON().genzi)?fmt(num(NOON().genzi)):'not entered yet'}</b>.</p>
+    ${(()=>{const o=NOON(),L=S.expenses.filter(x=>x.date===o.date&&!x.forMonth);if(!L.length)return '';const on=x=>noonCost(x);return `<h3 style="margin:12px 0 4px">Costs that day: ${fmt(sum(L.filter(on),x=>num(x.amount)))} counted</h3><p class="small muted" style="margin:0 0 6px">Only ticked costs come off Account Two. Costs paid before the start stay unticked. Every cost from the next day counts by itself.</p>
+    <div class="tbl-wrap"><table><thead><tr><th>Counts</th><th>Cost</th><th>Site</th><th>Details</th><th class="n">Amount</th></tr></thead><tbody>${L.map(x=>`<tr><td><input type="checkbox" data-chg="startCost" data-id="${x.id}"${on(x)?' checked':''}></td><td>${esc(x.category)}</td><td>${esc(siteName(x.site))}</td><td class="wrap small">${esc(x.desc||'')}</td><td class="n">${fmt(num(x.amount))}</td></tr>`).join('')}</tbody></table></div>`;})()}</div>`:''}
   <div class="card"><h2 style="margin-bottom:6px">Step by step, 88/12 on everything</h2>
     <div class="tbl-wrap"><table><thead><tr><th></th><th class="n">Total</th>${R.map(r=>`<th class="n">${esc(r.p)} ${Math.round(r.share*100)}%</th>`).join('')}</tr></thead><tbody>
     ${C.start?`<tr><td>Money in I&amp;M at the midday start</td><td class="n">${fmt(C.start)}</td>${R.map(r=>`<td class="n">${fmt2(C.start*r.share)}</td>`).join('')}</tr>`:''}
@@ -2227,6 +2230,15 @@ function reconcileBills(){
     logAct('The I&M count now starts at midday 16 Oct 2026 with '+fmt(1797)+'. Earlier money that day is left out; enter Genzi earnings from midday to midnight on Profit Split');
     done.push('im-noon-20261016');ch=true;
   }
+  if(ONLINE&&isOwner()&&done.includes('im-noon-20261016')&&!done.includes('im-startcost-6299')){
+    const o=S.settings.freshNoon||{},L=S.expenses.filter(x=>x.date===o.date&&!x.forMonth),T=6299;let pick=null;
+    const one=L.find(x=>num(x.amount)===T);if(one)pick=[one.id];
+    else if(L.length<=16){const c=L.filter(x=>num(x.amount)!==5000);for(let m=1;m<(1<<c.length)&&!pick;m++){let v=0;const ids=[];c.forEach((x,i)=>{if(m&(1<<i)){v+=num(x.amount);ids.push(x.id);}});if(v===T)pick=ids;}}
+    if(!pick)pick=L.filter(x=>num(x.amount)!==5000).map(x=>x.id);
+    S.settings.freshNoon={...o,costIds:pick};
+    logAct('Start day '+fmtD(o.date)+': only '+fmt(sum(L.filter(x=>pick.includes(x.id)),x=>num(x.amount)))+' of costs counted in Account Two (the 5,000 was paid before the start). Every cost from 17 Oct counts');
+    done.push('im-startcost-6299');ch=true;
+  }
   if(ONLINE&&isOwner()&&closeWeeks())ch=true;
   if(ONLINE&&!done.includes('maurice-sal-202609')){
     S.expenses.filter(e=>e.category==='Tech salary'&&String(e.date).slice(0,7)==='2026-10'&&num(e.amount)===20000&&!e.forMonth).forEach(e=>{
@@ -2587,6 +2599,7 @@ const CHG={
   splitRange(el){UI.splitRange=el.value;render();},
   splitAmt(el){UI.splitAmt=el.value;render();},
   weekM(el){UI.weekM=el.value;render();},
+  startCost(el){const o=NOON(),L=S.expenses.filter(x=>x.date===o.date&&!x.forMonth);let ids=Array.isArray(o.costIds)?[...o.costIds]:L.filter(noonCost).map(x=>x.id);const id=el.dataset.id;ids=el.checked?[...new Set([...ids,id])]:ids.filter(x=>x!==id);S.settings.freshNoon={...o,costIds:ids};save();render();toast('Account Two now '+fmt(bankBal('equity',today())));},
   splitCost(el){UI.splitCost=el.value;render();},
   splitWho(el){UI.splitWho=el.value;render();},
   tokMonth(el){UI.tokMonth=el.value;render();},
@@ -2662,6 +2675,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1792165714';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1792208885';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

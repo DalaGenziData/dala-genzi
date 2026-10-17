@@ -1488,13 +1488,13 @@ const bankOpen=id=>((S.settings.bankOpen||{})[id])||{date:'',amount:0};
 const bankAuto=()=>S.settings.bankAuto||{};
 function bankDay(id,d){
   const a=bankAuto(),g=(BANKS.find(b=>b[0]===id)||[])[2],auto=a.start&&d>=a.start;
-  const tin=sum(S.bankTx.filter(x=>x.bank===id&&x.date===d&&x.type==='in'),x=>num(x.amount)),tout=sum(S.bankTx.filter(x=>x.bank===id&&x.date===d&&x.type!=='in'),x=>num(x.amount));
+  const ok=x=>id!=='equity'||afterAnchor(x),tin=sum(S.bankTx.filter(x=>x.bank===id&&x.date===d&&x.type==='in'&&ok(x)),x=>num(x.amount)),tout=sum(S.bankTx.filter(x=>x.bank===id&&x.date===d&&x.type!=='in'&&ok(x)),x=>num(x.amount));
     const earn=auto?(g==='Genzi'?genziEarnDay(d):groupEarn(d,g)):0,cost=auto&&a.costBank===id?sum(costsFrom(d,d,true),x=>num(x.amount)):0;
-  const pin=sum(S.partnerTx.filter(x=>x.bank===id&&x.date===d&&x.type==='in'),x=>num(x.amount)),pout=sum(S.partnerTx.filter(x=>x.bank===id&&x.date===d&&x.type!=='in'),x=>num(x.amount));
+  const pin=sum(S.partnerTx.filter(x=>x.bank===id&&x.date===d&&x.type==='in'&&ok(x)),x=>num(x.amount)),pout=sum(S.partnerTx.filter(x=>x.bank===id&&x.date===d&&x.type!=='in'&&ok(x)),x=>num(x.amount));
   return {tin:tin+pin,tout:tout+pout,earn,cost,net:tin+pin+earn-tout-pout-cost};
 }
 function bankBal(id,upTo){
-  const o=bankOpen(id),a=bankAuto(),inR=x=>x.bank===id&&(!o.date||x.date>=o.date)&&x.date<=upTo;let b=num(o.amount)+sum([...S.bankTx.filter(inR),...S.partnerTx.filter(inR)],x=>(x.type==='in'?1:-1)*num(x.amount));
+  const o=bankOpen(id),a=bankAuto(),inR=x=>x.bank===id&&(!o.date||x.date>=o.date)&&x.date<=upTo&&(id!=='equity'||afterAnchor(x));let b=num(o.amount)+sum([...S.bankTx.filter(inR),...S.partnerTx.filter(inR)],x=>(x.type==='in'?1:-1)*num(x.amount));
   if(a.start){let d=o.date&&o.date>a.start?o.date:a.start;for(let n=0;d<=upTo&&n<4000;n++,d=addDays(d,1)){const x=bankDay(id,d);b+=x.earn-x.cost;}}
   return b;
 }
@@ -1534,11 +1534,16 @@ const pnl2=v=>`<span class="${v<0?'neg':'pos'}">${v<0?'−':''}${fmt2(Math.abs(v
 const NOON=()=>S.settings.freshNoon||{};
 const madeAt=x=>{if(x.addedAt)return Date.parse(x.addedAt)||0;const n=parseInt(String(x.id||'').slice(0,8),36);return n>1.6e12&&n<2.2e12?n:0;};
 // FIDEL, 17 Oct: on the start day only the costs ticked in costIds count (the 6,299, not the 5,000 paid before the start)
-const noonCost=x=>{const o=NOON();if(!(o.date&&x.date===o.date&&!x.forMonth))return true;if(Array.isArray(o.costIds))return o.costIds.includes(x.id);return madeAt(x)>=Date.parse(o.at);};
+const startAmt=()=>num(NOON().start)||1797;
+const ANCHOR=()=>{const o=bankOpen('equity');return o.at?o:null;};
+const afterAnchor=x=>{const a=ANCHOR();return !(a&&x.date===a.date)||madeAt(x)>=Date.parse(a.at);};
+const noonCost=x=>{const o=NOON();if(!afterAnchor(x))return false;if(!(o.date&&x.date===o.date&&!x.forMonth))return true;if(Array.isArray(o.costIds))return o.costIds.includes(x.id);return madeAt(x)>=Date.parse(o.at);};
 function genziEarnDay(d){const o=NOON();if(o.date===d&&num(o.genzi))return num(o.genzi);return sum(S.sites.filter(x=>x.group==='Genzi'),x=>num((S.earnings[d]||{})[x.id]));}
 function genziEarnRange(f,t){let v=0;for(const d of Object.keys(S.earnings))if(d>=f&&d<=t&&d!==NOON().date)v+=genziEarnDay(d);const o=NOON();if(o.date&&o.date>=f&&o.date<=t)v+=genziEarnDay(o.date);return v;}
-const costsFrom=(f,t,b)=>costsIn(f,t,b).filter(noonCost);
-function genziDay(d){const g=genziEarnDay(d)+(d===NOON().date?num(bankOpen('equity').amount):0),c=sum(costsFrom(d,d),x=>num(x.amount)),R=splitCalc(d,d).R.map(r=>({p:r.p,share:r.share,v:(g-c)*r.share}));return {g,c,R};}
+function costsFrom(f,t,b){const L=costsIn(f,t,b).filter(noonCost),o=NOON();
+  if(o.date&&num(o.costTotal)&&o.date>=f&&o.date<=t){const day=L.filter(x=>x.date===o.date&&!x.forMonth);if(Math.abs(sum(day,x=>num(x.amount))-num(o.costTotal))>0.5)return [...L.filter(x=>!day.includes(x)),{id:'start-costs',date:o.date,category:'Running costs on the start day',site:'general',desc:'agreed total',amount:num(o.costTotal)}];}
+  return L;}
+function genziDay(d){const g=genziEarnDay(d)+(d===NOON().date?startAmt():0),c=sum(costsFrom(d,d),x=>num(x.amount)),R=splitCalc(d,d).R.map(r=>({p:r.p,share:r.share,v:(g-c)*r.share}));return {g,c,R};}
 /* ---------- weekly Genzi report: Monday 00:00 to Sunday 23:59, closed for good when Sunday ends ---------- */
 const kenyaHour=()=>new Date(Date.now()+3*3600e3).getUTCHours();
 const weekClosesOn=m=>addDays(m,7);
@@ -1600,7 +1605,7 @@ function splitRange(){const r=UI.splitRange||'fresh',fs=S.settings.freshStart||t
   if(r==='fresh')return [fs<=today()?fs:today(),today()];if(r==='all')return ['2000-01-01',today()];return rangeOf(r==='last'?'lastmonth':'month');}
 function splitCalc(f,t){
   const ps=S.settings.partners,raw=ps.map(p=>num(S.settings.partnerShares[p])),tot=sum(raw,x=>x)||ps.length,share=Object.fromEntries(ps.map((p,i)=>[p,(raw[i]||(sum(raw,x=>x)?0:1))/tot]));
-  const o=NOON(),start=o.date&&o.date>=f&&o.date<=t?num(bankOpen('equity').amount):0,earn=genziEarnRange(f,t),cost=sum(costsFrom(f,t),x=>num(x.amount)),profit=start+earn-cost,L=partnerLedger(f,t).filter(x=>x.kind==='Took money out'&&!String(x.id).startsWith('im-gap')&&(byId(S.partnerTx,x.id)||{}).bank!=='coop');
+  const o=NOON(),start=o.date&&o.date>=f&&o.date<=t?startAmt():0,earn=genziEarnRange(f,t),cost=sum(costsFrom(f,t),x=>num(x.amount)),profit=start+earn-cost,L=partnerLedger(f,t).filter(x=>x.kind==='Took money out'&&!String(x.id).startsWith('im-gap')&&afterAnchor(byId(S.partnerTx,x.id)||{})&&(byId(S.partnerTx,x.id)||{}).bank!=='coop');
   const R=ps.map(p=>{const m=L.filter(x=>x.who===p&&x.kind==='Took money out'),put=0,paid=0,took=sum(m,x=>x.amount);
     return {p,share:share[p],due:profit*share[p],paid,put,took,net:paid+put-took};});
   const all=sum(R,r=>r.net);R.forEach(r=>{r.fair=all*r.share;r.pos=r.net-r.fair;r.biz=r.due+r.net;});
@@ -1633,7 +1638,7 @@ P.split=()=>{
     <p class="small muted">Line 5 = line 3 − line 4. All running costs are paid from Account Two (I&amp;M). This updates by itself every time a day's earnings or a cost is saved. If one partner has taken more than their 88/12 share, the other is owed the difference: that is the "owes" line below.</p>
   </div>
   <div class="card"><h2 style="margin-bottom:6px">Day by day</h2>
-    ${(()=>{const cb={};costsFrom(f,t).forEach(c=>{cb[c.date]=(cb[c.date]||0)+num(c.amount);});const days=[];for(let d=t;d>=f&&days.length<62;d=addDays(d,-1)){const g=genziEarnDay(d)+(d===NOON().date?num(bankOpen('equity').amount):0),c=cb[d]||0;if(g||c||d===NOON().date)days.push([d,g,c]);}
+    ${(()=>{const cb={};costsFrom(f,t).forEach(c=>{cb[c.date]=(cb[c.date]||0)+num(c.amount);});const days=[];for(let d=t;d>=f&&days.length<62;d=addDays(d,-1)){const g=genziEarnDay(d)+(d===NOON().date?startAmt():0),c=cb[d]||0;if(g||c||d===NOON().date)days.push([d,g,c]);}
       return days.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th class="n">Genzi earned</th><th class="n">Running costs</th><th class="n">Remaining</th>${R.map(r=>`<th class="n">${esc(r.p)} ${Math.round(r.share*100)}%</th>`).join('')}</tr></thead><tbody>${days.map(([d,g,c])=>`<tr><td>${fmtD(d)}</td><td class="n">${fmt(g)}</td><td class="n">${fmt(c)}</td><td class="n">${pnl(g-c)}</td>${R.map(r=>`<td class="n">${pnl2((g-c)*r.share)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<div class="empty">No Genzi earnings or costs in this period yet.</div>';})()}
   </div>
   <div class="card"><h2 style="margin-bottom:6px">Between the partners</h2><p style="font-size:17px;margin:4px 0 10px">${owe}</p>
@@ -2302,6 +2307,13 @@ function reconcileBills(){
     logAct('Start day '+fmtD(o.date)+': only '+fmt(sum(L.filter(x=>pick.includes(x.id)),x=>num(x.amount)))+' of costs counted in Account Two (the 5,000 was paid before the start). Every cost from 17 Oct counts');
     done.push('im-startcost-6299');ch=true;
   }
+  if(ONLINE&&isOwner()&&done.includes('im-noon-20261016')&&!done.includes('im-277-20261017')){
+    // FIDEL, 17 Oct 07:03: 1,797 at midday 16 Oct + 4,779 Genzi earned after midday − 6,299 paid = 277 in I&M now; nothing else paid
+    S.settings.freshNoon={...(S.settings.freshNoon||{}),genzi:4779,costTotal:6299};
+    S.settings.bankOpen.equity={date:'2026-10-17',amount:277,at:'2026-10-17T04:03:35Z'};
+    logAct('Account Two corrected to '+fmt(277)+' on 17 Oct 2026 (1,797 + 4,779 Genzi earnings − 6,299 paid). Every cost and day of earnings from now counts automatically');
+    done.push('im-277-20261017');ch=true;
+  }
   if(ONLINE&&isOwner()&&closeWeeks())ch=true;
   if(ONLINE&&!done.includes('maurice-sal-202609')){
     S.expenses.filter(e=>e.category==='Tech salary'&&String(e.date).slice(0,7)==='2026-10'&&num(e.amount)===20000&&!e.forMonth).forEach(e=>{
@@ -2326,13 +2338,13 @@ function reconcileBills(){
       const d=s[dk],a=num(s[ak]),mk=tag+'Counted';
       if(!d||!a||s[mk]===d)continue;
       if(!billNear(s.id,cat,d,a,null,tag==='tok'?'main':'')){
-        S.expenses.push({id:`auto-${tag}-${s.id}-${d}`,date:d,category:cat,site:s.id,amount:a,desc:(tag==='tok'?(s.tokenMeter?'Meter '+s.tokenMeter:'Token'):(s.wifiAccount?'Acc '+s.wifiAccount:'WiFi'))+' (from site details)',paidBy:BIZ,...(tag==='tok'?{power:'main'}:{})});
+        S.expenses.push({id:`auto-${tag}-${s.id}-${d}`,addedAt:new Date().toISOString(),date:d,category:cat,site:s.id,amount:a,desc:(tag==='tok'?(s.tokenMeter?'Meter '+s.tokenMeter:'Token'):(s.wifiAccount?'Acc '+s.wifiAccount:'WiFi'))+' (from site details)',paidBy:BIZ,...(tag==='tok'?{power:'main'}:{})});
       }
       s[mk]=d;ch=true;
     }
     (s.subs||[]).forEach((u,i)=>{const d=u.lastPaid,a=num(u.lastAmount),pw='s'+i;
       if(!d||!a||u.counted===d+'|'+a)return;
-      if(!billNear(s.id,'Electricity tokens',d,a,null,pw))S.expenses.push({id:`auto-tok${i}-${s.id}-${d}`,date:d,category:'Electricity tokens',site:s.id,amount:a,desc:(u.name||'Sub power '+(i+1))+(u.meter?' · Token '+u.meter:'')+' (from site details)',paidBy:BIZ,power:pw});
+      if(!billNear(s.id,'Electricity tokens',d,a,null,pw))S.expenses.push({id:`auto-tok${i}-${s.id}-${d}`,addedAt:new Date().toISOString(),date:d,category:'Electricity tokens',site:s.id,amount:a,desc:(u.name||'Sub power '+(i+1))+(u.meter?' · Token '+u.meter:'')+' (from site details)',paidBy:BIZ,power:pw});
       u.counted=d+'|'+a;ch=true;});
   }
   return ch;
@@ -2744,6 +2756,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1792209232';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1792209915';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

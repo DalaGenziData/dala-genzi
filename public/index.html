@@ -203,6 +203,13 @@ i.db-d{background:var(--cD)}i.db-g{background:var(--cG)}
 .db-chart{height:140px}.db-sl{font-size:12px}
 header .sub{line-height:1.35}header .hidem{display:none}header .brandrow>div{min-width:0}
 }
+.db-fin{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.db-f{display:block;border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:var(--ink);text-decoration:none;cursor:pointer;background:var(--card)}
+.db-f span{display:block;font-size:12px;color:var(--muted)}.db-f b{display:block;font-size:22px;margin:3px 0}.db-f small{font-size:12px;color:var(--muted)}
+.db-aglist{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;margin-top:6px;color:var(--muted)}.db-aglist i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}.db-aglist b{color:var(--ink)}
+@media (prefers-reduced-motion:no-preference){.db-f{transition:transform .15s ease,box-shadow .15s ease}.db-f:hover{transform:translateY(-2px);box-shadow:0 12px 24px -18px rgba(15,27,51,.5)}}
+@media (max-width:760px){.db-fin{grid-template-columns:1fr 1fr}}
+@media (max-width:600px){.db-f{padding:10px 12px}.db-f b{font-size:18px}}
 .db-range{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 0 10px}.db-range::-webkit-scrollbar{display:none}
 .db-range button{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:7px 14px;font:inherit;font-size:14px;cursor:pointer;transition:background .15s,color .15s}
 .db-range button.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
@@ -791,6 +798,36 @@ function dashSiteDrill(st,f,t){const L=[];for(let d=t;d>=f&&L.length<31;d=addDay
     ${L.map(([d,v])=>`<div class="db-li"><span>${fmtD(d)}</span><span class="db-mbar"><i class="${st.group==='Genzi'?'db-g':'db-d'}" style="width:${(v/mx*100).toFixed(1)}%"></i></span><b>${fmt(v)}</b></div>`).join('')||'<div class="small muted">No earnings in this period.</div>'}
     ${C.length?`<div class="small muted" style="margin:8px 0 4px">Costs at this site</div>${C.map(c=>`<div class="db-li"><span>${fmtDs(c.date)} · ${esc(c.category)}</span><b>${fmt(num(c.amount))}</b></div>`).join('')}`:''}
     <div class="row" style="margin-top:8px"><button class="btn sm" data-go="perf">Open Site Performance</button></div></div>`;}
+/* ---------- money health: the parts of an ISP finance dashboard that fit hotspot WiFi ---------- */
+const NET_CATS=['Electricity tokens','Wifi subscription'],UPKEEP_CATS=['Repairs & maintenance','Materials'];
+function finHealth(f,t){
+  const E=earnIn(f,t),C=costsIn(f,t).filter(x=>x.category!==INV_CAT&&x.category!==DEBT_CAT),earn=E.total,cost=sum(C,x=>num(x.amount)),net=sum(C.filter(x=>NET_CATS.includes(x.category)),x=>num(x.amount));
+  const daily=Object.keys(E.byDate).sort().map(d=>E.byDate[d]).filter(v=>v>0),mean=daily.length?sum(daily,v=>v)/daily.length:0,sd=daily.length>1?Math.sqrt(sum(daily,v=>(v-mean)**2)/(daily.length-1)):0,cv=mean?sd/mean:0;
+  let lost=0;for(const d in S.earnings){if(d<f||d>t)continue;for(const x of S.sites){const v=(S.earnings[d]||{})[x.id];if(v===undefined)continue;const u=usualEarn(x.id,d);if(u>0&&num(v)<u*0.7)lost+=u-num(v);}}
+  const owed=S.debts.filter(d=>d.type==='owedToUs'),ag=[0,0,0,0];owed.forEach(d=>{const b=debtBal(d);if(b<=0)return;const a=diffDays(d.date||today(),today());ag[a<=30?0:a<=60?1:a<=90?2:3]+=b;});
+  const billed=sum(owed,d=>num(d.amount)),paid=sum(owed,d=>debtPaid(d));
+  const days=Math.max(1,diffDays(f,t)+1);
+  const sites=S.sites.map(x=>{const e=E.bySite[x.id].total,c=C.filter(c=>c.site===x.id),n=sum(c.filter(c=>NET_CATS.includes(c.category)),c=>num(c.amount)),up=sum(c.filter(c=>UPKEEP_CATS.includes(c.category)),c=>num(c.amount)),all=sum(c,c=>num(c.amount)),inv=sum(S.assets.filter(a=>a.site===x.id),a=>num(a.cost)),perMonth=(e-all)/days*30;
+    return {x,e,n,up,all,inv,gm:e?(e-n)/e:null,perMonth,pay:inv>0&&perMonth>0?inv/perMonth:null};});
+  return {earn,cost,net,gross:earn-net,gm:earn?(earn-net)/earn:null,nm:earn?(earn-cost)/earn:null,run:mean*30,cv,days:daily.length,lost,ag,owedTot:sum(ag,v=>v),coll:billed?paid/billed:null,netPer100:earn?net/earn*100:null,sites};
+}
+function finCard(f,t,label){const H=finHealth(f,t),pc=v=>v===null?'—':Math.round(v*100)+'%',steady=H.days<4?'Not enough days yet':H.cv<0.15?'Very steady':H.cv<0.35?'Steady':'Up and down';
+  const agL=['0–30 days','31–60 days','61–90 days','Over 90 days'],agC=['#16a34a','#d97706','#ea580c','#e11d48'],agT=Math.max(1,H.owedTot);
+  return `<div class="card"><div class="h2row"><h2>Money health, ${esc(label)}</h2><span class="small muted">tap a box to open the page behind it</span></div>
+  <div class="db-fin">
+    <a class="db-f" data-go="pl"><span>Gross margin</span><b class="${H.gm!==null&&H.gm<0.5?'neg':'pos'}">${pc(H.gm)}</b><small>earnings left after tokens and WiFi: ${fmt(H.gross)}</small></a>
+    <a class="db-f" data-go="pl"><span>Net margin</span><b class="${H.nm!==null&&H.nm<0?'neg':'pos'}">${pc(H.nm)}</b><small>left after every cost</small></a>
+    <a class="db-f" data-go="bills"><span>Network cost per Ksh 100 earned</span><b>${H.netPer100===null?'—':'Ksh '+Math.round(H.netPer100)}</b><small>tokens + WiFi ${fmt(H.net)}</small></a>
+    <a class="db-f" data-go="perf"><span>Monthly run-rate</span><b>${fmt(H.run)}</b><small>average day × 30 · ${steady}</small></a>
+    <a class="db-f" data-go="perf"><span>Lost on weak days</span><b class="${H.lost>0?'neg':''}">${fmt(H.lost)}</b><small>days a site earned under 70% of its usual</small></a>
+    <a class="db-f" data-go="debts"><span>Money owed to us</span><b>${fmt(H.owedTot)}</b><small>${H.coll===null?'no debts recorded':pc(H.coll)+' of all debts collected'}</small></a>
+  </div>
+  ${H.owedTot?`<div class="small muted" style="margin:12px 0 4px">How old the money owed to us is</div><div class="db-sbar" style="height:12px">${H.ag.map((v,i)=>v?`<i style="width:${(v/agT*100).toFixed(1)}%;background:${agC[i]}" title="${agL[i]}: ${fmt(v)}"></i>`:'').join('')}</div><div class="db-aglist">${H.ag.map((v,i)=>`<span><i style="background:${agC[i]}"></i>${agL[i]}: <b>${fmt(v)}</b></span>`).join('')}</div>`:''}
+  <h3 style="margin:16px 0 6px">Each site: costs and payback</h3>
+  <div class="tbl-wrap"><table><thead><tr><th>Site</th><th class="n">Earned</th><th class="n">Tokens + WiFi</th><th class="n">Repairs + materials</th><th class="n">Gross margin</th><th class="n">Equipment</th><th class="n">Pays back in</th></tr></thead><tbody>
+  ${H.sites.sort((a,b)=>b.e-a.e).map(r=>`<tr><td><b>${esc(r.x.name)}</b></td><td class="n">${fmt(r.e)}</td><td class="n">${fmt(r.n)}</td><td class="n">${fmt(r.up)}</td><td class="n ${r.gm!==null&&r.gm<0.5?'neg':''}">${pc(r.gm)}</td><td class="n">${r.inv?fmt(r.inv):'—'}</td><td class="n">${r.inv?(r.pay===null?'<span class="neg">not paying back</span>':r.pay<1?'under a month':r.pay.toFixed(1)+' months'):'—'}</td></tr>`).join('')}
+  </tbody></table></div>
+  <p class="small muted">Gross margin = earnings minus tokens and WiFi. Pays back in = equipment cost ÷ the site's profit per month at this period's pace. Subscriber measures like revenue per user or customer churn are not shown because the business sells hotspot vouchers, not monthly accounts.</p></div>`;}
 P.dash=()=>{
   const t=today(),[mf,mt]=rangeOf('month'),e=earnIn(mf,mt),c=costsIn(mf,mt),exp=sum(c,x=>x.amount),profit=e.total-exp;
   const days=Object.keys(S.earnings).sort(),latest=days[days.length-1];
@@ -844,6 +881,7 @@ P.dash=()=>{
     <p class="small muted" style="margin:0 0 6px">Tap a bar to see that ${B0.byWeek?'week':'day'} in detail.</p>
     ${chart}${drill}
   </div>
+  ${isOwner()?finCard(rf,rt,R0.label):''}
   <div class="card"><div class="h2row"><h2>Sites, ${esc(R0.label)}</h2><span class="small muted">tap a site for details</span></div>${siteList}
     ${M.earn?`<div class="db-split"><div class="db-sbar"><i class="db-d" style="width:${Math.round(M.dala/M.earn*100)}%"></i><i class="db-g" style="width:${100-Math.round(M.dala/M.earn*100)}%"></i></div><div class="db-sl"><span><b>Dala</b> ${fmt(M.dala)} · ${Math.round(M.dala/M.earn*100)}%</span><span><b>Genzi</b> ${fmt(M.earn-M.dala)} · ${100-Math.round(M.dala/M.earn*100)}%</span></div></div>`:''}
   </div>
@@ -2756,6 +2794,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1792209915';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1792210947';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

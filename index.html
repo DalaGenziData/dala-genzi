@@ -405,7 +405,7 @@ async function runSync(){
         const send={...sets};if(send['state/sites']&&API_URL==='/api'){const b=written['state/sites'];send['state/sites']=JSON.stringify({...JSON.parse(send['state/sites']),...(b?{base:JSON.parse(b).v||[]}:{})});}
         // each document also goes with the copy this phone started from, so the server keeps what other phones saved meanwhile
         const bases={};[...Object.keys(sets),...dels].forEach(p=>{if(p!=='state/sites'&&written[p]!==undefined)bases[p]=written[p];});
-        await remote('saveDocs',PIN,send,dels,bases);lastStamp='';setTimeout(()=>refreshNow&&refreshNow(),600); // reload right after saving, to pick up anything a partner saved meanwhile
+        await remote('saveDocs',PIN,send,dels,bases);lastStamp='';savedAt=Date.now();setTimeout(()=>refreshNow&&refreshNow(),600); // reload right after saving, to pick up anything a partner saved meanwhile
       Object.assign(written,sets);dels.forEach(p=>delete written[p]);keepBase();}
     }else{
       for(const p in docs){const j=JSON.stringify(docs[p]);if(written[p]!==j){await DB.doc(p).set(docs[p]);written[p]=j;}}
@@ -477,7 +477,7 @@ async function connectRemote(){
       scheduleSync();
     }else applyRemote();
     setNet('ok');render();
-    if(!connectRemote.poll){connectRemote.poll=setInterval(()=>refreshNow(),20000);
+    if(!connectRemote.poll){connectRemote.poll=setInterval(()=>refreshNow(),5000); // every 5 seconds: a change saved on one phone shows on the others
       // coming back to the page: fetch what others saved straight away, before anything is edited here
       document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshNow();});window.addEventListener('focus',()=>refreshNow());}
   }catch(e){
@@ -485,7 +485,7 @@ async function connectRemote(){
     else{setNet('err');toast('Could not reach the online data. Check your internet and reload.');}
   }
 }
-let refreshing=false;
+let refreshing=false,savedAt=0;const justSaved=()=>Date.now()-savedAt<8000;
 async function refreshNow(){
       if(!ONLINE||refreshing||syncing||syncTimer||document.hidden)return;
       refreshing=true;
@@ -495,7 +495,8 @@ async function refreshNow(){
         const r2=await remote('loadAll',PIN);
         // a save started or finished while this copy was being fetched: it may be older than what is here
         if(seq!==saveSeq||syncing||syncTimer||isDirty()||Number(r2.stamp)<Number(lastStamp))return;
-        lastStamp=r2.stamp;const g=fakeSnaps(r2.docs);lastSnaps.state=g.st;lastSnaps.earn=g.ea;lastSnaps.seq=seq;applyRemote();
+        const first=!!lastStamp&&lastStamp!==r2.stamp;lastStamp=r2.stamp;const g=fakeSnaps(r2.docs);lastSnaps.state=g.st;lastSnaps.earn=g.ea;lastSnaps.seq=seq;applyRemote();
+        if(first&&!justSaved())toast('Updated with changes from another phone');
       }catch(e){}finally{refreshing=false;}
 }
 async function connectOnline(){
@@ -2765,6 +2766,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1792940400';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1792941300';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

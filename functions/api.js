@@ -103,6 +103,37 @@ function mergeSites(cur, base, inc, mayRemove) {
   const order = [...inc.map(x => x.id).filter(id => C.has(id)), ...[...C.keys()].filter(id => !I.has(id))];
   return order.map(id => C.get(id));
 }
+// Three-way merge for every other document: cur = saved now, base = what the phone started from, inc = the phone's copy.
+// Only what this phone really changed is laid over the saved copy, so an old copy on one phone never wipes
+// costs, bills or settings another phone saved in the meantime. Lists of records are matched by their id.
+const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
+const byIds = a => Array.isArray(a) && a.every(x => isObj(x) && x.id !== undefined);
+function merge3(cur, base, inc) {
+  if (same(inc, base)) return cur; // not changed on this phone: keep what is saved
+  if (cur === undefined || same(cur, base)) return inc; // nobody else changed it: take the phone's copy
+  if (isObj(cur) && isObj(inc)) {
+    const b = isObj(base) ? base : {}, out = {};
+    for (const k of new Set([...Object.keys(cur), ...Object.keys(inc), ...Object.keys(b)])) {
+      const v = merge3(cur[k], b[k], inc[k]);
+      if (v !== undefined) out[k] = v;
+    }
+    return out;
+  }
+  if (byIds(cur) && byIds(inc) && (base === undefined || byIds(base))) {
+    const B = new Map((base || []).map(x => [x.id, x])), C = new Map(cur.map(x => [x.id, x])), I = new Map(inc.map(x => [x.id, x])), out = [];
+    for (const [id, i] of I) { const v = C.has(id) ? merge3(C.get(id), B.get(id), i) : B.has(id) && !same(B.get(id), i) ? i : B.has(id) ? undefined : i; if (v !== undefined) out.push(v); } // removed on another phone and not edited here: stays removed
+    for (const [id, c] of C) if (!I.has(id) && !(B.has(id) && same(B.get(id), c))) out.push(c); // added or edited elsewhere: kept
+    return out;
+  }
+  if (Array.isArray(cur) && Array.isArray(inc) && Array.isArray(base) && [cur, inc, base].every(l => l.every(x => x === null || typeof x !== 'object'))) {
+    // plain lists (like the list of corrections already done): keep additions from both phones
+    const gone = base.filter(x => !inc.includes(x));
+    return [...cur.filter(x => !gone.includes(x)), ...inc.filter(x => !base.includes(x) && !cur.includes(x))];
+  }
+  return inc;
+}
+const parse = j => { try { return JSON.parse(j); } catch (e) { return undefined; } };
+
 // fill a saved site with the values a phone sends, but never replace a saved value with an empty one
 function fillSite(c, x) {
   if (!c) return x;
@@ -201,7 +232,7 @@ const FNS = {
     for (const r of results) docs[r.path] = r.data;
     return { docs: me.role === 'tech' ? techDocs(docs) : me.role === 'staff' ? staffDocs(docs) : docs, stamp: await stamp(db) };
   },
-  async saveDocs(db, pin, sets, dels) {
+  async saveDocs(db, pin, sets, dels, bases) {
     const me = await checkPin(db, pin);
     if (me.role === 'tech' && ([...Object.keys(sets || {}), ...(dels || [])].some(p => !TECH_WRITE.test(p)) || (dels || []).includes('state/sites'))) throw new Error('not_allowed');
     if (me.role === 'staff') {
@@ -229,6 +260,24 @@ const FNS = {
         out = [...byId.values()];
       } else out = inc;
       sets = { ...sets, 'state/sites': JSON.stringify({ v: out }) };
+    }
+    if (bases && typeof bases === 'object') {
+      // merge each changed or removed document with what other phones saved since this phone loaded it
+      const paths = [...Object.keys(sets || {}), ...(dels || [])].filter(p => p !== 'state/sites' && bases[p] !== undefined);
+      const saved = {};
+      for (const p of paths) { const r = await db.prepare('SELECT data FROM docs WHERE path = ?').bind(p).first(); if (r) saved[p] = r.data; }
+      sets = { ...(sets || {}) };
+      const keep = [];
+      for (const p of paths) {
+        if (saved[p] === undefined) continue;
+        const cur = parse(saved[p]), base = parse(bases[p]);
+        if (cur === undefined || base === undefined) continue;
+        const inc = (dels || []).includes(p) ? { v: [] } : parse(sets[p]);
+        const m = merge3(cur, base, inc);
+        if ((dels || []).includes(p)) { if (!(Array.isArray(m.v) && !m.v.length)) { keep.push(p); sets[p] = JSON.stringify(m); } }
+        else sets[p] = JSON.stringify(m);
+      }
+      if (keep.length) dels = (dels || []).filter(p => !keep.includes(p));
     }
     const now = Date.now(), st = String(now), q = [];
     for (const p of Object.keys(sets || {})) {

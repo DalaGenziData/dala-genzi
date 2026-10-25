@@ -403,7 +403,9 @@ async function runSync(){
       if(Object.keys(sets).length||dels.length){
         // sites go with the copy this phone started from, so the server keeps only the fields really changed here
         const send={...sets};if(send['state/sites']&&API_URL==='/api'){const b=written['state/sites'];send['state/sites']=JSON.stringify({...JSON.parse(send['state/sites']),...(b?{base:JSON.parse(b).v||[]}:{})});}
-        await remote('saveDocs',PIN,send,dels);lastStamp=''; // reload once after saving, to pick up anything a partner saved meanwhile
+        // each document also goes with the copy this phone started from, so the server keeps what other phones saved meanwhile
+        const bases={};[...Object.keys(sets),...dels].forEach(p=>{if(p!=='state/sites'&&written[p]!==undefined)bases[p]=written[p];});
+        await remote('saveDocs',PIN,send,dels,bases);lastStamp='';setTimeout(()=>refreshNow&&refreshNow(),600); // reload right after saving, to pick up anything a partner saved meanwhile
       Object.assign(written,sets);dels.forEach(p=>delete written[p]);keepBase();}
     }else{
       for(const p in docs){const j=JSON.stringify(docs[p]);if(written[p]!==j){await DB.doc(p).set(docs[p]);written[p]=j;}}
@@ -475,8 +477,18 @@ async function connectRemote(){
       scheduleSync();
     }else applyRemote();
     setNet('ok');render();
-    if(!connectRemote.poll)connectRemote.poll=setInterval(async()=>{
-      if(syncing||syncTimer||document.hidden)return;
+    if(!connectRemote.poll){connectRemote.poll=setInterval(()=>refreshNow(),20000);
+      // coming back to the page: fetch what others saved straight away, before anything is edited here
+      document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshNow();});window.addEventListener('focus',()=>refreshNow());}
+  }catch(e){
+    if(String(e.message||e).includes('bad_pin')){try{localStorage.removeItem('isp.pin');}catch(_){}PIN='';askPin('That PIN is not correct. Try again.');}
+    else{setNet('err');toast('Could not reach the online data. Check your internet and reload.');}
+  }
+}
+let refreshing=false;
+async function refreshNow(){
+      if(!ONLINE||refreshing||syncing||syncTimer||document.hidden)return;
+      refreshing=true;
       try{
         const seq=saveSeq,st=await remote('getStamp',PIN);
         if(st===lastStamp||seq!==saveSeq||syncing||syncTimer||isDirty())return;
@@ -484,12 +496,7 @@ async function connectRemote(){
         // a save started or finished while this copy was being fetched: it may be older than what is here
         if(seq!==saveSeq||syncing||syncTimer||isDirty()||Number(r2.stamp)<Number(lastStamp))return;
         lastStamp=r2.stamp;const g=fakeSnaps(r2.docs);lastSnaps.state=g.st;lastSnaps.earn=g.ea;lastSnaps.seq=seq;applyRemote();
-      }catch(e){}
-    },20000);
-  }catch(e){
-    if(String(e.message||e).includes('bad_pin')){try{localStorage.removeItem('isp.pin');}catch(_){}PIN='';askPin('That PIN is not correct. Try again.');}
-    else{setNet('err');toast('Could not reach the online data. Check your internet and reload.');}
-  }
+      }catch(e){}finally{refreshing=false;}
 }
 async function connectOnline(){
   if(REMOTE)return connectRemote();
@@ -2025,7 +2032,65 @@ function backupCard(){
   return `<div class="card"><div class="h2row"><h2 style="margin:0">Backups</h2><button class="btn primary" data-act="backupNow">Save a backup now</button></div>
     <p class="small muted">Every night at midnight a full copy of all data is saved online. Kept: the last 30 nights, the copy of the 1st of every month, and every copy saved with <b>Save a backup now</b>. Month copies and hand-saved copies are never deleted. Download any copy and use <b>Restore from backup</b> if something goes wrong.</p>
     ${!L?'<div class="small muted">Loading…</div>':L.length?`<div class="row">${L.map(b=>`<button class="btn sm" data-act="getBackup" data-id="${esc(b.day)}">⬇ ${esc(lab(b.day))}</button>`).join('')}</div>`:'<div class="small muted">The first automatic backup will be made tonight at midnight.</div>'}
+  </div>${lostCard()}`;
+}
+/* ---------- find records that disappeared: compare today's data with every saved backup ---------- */
+const LOST_KEYS=[...SPLIT,'debts','assets','store','toBuy','lumpIncome','crew','employees'];
+const LOST_FIELDS=['tokenMeter','powerName','powerPhone','tokenLastPaid','tokenLastAmount','wifiProvider','wifiAccount','wifiLastPaid','wifiAmount','notes','group','location'];
+const LOST_SUB=['name','meter','powerName','phone','lastPaid','lastAmount'];
+const LOST_NAMES={expenses:'Cost',subtech:'Sub-tech day',matLog:'Store movement',checks:'Check',issues:'Issue',partnerTx:'Partner money',bankTx:'Bank entry',tickets:'Ticket',techDays:'Tech day',techReq:'Tech request',techSpend:'Tech spending',techReports:'Tech report',extLog:'Extension',debts:'Debt',assets:'Equipment',store:'Store item',toBuy:'To buy',lumpIncome:'Earning',crew:'Crew member',employees:'Staff member'};
+const emptyV=v=>v===undefined||v===null||v===''||v===0||v==='0';
+async function findLost(){
+  UI.lost={busy:true,list:[]};render();
+  try{
+    const days=(await remote('listBackups',PIN)).map(b=>b.day).sort();
+    const gone=new Set((S.activity||[]).filter(a=>a.item&&a.item.id!==undefined).map(a=>a.key+'|'+a.item.id)); // deleted on purpose
+    const out=new Map(),siteSeen=new Map();
+    for(const day of days){
+      const r=await remote('getBackup',PIN,day),sn=fakeSnaps(r.docs),st=fromDocs(sn.st,sn.ea);
+      for(const k of LOST_KEYS){const have=new Set((S[k]||[]).map(x=>x&&x.id));(st[k]||[]).forEach(x=>{if(!x||x.id===undefined||have.has(x.id)||gone.has(k+'|'+x.id))return;out.set(k+'|'+x.id,{kind:'rec',k,x,day});});}
+      (st.sites||[]).forEach(x=>siteSeen.set(x.id,{x,day}));
+      for(const d in st.earnings||{})for(const id in st.earnings[d]){const v=st.earnings[d][id];if(!emptyV(v)&&(S.earnings[d]||{})[id]===undefined&&S.sites.some(x=>x.id===id))out.set('earn|'+d+'|'+id,{kind:'earn',d,id,v,day});}
+    }
+    for(const [id,{x,day}] of siteSeen){
+      const c=S.sites.find(y=>y.id===id);
+      if(!c){if(!gone.has('sites|'+id))out.set('site|'+id,{kind:'site',x,day});continue;}
+      const f=LOST_FIELDS.filter(k=>emptyV(c[k])&&!emptyV(x[k])).map(k=>({k,v:x[k]}));
+      (x.subs||[]).forEach((u,i)=>LOST_SUB.forEach(k=>{if(!emptyV((u||{})[k])&&emptyV(((c.subs||[])[i]||{})[k]))f.push({k,v:u[k],sub:i});}));
+      if(f.length)out.set('fields|'+id,{kind:'fields',id,f,day});
+    }
+    UI.lost={list:[...out.values()].map((o,i)=>({...o,i,on:true}))};
+  }catch(e){UI.lost=null;toast('Could not check the backups: '+(e.message||e));}
+  render();
+}
+function lostLabel(o){
+  const dayL=' <span class="muted small">(in the backup of '+esc(fmtDs(o.day.slice(0,10)))+')</span>';
+  if(o.kind==='rec')return '<b>'+esc(LOST_NAMES[o.k]||o.k)+'</b> '+esc(o.x.date?fmtDs(o.x.date)+' · ':'')+esc(itemLabel(o.x)||o.x.desc||'')+(o.x.desc&&!itemLabel(o.x).includes(o.x.desc)?' · '+esc(o.x.desc):'')+dayL;
+  if(o.kind==='earn')return '<b>Earning</b> '+esc(fmtDs(o.d))+' · '+esc(siteName(o.id))+' · '+esc(fmt(num(o.v)))+dayL;
+  if(o.kind==='site')return '<b>Site</b> '+esc(o.x.name)+dayL;
+  return '<b>'+esc(siteName(o.id))+'</b> details now blank: '+o.f.map(z=>esc((z.sub!==undefined?'sub power '+(z.sub+1)+' ':'')+z.k.replace(/([A-Z])/g,' $1').toLowerCase()+' = '+z.v)).join(', ')+dayL;
+}
+function lostCard(){
+  const L=UI.lost;
+  return `<div class="card"><div class="h2row"><h2 style="margin:0">Find lost records</h2><button class="btn" data-act="findLost" ${L&&L.busy?'disabled':''}>${L&&L.busy?'Checking…':'Check backups'}</button></div>
+  <p class="small muted">Compares today's data with every saved backup and lists costs, bills, site details and other records that were in a backup but are missing now. Records someone deleted on purpose (shown in Activity History) are left out. Nothing changes until you press <b>Bring back</b>.</p>
+  ${!L||L.busy?'':!L.list.length?'<div class="small" style="color:var(--pos)">Nothing is missing. Every record in the backups is still here.</div>':`
+   <div class="small" style="margin-bottom:6px"><b>${L.list.length}</b> missing. Untick anything that should stay deleted.</div>
+   <div style="max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:6px 10px">${L.list.map(o=>`<label style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--line)"><input type="checkbox" data-chg="lostTick" data-id="${o.i}" ${o.on?'checked':''}><span class="small">${lostLabel(o)}</span></label>`).join('')}</div>
+   <div class="row" style="margin-top:10px"><button class="btn primary" data-act="bringBack">Bring back ticked</button></div>`}
   </div>`;
+}
+function bringBack(){
+  const L=(UI.lost&&UI.lost.list||[]).filter(o=>o.on);let n=0;
+  L.forEach(o=>{
+    if(o.kind==='rec'){S[o.k]=S[o.k]||[];if(!S[o.k].some(x=>x.id===o.x.id)){S[o.k].push(o.x);n++;}}
+    else if(o.kind==='earn'){(S.earnings[o.d]=S.earnings[o.d]||{});if(S.earnings[o.d][o.id]===undefined){S.earnings[o.d][o.id]=o.v;n++;}}
+    else if(o.kind==='site'){if(!S.sites.some(x=>x.id===o.x.id)){S.sites.push(o.x);n++;}}
+    else{const c=S.sites.find(x=>x.id===o.id);if(!c)return;o.f.forEach(z=>{if(z.sub!==undefined){c.subs=c.subs||[];c.subs[z.sub]=c.subs[z.sub]||{};if(emptyV(c.subs[z.sub][z.k]))c.subs[z.sub][z.k]=z.v;}else if(emptyV(c[z.k]))c[z.k]=z.v;});n++;}
+  });
+  if(!n){toast('Nothing ticked');return;}
+  logAct('Brought back '+n+' lost record'+(n>1?'s':'')+' from the backups');
+  UI.lost=null;S=migrate(S);save();render();toast('Brought back '+n+' record'+(n>1?'s':''));
 }
 
 /* ---------- more charts ---------- */
@@ -2265,107 +2330,10 @@ function tokSum(list,id,pw){return sum(list.filter(e=>e.category==='Electricity 
 function reconcileBills(){
   let ch=false;
   const done=S.settings.pendingDone=S.settings.pendingDone||[];
-  // FIDEL, 11 Oct 2026: the store items added that day were paid for in earlier months, so their cost is taken
-  // off Running Costs once (the items stay in the store). Only after the online copy is loaded, so it sticks.
-  // FIDEL, 11 Oct 2026: only FIDELIS and DOROTHY are partners; MAURICE is the head technician.
-  if(ONLINE&&!done.includes('nopartner-maurice')){
-    S.settings.partners=(S.settings.partners||[]).filter(n=>String(n).trim().toUpperCase()!=='MAURICE');
-    if(S.settings.partnerShares)delete S.settings.partnerShares.MAURICE;
-    done.push('nopartner-maurice');ch=true;
-  }
-  if(ONLINE&&!done.includes('nocost-20261011')){
-    const NAMES=['router xpon','atb','pachcode','media converter','outdoor cable','indoor cable','microtik rb 951'];
-    const hit=e=>e.date==='2026-10-11'&&e.category==='Materials'&&NAMES.some(n=>new RegExp('^[\\d.]+ \\S+ '+n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'$','i').test(String(e.desc||'').trim()));
-    S.expenses.filter(hit).forEach(e=>{S.expenses.splice(S.expenses.indexOf(e),1);logAct('Took off a cost already paid in earlier months: '+e.desc+' ('+fmt(num(e.amount))+')',{key:'expenses',item:e});});
-    done.push('nocost-20261011');ch=true;
-  }
-  // FIDEL, 12 Oct 2026: 17 routers were used at Kibos today; take them out of the store once.
-  // FIDEL, 14 Oct 2026: Genzi F8 belongs to the Genzi group (it was added under Dala).
-  if(ONLINE&&!done.includes('f8-genzi')){
-    S.sites.filter(x=>/genzi\s*f\s*8\b|^f\s*8$/i.test(String(x.name).trim())&&x.group!=='Genzi').forEach(x=>{x.group='Genzi';moveToGroup(x);logAct('Moved '+x.name+' to the Genzi group');});
-    done.push('f8-genzi');ch=true;
-  }
-  // FIDEL, 14 Oct 2026: Dala 1 WiFi paid in October 2026 is 12,499 in total (it showed 24,889). Keep one payment of
-  // 12,499 and take the others off once; each one taken off can be restored from Activity History.
-  if(ONLINE&&!done.includes('dala1-wifi-202610')){
-    const d1=S.sites.find(x=>/^dala\s*0?1$/i.test(String(x.name).trim()));
-    if(d1){
-      const L=S.expenses.filter(e=>e.site===d1.id&&e.category==='Wifi subscription'&&String(e.date).slice(0,7)==='2026-10').sort((a,b)=>(/^auto-/.test(String(a.id))-/^auto-/.test(String(b.id)))||a.date.localeCompare(b.date));
-      if(sum(L,e=>num(e.amount))!==12499&&L.length){
-        const keep=L.find(e=>num(e.amount)===12499)||L[0];
-        if(num(keep.amount)!==12499){logAct('Changed Dala 1 WiFi cost of '+fmtD(keep.date)+' from '+fmt(num(keep.amount))+' to '+fmt(12499));keep.amount=12499;}
-        L.filter(e=>e!==keep).forEach(e=>{S.expenses.splice(S.expenses.indexOf(e),1);logAct('Took off an extra Dala 1 WiFi cost ('+fmtD(e.date)+', '+fmt(num(e.amount))+'): only 12,499 was paid in October',{key:'expenses',item:e});});
-        d1.wifiAmount=12499;if(d1.wifiLastPaid)d1.wifiCounted=d1.wifiLastPaid;
-        toast('Dala 1 WiFi for October corrected to '+fmt(12499));
-      }
-    }
-    done.push('dala1-wifi-202610');ch=true;
-  }
-  // FIDEL, 14 Oct 2026 (second fix): October still showed 24,998 because a payment dated 26 Sept counts in October
-  // (most of its days fall there). Nothing was paid for Dala 1 in September; only one 12,499 payment in total.
-  // Keep one 12,499 payment (an October one first) and take the September one off; each can be restored from Activity History.
-  if(ONLINE&&!done.includes('dala1-wifi-202610b')){
-    const d1=S.sites.find(x=>/^dala\s*0?1$/i.test(String(x.name).trim()));
-    if(d1){
-      const L=S.expenses.filter(e=>e.site===d1.id&&e.category==='Wifi subscription'&&String(e.date)>='2026-09-16'&&String(e.date)<='2026-10-31');
-      if(L.length&&sum(L,e=>num(e.amount))!==12499){
-        const rank=e=>(String(e.date).slice(0,7)==='2026-10'?0:2)+(num(e.amount)===12499?0:1);
-        const keep=[...L].sort((a,b)=>rank(a)-rank(b)||a.date.localeCompare(b.date))[0];
-        if(num(keep.amount)!==12499){logAct('Changed Dala 1 WiFi cost of '+fmtD(keep.date)+' from '+fmt(num(keep.amount))+' to '+fmt(12499));keep.amount=12499;}
-        L.filter(e=>e!==keep).forEach(e=>{S.expenses.splice(S.expenses.indexOf(e),1);logAct('Took off a Dala 1 WiFi cost ('+fmtD(e.date)+', '+fmt(num(e.amount))+'): only 12,499 was paid',{key:'expenses',item:e});});
-        d1.wifiAmount=12499;d1.wifiLastPaid=keep.date;d1.wifiCounted=keep.date;
-        toast('Dala 1 WiFi corrected to '+fmt(12499));
-      }
-    }
-    done.push('dala1-wifi-202610b');ch=true;
-  }
-  // FIDEL, 14 Oct 2026: the 20,000 tech salary paid to MAURICE in October was his September salary.
-  if(ONLINE&&isOwner()&&!done.includes('im-fresh-20261016')){
-    // FIDEL, 16 Oct 2026: Account Two moved from Equity to I&M; balance 1,797 now. Start Genzi money afresh from that.
-    const o=bankOpen('equity'),fs='2026-10-17';
-    const old=o.date?Math.round(bankBal('equity','2026-10-16')):null,gap=old===null?0:old-1797;
-    if(gap>0){const P=S.settings.partners,sh={FIDEL:88,DOROTHY:12};let left=gap;P.forEach((p,i)=>{const v=i===P.length-1?left:Math.round(gap*(sh[p]||0)/100);left-=v;if(v>0)S.partnerTx.push({id:'im-gap-'+p,date:'2026-10-16',person:p,type:'out',amount:v,bank:'',note:'Account Two money used for personal lives before the I&M fresh start (missing '+fmt(gap)+', split 88/12, edit if different)'});});}
-    S.settings.bankOpen=S.settings.bankOpen||{};S.settings.bankOpen.equity={date:fs,amount:1797};
-    S.settings.freshStart=fs;S.settings.partnerShares={...(S.settings.partnerShares||{}),FIDEL:88,DOROTHY:12};
-    logAct('Account Two is now I&M Bank, starting afresh at '+fmt(1797)+' at the close of 16 Oct 2026'+(gap>0?'. '+fmt(gap)+' missing from the old balance was recorded as personal use, split 88/12':gap<0?'. The old figures showed '+fmt(-gap)+' less than the real balance':''));
-    done.push('im-fresh-20261016');ch=true;
-  }
-  if(ONLINE&&isOwner()&&done.includes('im-fresh-20261016')&&!done.includes('im-noon-20261016')){
-    S.settings.bankOpen.equity={date:'2026-10-16',amount:1797};S.settings.freshStart='2026-10-16';
-    S.settings.freshNoon={date:'2026-10-16',at:'2026-10-16T09:00:00Z',genzi:(S.settings.freshNoon||{}).genzi||0};
-    logAct('The I&M count now starts at midday 16 Oct 2026 with '+fmt(1797)+'. Earlier money that day is left out; enter Genzi earnings from midday to midnight on Profit Split');
-    done.push('im-noon-20261016');ch=true;
-  }
-  if(ONLINE&&isOwner()&&done.includes('im-noon-20261016')&&!done.includes('im-startcost-6299')){
-    const o=S.settings.freshNoon||{},L=S.expenses.filter(x=>x.date===o.date&&!x.forMonth),T=6299;let pick=null;
-    const one=L.find(x=>num(x.amount)===T);if(one)pick=[one.id];
-    else if(L.length<=16){const c=L.filter(x=>num(x.amount)!==5000);for(let m=1;m<(1<<c.length)&&!pick;m++){let v=0;const ids=[];c.forEach((x,i)=>{if(m&(1<<i)){v+=num(x.amount);ids.push(x.id);}});if(v===T)pick=ids;}}
-    if(!pick)pick=L.filter(x=>num(x.amount)!==5000).map(x=>x.id);
-    S.settings.freshNoon={...o,costIds:pick};
-    logAct('Start day '+fmtD(o.date)+': only '+fmt(sum(L.filter(x=>pick.includes(x.id)),x=>num(x.amount)))+' of costs counted in Account Two (the 5,000 was paid before the start). Every cost from 17 Oct counts');
-    done.push('im-startcost-6299');ch=true;
-  }
-  if(ONLINE&&isOwner()&&done.includes('im-noon-20261016')&&!done.includes('im-277-20261017')){
-    // FIDEL, 17 Oct 07:03: 1,797 at midday 16 Oct + 4,779 Genzi earned after midday − 6,299 paid = 277 in I&M now; nothing else paid
-    S.settings.freshNoon={...(S.settings.freshNoon||{}),genzi:4779,costTotal:6299};
-    S.settings.bankOpen.equity={date:'2026-10-17',amount:277,at:'2026-10-17T04:03:35Z'};
-    logAct('Account Two corrected to '+fmt(277)+' on 17 Oct 2026 (1,797 + 4,779 Genzi earnings − 6,299 paid). Every cost and day of earnings from now counts automatically');
-    done.push('im-277-20261017');ch=true;
-  }
+  // The one-time corrections FIDEL asked for between 11 and 17 Oct 2026 (Dala 1 WiFi, I&M start, Kibos routers and others)
+  // have all been applied to the saved data. They are no longer here, so they can never run a second time and remove
+  // records again if a phone ever sent an old copy of the settings.
   if(ONLINE&&isOwner()&&closeWeeks())ch=true;
-  if(ONLINE&&!done.includes('maurice-sal-202609')){
-    S.expenses.filter(e=>e.category==='Tech salary'&&String(e.date).slice(0,7)==='2026-10'&&num(e.amount)===20000&&!e.forMonth).forEach(e=>{
-      e.forMonth='2026-09';logAct('Counted the '+fmt(20000)+' tech salary paid on '+fmtD(e.date)+' in September 2026 (it was the September salary)');});
-    done.push('maurice-sal-202609');ch=true;
-  }
-  if(ONLINE&&!done.includes('kibos-routers-20261012')){
-    const R=S.store.filter(m=>/router/i.test(m.name)),site=(S.sites.find(x=>/kibos/i.test(x.name))||{}).id||'general';
-    const already=S.matLog.some(l=>l.type==='Out'&&l.date==='2026-10-12'&&num(l.qty)===17&&/router/i.test(l.name));
-    if(already){}
-    else if(R.length===1){const m=R[0];m.qty=num(m.qty)-17;S.matLog.push({id:uid(),date:'2026-10-12',name:m.name,qty:17,type:'Out',site,note:'Used at Kibos'});logAct('Took 17 '+m.name+' out of the store: used at Kibos on 12 Oct');toast('17 '+m.name+' taken out of the store for Kibos. '+num(m.qty)+' left.');}
-    else{logAct('Could not take out the 17 Kibos routers: '+(R.length?'more than one router item in the store':'no router item in the store'));setTimeout(()=>toast('Please take out the 17 Kibos routers yourself: Materials → − Use on the router row.'),1500);}
-    done.push('kibos-routers-20261012');ch=true;
-  }
   for(const x of PENDING){
     if(done.includes(x.id))continue;
     if(!S.expenses.some(e=>e.id===x.id||(e.site===x.site&&e.category===x.category&&num(e.amount)===num(x.amount)&&String(e.date).slice(0,7)===x.date.slice(0,7))))S.expenses.push({...x});
@@ -2606,6 +2574,8 @@ const ACT={
   async undoDel(id){const a=(S.activity||[]).find(x=>x.id===id);if(!a||!a.item)return;const arr=S[a.key];if(!Array.isArray(arr)){toast('Cannot restore this');return;}
     if(!arr.some(x=>x.id===a.item.id)){arr.push(a.item);if((a.key==='extLog'||a.key==='techReports')&&(a.item.materials||[]).length)takeMats(a.item.materials.filter(x=>byId(S.store,x.id)),today(),a.item.site,'Taken again: restored record');}logAct('Restored: '+a.text.replace(/^Deleted /,''),{undoOf:a.id});save();render();toast('Restored');},
   async backupNow(){try{UI.bkList=await remote('backupNow',PIN);logAct('Saved a backup by hand');save();render();toast('Backup saved online. It will never be deleted.');}catch(e){toast('Could not save the backup. Check your internet.');}},
+  findLost(){findLost();},
+  bringBack(){bringBack();},
   async getBackup(day){try{const r=await remote('getBackup',PIN,day);const sn=fakeSnaps(r.docs);const st=migrate(fromDocs(sn.st,sn.ea));
     download(`dala-genzi-backup-${String(day).replace(/[^0-9-]/g,"-")}.json`,JSON.stringify(st,null,1),'application/json');}catch(e){toast('Could not get that backup: '+(e.message||e));}},
   editContacts(){const c=S.settings.contacts||[],F=[];for(let i=0;i<4;i++)F.push({k:'n'+i,label:'Name '+(i+1)+(i>2?' (optional)':'')},{k:'p'+i,label:'Phone '+(i+1),type:'tel'});
@@ -2707,6 +2677,7 @@ function excelAll(){
 function downloadLink(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);return true;}
 
 const CHG={
+  lostTick(el){const o=UI.lost&&UI.lost.list[+el.dataset.id];if(o)o.on=el.checked;},
   earnDate(el){if(el.value){UI.earnDate=el.value;UI.earnMonth=el.value.slice(0,7);render();}},
   earnMonth(el){UI.earnMonth=el.value;render();},
   shMonth(el){UI.shMonth=el.value;render();},
@@ -2794,6 +2765,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1792210947';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1792940400';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>

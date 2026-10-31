@@ -44,7 +44,7 @@ const TECH_WRITE = /^state\/((store|toBuy|crew|sites)|(matLog|issues|tickets|tec
 // Read-only for the technician, cut down to the fields the tech pages need.
 const TECH_READ = {
   'state/employees': v => (v || []).map(e => ({ id: e.id, name: e.name, role: e.role, phone: e.phone })),
-  'state/settings': v => { v = v || {}; return { business: v.business, techName: v.techName, subtechName: v.subtechName, codes: v.codes, tokenWarnDays: v.tokenWarnDays, wifiWarnDays: v.wifiWarnDays }; },
+  'state/settings': v => { v = v || {}; return { lockUpTo: v.lockUpTo, business: v.business, techName: v.techName, subtechName: v.subtechName, codes: v.codes, tokenWarnDays: v.tokenWarnDays, wifiWarnDays: v.wifiWarnDays }; },
 };
 // Staff see the business pages but not the owners' own money: directors' capital, partner money in/out, shares.
 const STAFF_HIDE = /^state\/(equityTx(@[^/]+)?|partnerTx(@[^/]+)?)$/;
@@ -132,6 +132,36 @@ function merge3(cur, base, inc) {
   }
   return inc;
 }
+// Closed months: records dated up to the lock date stay exactly as saved, whatever a phone sends.
+const LOCK_KEYS = ['expenses', 'subtech', 'matLog', 'checks', 'partnerTx', 'bankTx', 'techDays', 'techSpend', 'techReports', 'extLog', 'lumpIncome'];
+async function keepLocked(db, lock, sets, dels) {
+  sets = { ...sets }; dels = [...dels];
+  const month = lock.slice(0, 7), endOfMonth = (() => { const [y, m] = month.split('-').map(Number); return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10); })();
+  for (const p of [...Object.keys(sets), ...dels]) {
+    const em = /^earnings\/(\d{4}-\d{2})$/.exec(p);
+    if (em) {
+      if (em[1] < month || (em[1] === month && lock >= endOfMonth)) { delete sets[p]; dels = dels.filter(x => x !== p); }
+      else if (em[1] === month) {
+        // part of the month is closed: keep the saved closed days
+        const r = await db.prepare('SELECT data FROM docs WHERE path = ?').bind(p).first(), cur = r ? (parse(r.data) || {}).days || {} : {};
+        const inc = dels.includes(p) ? {} : ((parse(sets[p]) || {}).days || {}), out = {};
+        for (const d in inc) if (d > lock) out[d] = inc[d];
+        for (const d in cur) if (d <= lock) out[d] = cur[d];
+        dels = dels.filter(x => x !== p); sets[p] = JSON.stringify({ days: out });
+      }
+      continue;
+    }
+    const sm = /^state\/([A-Za-z]+)(@[^/]+)?$/.exec(p);
+    if (!sm || !LOCK_KEYS.includes(sm[1])) continue;
+    const r = await db.prepare('SELECT data FROM docs WHERE path = ?').bind(p).first(), cur = r ? ((parse(r.data) || {}).v || []) : [];
+    const shut = x => x && x.date && x.date <= lock;
+    const inc = dels.includes(p) ? [] : (((parse(sets[p]) || {}).v) || []);
+    const v = [...inc.filter(x => !shut(x)), ...cur.filter(shut)];
+    if (dels.includes(p)) { if (!v.length) continue; dels = dels.filter(x => x !== p); }
+    sets[p] = JSON.stringify({ v });
+  }
+  return [sets, dels];
+}
 const parse = j => { try { return JSON.parse(j); } catch (e) { return undefined; } };
 
 // fill a saved site with the values a phone sends, but never replace a saved value with an empty one
@@ -191,6 +221,8 @@ const FNS = {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(o.date) ? o.date : new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
     const amount = Number(o.amount);
     if (!(amount > 0)) throw new Error('bad_amount');
+    const lock = await getMeta(db, 'lock');
+    if (lock && date <= lock) throw new Error('month_closed');
     const item = { id: 'tc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), date, category: ['Materials', 'Electricity tokens', 'Wifi subscription'].includes(o.category) ? o.category : 'Materials', site: String(o.site || 'general').slice(0, 40), amount, desc: String(o.desc || '').slice(0, 200), paidBy: String(o.paidBy || '').slice(0, 60), ...(['main', 's0', 's1'].includes(o.power) ? { power: o.power } : {}), addedBy: me.name || 'Technician', addedCode: String(o.addedCode || '').slice(0, 20), addedAt: new Date().toISOString() };
     const path = 'state/expenses@' + date.slice(0, 4), r = await db.prepare('SELECT data FROM docs WHERE path = ?').bind(path).first();
     const doc = r ? JSON.parse(r.data) : { v: [] };
@@ -220,6 +252,15 @@ const FNS = {
     const r = await db.prepare('SELECT data FROM backups WHERE day = ?').bind(String(day)).first();
     if (!r) throw new Error('no_backup');
     return { docs: JSON.parse(r.data) };
+  },
+  // close a month for good: from now on nothing dated up to upTo can be added, changed or deleted, and a copy is kept forever
+  async closeMonth(db, pin, upTo) {
+    await checkOwner(db, pin);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(upTo))) throw new Error('bad_date');
+    const cur = await getMeta(db, 'lock');
+    if (!cur || cur < upTo) await db.prepare('INSERT INTO meta (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v').bind('lock', upTo).run();
+    await snapshot(db, upTo + ' month closed');
+    return { lock: cur && cur > upTo ? cur : upTo };
   },
   async getStamp(db, pin) {
     await checkPin(db, pin);
@@ -279,6 +320,8 @@ const FNS = {
       }
       if (keep.length) dels = (dels || []).filter(p => !keep.includes(p));
     }
+    const lock = await getMeta(db, 'lock');
+    if (lock) [sets, dels] = await keepLocked(db, lock, sets || {}, dels || []);
     const now = Date.now(), st = String(now), q = [];
     for (const p of Object.keys(sets || {})) {
       q.push(db.prepare('INSERT INTO docs (path, data, updated) VALUES (?, ?, ?) ON CONFLICT(path) DO UPDATE SET data = excluded.data, updated = excluded.updated').bind(p, String(sets[p]), now));

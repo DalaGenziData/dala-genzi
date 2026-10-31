@@ -289,11 +289,11 @@ const INV_CAT='Equipment & investment';
 const EXP_CATS=['Motorbike fuel','Tech salary','Electricity tokens','Wifi subscription','Materials','Repairs & maintenance','Transport','Airtime / SMS','Lunch','Rent',INV_CAT,'Other'];
 const isInv=x=>x.category===INV_CAT;
 const SUBTECH_CAT='Sub-tech wages';
-const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['analysis','Analysis'],['report','Monthly Report'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup'],['crew','Sub-tech Days'],['desk','Tech Requests & Refunds'],['reports','Technician Reports'],['weekly','Weekly Costs'],['gaps','Data Check'],['thome','Home'],['ext','Router Extensions'],['shared','Shared Costs Report'],['split','Profit Split'],['week','Weekly Genzi Report']];
+const PAGES=[['dash','Dashboard'],['earn','Daily Earnings'],['perf','Site Performance'],['bills','Tokens & WiFi'],['mat','Materials'],['costs','Running Costs'],['staff','Staff & Wages'],['team','Employee Performance'],['debts','Debts'],['pl','Profit & Loss'],['targets','Targets'],['assets','Equipment & Payback'],['partners','Partners'],['directors','Directors & Ownership'],['upcoming','Upcoming Payments'],['tickets','Customer Issues'],['analysis','Analysis'],['report','Monthly Report'],['sitecosts','Costs per Site'],['search','Search'],['activity','Activity History'],['bank','Bank'],['issues','Site Issues'],['settings','Settings & Backup'],['crew','Sub-tech Days'],['desk','Tech Requests & Refunds'],['reports','Technician Reports'],['weekly','Weekly Costs'],['gaps','Data Check'],['thome','Home'],['ext','Router Extensions'],['shared','Shared Costs Report'],['split','Profit Split'],['week','Weekly Genzi Report'],['closed','Closed Months']];
 
 // Main menu: each main page holds related subpages, shown as tabs under the menu.
-const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','ext','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','weekly','sitecosts','shared','mat']],['Employees',['staff','crew','desk','reports','team']],['Profit & Loss',['pl','analysis','report','debts','bank']],['Owners',['split','week','partners','directors']],['Settings',['settings','gaps','activity','search']]];
-const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',analysis:'Analysis',report:'Monthly Report',sitecosts:'Costs per Site',search:'Search',activity:'Activity History',crew:'Sub-tech Days',desk:'Requests & Refunds',reports:'Tech Reports',weekly:'Weekly Costs',gaps:'Data Check',thome:'Home',ext:'Router Extensions',shared:'Shared Costs',split:'Profit Split',week:'Weekly Report'};
+const GROUPS=[['Dashboard',['dash']],['Earnings',['earn','perf','targets']],['Sites & Bills',['bills','ext','upcoming','assets']],['Customer Care',['tickets','issues']],['Costs',['costs','weekly','sitecosts','shared','mat']],['Employees',['staff','crew','desk','reports','team']],['Profit & Loss',['pl','analysis','report','debts','bank']],['Owners',['split','week','closed','partners','directors']],['Settings',['settings','gaps','activity','search']]];
+const SUBNAME={dash:'Dashboard',earn:'Daily Earnings',perf:'Site Performance',targets:'Targets',bills:'Tokens & WiFi',upcoming:'Upcoming Payments',assets:'Equipment & Payback',issues:'Site Issues',costs:'Running Costs',mat:'Materials',staff:'Staff & Wages',team:'Employee Performance',pl:'Profit & Loss',debts:'Debts',bank:'Bank',directors:'Directors & Ownership',partners:'Partners',settings:'Settings & Backup',tickets:'Customer Issues',analysis:'Analysis',report:'Monthly Report',sitecosts:'Costs per Site',search:'Search',activity:'Activity History',crew:'Sub-tech Days',desk:'Requests & Refunds',reports:'Tech Reports',weekly:'Weekly Costs',gaps:'Data Check',thome:'Home',ext:'Router Extensions',shared:'Shared Costs',split:'Profit Split',week:'Weekly Report',closed:'Closed Months'};
 // The technician sees only the technical pages; staff see everything except the Owners pages.
 const TECH_GROUPS=[['Home',['thome']],['Customer Care',['tickets','issues']],['Tokens & WiFi',['bills']],['Extensions',['ext']],['Sub-techs',['crew']],['Requests & Refunds',['desk']],['Reports',['reports']],['Materials',['mat']],['Settings',['settings']]];
 const navGroups=()=>isTech()?TECH_GROUPS:isOwner()?GROUPS:GROUPS.filter(g=>g[0]!=='Owners');
@@ -339,10 +339,29 @@ function load(){
 }
 let S=load();
 if(!S.employees.length)S=migrate(S);
+/* ---------- closed months: nothing dated up to settings.lockUpTo can be added, changed or deleted ---------- */
+// FIDEL, 1 Nov 2026: October is closed for good. The server enforces the same rule.
+const LOCK_KEYS=['expenses','subtech','matLog','checks','partnerTx','bankTx','techDays','techSpend','techReports','extLog','lumpIncome'];
+const LOCK={sig:'',data:null};let relockSoon=false;
+function lockedPart(st){
+  const L=(st.settings||{}).lockUpTo;if(!L)return {sig:'',data:null};
+  const data={earnings:{}},parts=[];
+  LOCK_KEYS.forEach(k=>{data[k]=(st[k]||[]).filter(x=>x&&x.date&&x.date<=L);parts.push(k,data[k].map(x=>JSON.stringify(x)).sort());});
+  Object.keys(st.earnings||{}).filter(d=>d<=L).sort().forEach(d=>{data.earnings[d]=st.earnings[d];parts.push(d,Object.entries(st.earnings[d]||{}).sort());});
+  return {sig:JSON.stringify(parts),data:JSON.parse(JSON.stringify(data))};
+}
+function relock(){const p=lockedPart(S);LOCK.sig=p.sig;LOCK.data=p.data;}
+function restoreLocked(){
+  const L=S.settings.lockUpTo,D=LOCK.data;if(!L||!D)return;
+  LOCK_KEYS.forEach(k=>{S[k]=[...(S[k]||[]).filter(x=>!(x&&x.date&&x.date<=L)),...JSON.parse(JSON.stringify(D[k]||[]))];});
+  Object.keys(S.earnings).filter(d=>d<=L).forEach(d=>delete S.earnings[d]);Object.assign(S.earnings,JSON.parse(JSON.stringify(D.earnings||{})));
+}
+relock();
 // saveSeq counts local edits. A copy fetched from online storage before the latest edit is out of date and is
 // never applied over it. The ".dirty" flag marks edits not yet confirmed online, so they survive a reload.
 let saveSeq=0;
 function save(){
+  if(LOCK.sig&&lockedPart(S).sig!==LOCK.sig){restoreLocked();setTimeout(()=>toast('This month is closed. Nothing up to '+fmtDs(S.settings.lockUpTo)+' can be added, changed or deleted.'),50);}
   saveSeq++;
   try{localStorage.setItem(KEY,JSON.stringify(S));if(ONLINE||REMOTE)localStorage.setItem(KEY+'.dirty','1');}
   catch(e){if(!ONLINE)toast('Could not save in this browser. Use Backup to keep your data.');}
@@ -430,9 +449,9 @@ function applyRemote(){
   const all=[...lastSnaps.state.map(d=>['state/'+d.id,d]),...lastSnaps.earn.map(d=>['earnings/'+d.id,d])];
   if(!all.length)return;
   written={};all.forEach(([p,d])=>written[p]=JSON.stringify(d.data()));keepBase();
-  S=migrate(fromDocs(lastSnaps.state,lastSnaps.earn));
+  S=migrate(fromDocs(lastSnaps.state,lastSnaps.earn));relock();
   try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
-  if(!isTech()&&reconcileBills())setTimeout(save,0);
+  if(!isTech()&&reconcileBills())setTimeout(()=>{if(relockSoon){relockSoon=false;relock();}save();},0);
   const a=document.activeElement;
   if(a&&a.closest&&a.closest('main')&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)){needApply=true;return;}
   render();
@@ -946,6 +965,7 @@ function alerts(){
   {const w=(S.tickets||[]).filter(t=>t.stage<4).length;if(w)a.unshift({cls:'b-bad',tag:'Customers',html:`${w} customer issue${w>1?'s':''} not finished. <a href="#tickets" data-go="tickets">View</a>`});}
   if(open)a.push({cls:'b-bad',tag:'Issues',html:`${open} open site issue${open>1?'s':''}. <a href="#issues" data-go="issues">View</a>`});
   if(isOwner()){const lw=weekList().find(x=>weekGet(x));if(lw&&diffDays(weekClosesOn(lw),today())<=1)a.push({cls:'b-ok',tag:'Report',html:`The Genzi report for ${fmtDs(lw)} to ${fmtDs(addDays(lw,6))} is ready. <a href="#week" data-act="openWeek" data-id="${lw}">Open it</a>`});}
+  {const m=closeDue();if(m)a.unshift({cls:'b-warn',tag:'Close',html:`${esc(monthLabel(m))} is ready to close: ${monthMissing(m).length} day${monthMissing(m).length===1?'':'s'} still missing earnings. It closes by itself on ${fmtDs(addDays(monthRange(m)[1],CLOSE_GRACE+1))}. <a href="#closed" data-go="closed">Open</a>`});}
   if(isOwner()){const n=sum(dataGaps(),g=>g.items.length);if(n)a.push({cls:'b-info',tag:'Data',html:`${n} gap${n>1?'s':''} or doubtful figure${n>1?'s':''} in the data. <a href="#gaps" data-go="gaps">Check</a>`});}
   if(!S.lastBackup||diffDays(S.lastBackup,t)>7)a.push({cls:'b-warn',tag:'Backup',html:`${S.lastBackup?'Last backup was '+fmtD(S.lastBackup):'No backup made yet'}. <a href="#" data-act="exportJSON">Download backup</a>`});
   return a;
@@ -1614,6 +1634,84 @@ function weekText(W){const R=W.R,p2=v=>fmt2(Math.abs(v)),pos=R.filter(r=>r.pos>0
   L.push(pos.length&&neg.length?`<b>${esc(neg[0].p)} owes ${esc(pos[0].p)} ${p2(pos[0].pos)}</b>, because ${esc(neg[0].p)} took more than their ${Math.round(neg[0].share*100)}% share of the personal money.`:'Nobody owes anybody this week: personal money followed the 88/12 shares.');
   L.push(`Left for each partner at the end of the week: ${R.map(r=>`${esc(r.p)} ${r.biz<0?'<span class="neg">':''}<b>${r.biz<0?'−':''}${p2(r.biz)}</b>${r.biz<0?'</span>':''}`).join(', ')}.`);
   return L;}
+/* ---------- month close: a permanent report of the month, then the month is locked and the banks start again ---------- */
+function monthMissing(m){const [f,t]=monthRange(m),out=[];for(let d=f;d<=t;d=addDays(d,1)){const r=S.earnings[d]||{},n=S.sites.filter(x=>d>=siteStart(x)&&r[x.id]===undefined).map(x=>x.name);if(n.length)out.push([d,n]);}return out;}
+function monthSnapshot(m){
+  const [f,t]=monthRange(m),E=earnIn(f,t),C=costsIn(f,t),cost=sum(C,x=>num(x.amount)),grp={Dala:0,Genzi:0};
+  S.sites.forEach(x=>{grp[x.group]=(grp[x.group]||0)+E.bySite[x.id].total;});
+  const cat={};C.forEach(x=>cat[x.category]=(cat[x.category]||0)+num(x.amount));
+  const sites=S.sites.map(x=>{const e=E.bySite[x.id],c=sum(C.filter(y=>y.site===x.id),y=>num(y.amount));return {name:x.name,group:x.group,earn:e.total,days:e.days,cost:c,net:e.total-c};}).filter(r=>r.earn||r.cost).sort((a,b)=>b.earn-a.earn);
+  const days=[];for(let d=f;d<=t;d=addDays(d,1)){const r=S.earnings[d]||{},g=k=>sum(S.sites.filter(x=>x.group===k),x=>num(r[x.id]));days.push({d,dala:g('Dala'),genzi:g('Genzi'),cost:sum(C.filter(x=>x.date===d),x=>num(x.amount))});}
+  const fs=S.settings.freshStart&&S.settings.freshStart>=f?S.settings.freshStart:f,SP=splitCalc(fs,t);
+  const H=finHealth(f,t),bal={coop:Math.round(bankBal('coop',t)),equity:Math.round(bankBal('equity',t))};
+  const took=S.partnerTx.filter(x=>x.type==='out'&&x.date>=f&&x.date<=t&&!String(x.id).startsWith('im-gap')).map(x=>({date:x.date,person:x.person,amount:num(x.amount),bank:x.bank||'',note:x.note||''})).sort((a,b)=>a.date.localeCompare(b.date));
+  const weeks=Object.values(S.settings.weekClose||{}).filter(w=>w.f<=t&&w.t>=f).map(w=>({f:w.f,t:w.t,earn:w.earn,cost:w.cost,profit:w.profit,start:w.start})).sort((a,b)=>a.f.localeCompare(b.f));
+  const shares=splitCalc(t,t).R.map(r=>({p:r.p,share:r.share}));
+  return {m,f,t,earn:E.total,grp,cost,profit:E.total-cost,cat,sites,days,
+    split:{f:fs,t,start:SP.start,earn:SP.earn,cost:SP.cost,profit:SP.profit,R:SP.R.map(r=>({p:r.p,share:r.share,due:r.due,took:r.took,biz:r.biz}))},
+    bal,shares,health:{gm:H.gm,nm:H.nm,run:H.run,lost:H.lost,owed:H.owedTot,coll:H.coll,net:H.net},
+    debts:{owedUs:sum(S.debts.filter(d=>d.type==='owedToUs'),debtBal),weOwe:sum(S.debts.filter(d=>d.type==='weOwe'),debtBal)},
+    tickets:(S.tickets||[]).filter(x=>x.date>=f&&x.date<=t).length,ticketsOpen:(S.tickets||[]).filter(x=>x.date>=f&&x.date<=t&&x.stage<4).length,
+    costs:C.map(x=>({date:x.date,category:x.category,site:siteName(x.site),desc:x.desc||'',amount:num(x.amount)})).sort((a,b)=>a.date.localeCompare(b.date)),took,weeks};
+}
+// close the month m ('2026-10'): keep its report, lock it, start both banks and the Genzi split again from 0 the next day
+function closeMonth(m){
+  const [,t]=monthRange(m),nx=addDays(t,1);S.settings.closed=S.settings.closed||{};
+  if(S.settings.closed[m])return false;
+  if(isOwner()&&S.settings.freshStart)closeWeeks();
+  S.settings.closed[m]={...monthSnapshot(m),closedAt:new Date().toISOString(),closedBy:meName()};
+  if(!S.settings.lockUpTo||S.settings.lockUpTo<t)S.settings.lockUpTo=t;
+  S.settings.bankOpen={coop:{date:nx,amount:0},equity:{date:nx,amount:0}};
+  S.settings.freshStart=nx;S.settings.freshNoon={};
+  logAct('Closed '+monthLabel(m)+': its report is kept on Owners → Closed Months and nothing up to '+fmtDs(t)+' can be changed. Both bank accounts and the Genzi split start again from 0 on '+fmtDs(nx));
+  setTimeout(()=>{if(API_URL==='/api'&&ONLINE)remote('closeMonth',PIN,t).catch(()=>{});},4000);
+  return true;
+}
+// FIDEL, 31 Oct 2026: close October and start fresh with both banks at 0, then close every month automatically.
+// A month closes on the 1st of the next month once all its earnings are in, and on the 3rd at the latest.
+const CLOSE_FIRST='2026-10',CLOSE_GRACE=2;
+function closeDue(){if(!isOwner())return '';const C=S.settings.closed||{};
+  for(let m=CLOSE_FIRST;monthRange(m)[1]<today();m=addDays(monthRange(m)[1],1).slice(0,7))if(!C[m])return m;
+  return '';}
+const closeAuto=m=>!monthMissing(m).length||today()>addDays(monthRange(m)[1],CLOSE_GRACE);
+P.closed=()=>{
+  const C=S.settings.closed||{},ms=Object.keys(C).sort().reverse(),due=closeDue();
+  const m=UI.closedM&&C[UI.closedM]?UI.closedM:ms[0],R=m&&C[m];
+  const pc=v=>v===null||v===undefined?'—':Math.round(v*100)+'%',sh=p=>{const r=(R.shares||[]).find(x=>x.p===p);return r?r.share:0;};
+  const dueCard=due?(()=>{const miss=monthMissing(due);return `<div class="card"><h2>Close ${esc(monthLabel(due))}</h2>
+    <p>${miss.length?`<b>${miss.length}</b> day${miss.length>1?'s are':' is'} missing earnings for some sites. Enter them first, because after closing nothing in ${esc(monthLabel(due))} can be added or changed. If nobody closes it, it closes by itself on ${fmtDs(addDays(monthRange(due)[1],CLOSE_GRACE+1))}.`:'All earnings are in. The month closes automatically now.'}</p>
+    ${miss.length?`<div class="tbl-wrap"><table><tbody>${miss.slice(0,40).map(([d,n])=>`<tr><td>${fmtD(d)}</td><td class="wrap small">${esc(n.join(', '))}</td><td style="text-align:right"><button class="btn sm" data-act="gotoDay" data-id="${d}">Enter</button></td></tr>`).join('')}</tbody></table></div>`:''}
+    <div class="row" style="margin-top:10px"><button class="btn primary" data-act="closeMonthNow" data-id="${due}">Close ${esc(monthLabel(due))} now</button></div></div>`;})():'';
+  if(!R)return dueCard||'<div class="card"><div class="empty">No month has been closed yet.</div></div>';
+  const ps=R.split.R;
+  return `${dueCard}<div class="card noprint"><div class="h2row"><h2>Closed months</h2><div class="row">${ms.length>1?`<select data-chg="closedM">${ms.map(x=>`<option value="${x}"${x===m?' selected':''}>${esc(monthLabel(x))}</option>`).join('')}</select>`:''}<button class="btn primary" data-act="printPage">Save as PDF / Print</button></div></div>
+    <p class="small muted" style="margin:0">Closed on ${esc(new Date(R.closedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}))}${R.closedBy?' by '+esc(R.closedBy):''}. These figures are final: nothing dated in ${esc(monthLabel(m))} can be added, changed or deleted.</p></div>
+  <div class="card report">
+    <div class="rhead"><img src="${$('header .logo').src}" alt="DalaWifi" style="height:46px"><div><h2 style="margin:0">${esc(S.settings.business||'DalaWifi')}: ${esc(monthLabel(m))} closing report</h2><div class="muted">${fmtD(R.f)} to ${fmtD(R.t)} · final</div></div></div>
+    <div class="kpis"><div class="kpi"><div class="l">Earnings</div><div class="v">${fmt(R.earn)}</div><div class="s">Dala ${fmt(R.grp.Dala||0)} · Genzi ${fmt(R.grp.Genzi||0)}</div></div>
+      <div class="kpi"><div class="l">Running costs</div><div class="v">${fmt(R.cost)}</div><div class="s">all paid from Account Two</div></div>
+      <div class="kpi"><div class="l">Profit</div><div class="v ${R.profit<0?'neg':'pos'}">${fmt(R.profit)}</div><div class="s">net margin ${pc(R.health.nm)} · gross margin ${pc(R.health.gm)}</div></div>
+      <div class="kpi"><div class="l">Banks at close</div><div class="v">${fmt(R.bal.coop+R.bal.equity)}</div><div class="s">Account One ${fmt(R.bal.coop)} · Account Two ${fmt(R.bal.equity)}</div></div></div>
+    <h3>Each site</h3><div class="tbl-wrap"><table><thead><tr><th>Site</th><th>Group</th><th class="n">Days</th><th class="n">Earned</th><th class="n">Costs</th><th class="n">Net</th></tr></thead><tbody>${R.sites.map(r=>`<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.group||'')}</td><td class="n">${r.days}</td><td class="n">${fmt(r.earn)}</td><td class="n">${fmt(r.cost)}</td><td class="n">${pnl(r.net)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="3">Total</td><td class="n">${fmt(R.earn)}</td><td class="n">${fmt(sum(R.sites,r=>r.cost))}</td><td class="n">${pnl(R.earn-sum(R.sites,r=>r.cost))}</td></tr></tfoot></table></div>
+    <p class="small muted">Costs not tied to one site (shared costs): ${fmt(R.cost-sum(R.sites,r=>r.cost))}.</p>
+    <h3>Costs by type</h3><div class="tbl-wrap"><table><tbody>${Object.entries(R.cat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="n">${fmt(v)}</td><td class="n muted">${R.cost?Math.round(v/R.cost*100):0}%</td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td class="n">${fmt(R.cost)}</td><td></td></tr></tfoot></table></div>
+    <h3>Genzi money split, ${fmtDs(R.split.f)} to ${fmtDs(R.split.t)}</h3>
+    <div class="tbl-wrap"><table><thead><tr><th></th><th class="n">Total</th>${ps.map(r=>`<th class="n">${esc(r.p)} ${Math.round(r.share*100)}%</th>`).join('')}</tr></thead><tbody>
+      ${R.split.start?`<tr><td>Money in I&amp;M at the start</td><td class="n">${fmt(R.split.start)}</td>${ps.map(r=>`<td class="n">${fmt2(R.split.start*r.share)}</td>`).join('')}</tr>`:''}
+      <tr><td>Genzi money earned</td><td class="n">${fmt(R.split.earn)}</td>${ps.map(r=>`<td class="n">${fmt2(R.split.earn*r.share)}</td>`).join('')}</tr>
+      <tr><td>Running costs (Dala and Genzi)</td><td class="n">${fmt(R.split.cost)}</td>${ps.map(r=>`<td class="n">−${fmt2(R.split.cost*r.share)}</td>`).join('')}</tr>
+      <tr><td><b>Remaining to divide</b></td><td class="n"><b>${pnl(R.split.profit)}</b></td>${ps.map(r=>`<td class="n"><b>${fmt2(r.due)}</b></td>`).join('')}</tr>
+      <tr><td>Already taken for personal use</td><td class="n">${fmt(sum(ps,r=>r.took))}</td>${ps.map(r=>`<td class="n">−${fmt2(r.took)}</td>`).join('')}</tr>
+      <tr><td><b>Still to be given</b></td><td class="n"><b>${pnl(sum(ps,r=>r.biz))}</b></td>${ps.map(r=>`<td class="n"><b>${pnl2(r.biz)}</b></td>`).join('')}</tr></tbody></table></div>
+    <h3>Account One (Dala savings) at close</h3><p>${fmt(R.bal.coop)} to divide: ${(R.shares||[]).map(r=>`<b>${esc(r.p)}</b> ${Math.round(r.share*100)}% = <b>${fmt(Math.round(R.bal.coop*r.share))}</b>`).join(' · ')}.</p>
+    <h3>Money health</h3><p>Gross margin ${pc(R.health.gm)} · net margin ${pc(R.health.nm)} · tokens and WiFi ${fmt(R.health.net)} · lost on weak days ${fmt(R.health.lost)} · monthly run-rate ${fmt(R.health.run)}.<br>Money owed to us ${fmt(R.debts.owedUs)} · money we owe ${fmt(R.debts.weOwe)} · customer issues ${R.tickets} (${R.ticketsOpen} still open at close).</p>
+    ${R.weeks.length?`<h3>Genzi weeks</h3><div class="tbl-wrap"><table><thead><tr><th>Week</th><th class="n">Earned</th><th class="n">Costs</th><th class="n">Remaining</th></tr></thead><tbody>${R.weeks.map(w=>`<tr><td>${fmtDs(w.f)} to ${fmtDs(w.t)}</td><td class="n">${fmt(w.earn)}</td><td class="n">${fmt(w.cost)}</td><td class="n">${pnl(w.profit)}</td></tr>`).join('')}</tbody></table></div>`:''}
+    <h3>Day by day</h3><div class="tbl-wrap"><table><thead><tr><th>Date</th><th class="n">Dala</th><th class="n">Genzi</th><th class="n">Total</th><th class="n">Costs</th></tr></thead><tbody>${R.days.map(x=>`<tr><td>${fmtD(x.d)}</td><td class="n">${fmt(x.dala)}</td><td class="n">${fmt(x.genzi)}</td><td class="n"><b>${fmt(x.dala+x.genzi)}</b></td><td class="n">${x.cost?fmt(x.cost):''}</td></tr>`).join('')}</tbody></table></div>
+    ${R.took.length?`<h3>Personal money taken</h3><div class="tbl-wrap"><table><tbody>${R.took.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.person)}</td><td class="wrap small">${esc(x.note)}${x.bank==='coop'?' (Account One)':''}</td><td class="n">${fmt(x.amount)}</td></tr>`).join('')}</tbody></table></div>`:''}
+    <h3>Every cost</h3><div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Cost</th><th>Site</th><th>Details</th><th class="n">Amount</th></tr></thead><tbody>${R.costs.map(x=>`<tr><td>${fmtD(x.date)}</td><td>${esc(x.category)}</td><td>${esc(x.site)}</td><td class="wrap small">${esc(x.desc)}</td><td class="n">${fmt(x.amount)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="4">Total</td><td class="n">${fmt(R.cost)}</td></tr></tfoot></table></div>
+  </div>`;
+};
 P.week=()=>{
   const L=weekList(),m=UI.weekM&&L.includes(UI.weekM)?UI.weekM:(L.find(x=>weekGet(x))||L[0]);
   if(!m)return '<div class="card"><div class="empty">The weekly report starts once the I&amp;M count has started.</div></div>';
@@ -2335,6 +2433,7 @@ function reconcileBills(){
   // have all been applied to the saved data. They are no longer here, so they can never run a second time and remove
   // records again if a phone ever sent an old copy of the settings.
   if(ONLINE&&isOwner()&&closeWeeks())ch=true;
+  {const m=ONLINE&&closeDue();if(m&&closeAuto(m)&&closeMonth(m)){relockSoon=true;ch=true;}}
   for(const x of PENDING){
     if(done.includes(x.id))continue;
     if(!S.expenses.some(e=>e.id===x.id||(e.site===x.site&&e.category===x.category&&num(e.amount)===num(x.amount)&&String(e.date).slice(0,7)===x.date.slice(0,7))))S.expenses.push({...x});
@@ -2558,6 +2657,7 @@ const ACT={
     rows.push([]);rows.push(['Ownership now',...n.map(x=>x+' '+(R.share[x]*100).toFixed(2)+'% ('+Math.round(R.cap[x])+')')]);
     download(`directors-statement-${today()}.csv`,rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');},
   printPage(){window.print();},
+  closeMonthNow(m){const miss=monthMissing(m).length;ask((miss?miss+' day'+(miss>1?'s are':' is')+' still missing earnings. ':'')+'Close '+monthLabel(m)+' for good? Nothing dated in it can be added or changed afterwards, and both banks start again from 0.','Close it').then(y=>{if(!y)return;if(closeMonth(m)){save();relock();UI.closedM=m;render();toast(monthLabel(m)+' is closed');}});},
   pickMe(){pickMe();},
   shareReport(){window.open('https://wa.me/?text='+encodeURIComponent(reportText(UI.repMonth||today().slice(0,7))),'_blank');},
   quickAdd(){quickAdd();},
@@ -2678,6 +2778,7 @@ function excelAll(){
 function downloadLink(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);return true;}
 
 const CHG={
+  closedM(el){UI.closedM=el.value;render();},
   lostTick(el){const o=UI.lost&&UI.lost.list[+el.dataset.id];if(o)o.on=el.checked;},
   earnDate(el){if(el.value){UI.earnDate=el.value;UI.earnMonth=el.value.slice(0,7);render();}},
   earnMonth(el){UI.earnMonth=el.value;render();},
@@ -2766,6 +2867,6 @@ if(API_URL==='/api'&&'serviceWorker' in navigator)navigator.serviceWorker.regist
 $('#dlg').addEventListener('close',()=>{if(needApply)setTimeout(applyRemote,0);});
 document.addEventListener('focusout',()=>{if(needApply)setTimeout(applyRemote,300);});
 </script>
-<script>/* auto-update */(function(){const V='1792941300';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
+<script>/* auto-update */(function(){const V='1793481386';function chk(){fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const V='(\d+)'/);if(m&&Number(m[1])>Number(V)&&!(document.getElementById('dlg')||{}).open){location.replace(location.pathname+'?v='+m[1]+location.hash);}}).catch(()=>{});}chk();setInterval(chk,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk();});})();</script>
 </body>
 </html>
